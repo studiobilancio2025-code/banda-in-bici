@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La banda in 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: allegro, da diretta della gara della domenica
+   IDEA: la ripresa TV dalla moto al seguito del gruppo, con la grafica di corsa
+   PICTURE: il percorso 3D a tutto schermo, nomi sulle teste
+   COLOUR and TYPE: cielo, asfalto, maglie sature, cartellini gialli; Barlow Condensed
+   LAYOUT: scena piena, titolo, data e grafica di gara in alto, comandi in basso */
+:root{color-scheme:light dark;--ink:#10151c;--tag:#ffd400}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;overflow:hidden;background:#8ec9ee;font-family:"Barlow Condensed",system-ui,sans-serif}
+#scene{position:fixed;inset:0}
+#scene canvas{display:block;width:100%;height:100%;touch-action:none}
+#tags{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform;transition:opacity .2s}
+.tag b{background:var(--tag);color:var(--ink);font-weight:800;font-size:17px;line-height:1;padding:5px 9px 4px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap;box-shadow:0 2px 0 var(--ink)}
+.tag i{width:0;height:0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:10px solid var(--ink);margin-top:2px}
+header{position:fixed;top:0;left:0;right:0;padding:12px max(4vw,14px) 28px;pointer-events:none;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);background:linear-gradient(rgba(16,21,28,.6),rgba(16,21,28,0))}
+h1{margin:0;font-size:clamp(24px,5vw,36px);line-height:1.05;font-weight:800}
+#data{display:inline-block;margin-top:6px;font-size:clamp(18px,3.6vw,24px);font-weight:800;background:var(--ink);color:#fff;padding:3px 10px;border-radius:6px;text-shadow:none}
+#info{display:block;margin-top:6px;font-size:17px;font-weight:600;max-width:34em}
+#hud{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+#hud span{background:rgba(255,255,255,.92);color:var(--ink);text-shadow:none;font-weight:800;font-size:15px;padding:2px 8px;border-radius:5px;white-space:nowrap}
+#hud span:empty{display:none}
+#arrivi{margin-top:6px;font-size:15px;font-weight:600}
+nav{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:7px;flex-wrap:wrap;justify-content:center;width:min(97vw,640px)}
+nav button,nav select{font:600 17px "Barlow Condensed",sans-serif;min-height:44px;padding:0 14px;border-radius:22px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+nav button.on{background:var(--ink);color:#fff}
+nav button:focus-visible,nav select:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+@media(max-width:600px){.tag b{font-size:14px;padding:4px 7px 3px}nav button,nav select{padding:0 10px;font-size:16px;min-height:42px}#info{font-size:16px}}
+#err{position:fixed;inset:auto 16px 110px;color:#fff;background:#b00020;padding:10px 14px;border-radius:8px;display:none}
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="tags"></div>
+<header>
+  <h1>La banda in bici</h1><span id="data">sabato 21 novembre 2026</span>
+  <span id="info">Rettilineo verso la rotonda</span>
+  <div id="hud"><span id="pend"></span><span id="quota"></span></div>
+  <div id="arrivi"></div>
+</header>
+<nav>
+  <button data-v="segui" class="on">Dalla moto</button>
+  <button data-v="lato">Di lato</button>
+  <button data-v="alto">Dall'alto</button>
+  <button data-v="libera">Libera</button>
+  <select id="chi" aria-label="Chi seguire"><option value="-1">Segui: il gruppo</option></select>
+  <button id="vel" aria-label="Velocità della scena">×3</button>
+  <button id="pausa">Pausa</button>
+  <button id="reset">Ricomincia</button>
+</nav>
+<div id="err">La scena 3D non si è caricata: riapri la pagina.</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+{
+if(!window.THREE){document.getElementById('err').style.display='block';throw new Error('three');}
+document.getElementById('data').textContent=new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+// Segmento Strava "Le Cave" del 21/11/2026: x, z, quota (scala orizzontale 0,4, verticale 0,6)
+const TR=[[65.0,140.0,0.0],[65.2,144.0,-0.04],[65.5,149.9,-0.07],[66.0,157.9,-0.07],[66.3,165.8,-0.1],[65.0,173.2,-0.07],[61.5,179.5,-0.02],[56.0,184.8,0.06],[49.4,189.1,0.18],[42.6,193.3,0.29],[35.7,197.4,0.41],[28.9,201.5,0.55],[22.0,205.6,0.71],[15.2,209.9,0.89],[8.4,213.9,1.08],[1.4,217.7,1.28],[-5.7,221.2,1.5],[-13.0,224.5,1.72],[-20.4,227.5,1.93],[-27.8,230.6,2.16],[-35.2,233.6,2.39],[-42.6,236.7,2.62],[-50.0,239.7,2.85],[-57.3,242.9,3.09],[-64.5,246.2,3.34],[-71.7,249.8,3.58],[-78.8,253.5,3.82],[-85.9,257.1,4.06],[-93.0,260.7,4.32],[-100.0,264.4,4.61],[-107.1,268.1,4.86],[-114.2,271.8,5.08],[-121.3,275.5,5.3],[-128.3,279.2,5.52],[-135.4,282.9,5.73],[-142.5,286.6,5.88],[-149.5,290.4,6.05],[-156.5,294.2,6.24],[-163.4,298.3,6.45],[-170.1,302.6,6.67],[-176.6,307.2,6.9],[-182.9,312.0,7.16],[-189.2,317.0,7.44],[-195.4,322.0,7.74],[-201.6,327.0,8.06],[-207.8,332.1,8.41],[-213.9,337.1,8.77],[-220.1,342.1,9.12],[-226.4,347.1,9.49],[-232.5,352.3,9.9],[-238.2,357.8,10.35],[-243.4,363.8,10.8],[-248.2,370.1,11.25],[-252.7,376.7,11.69],[-257.4,383.1,12.16],[-262.2,389.5,12.63],[-267.2,395.7,13.07],[-272.2,401.9,13.51],[-277.4,408.0,13.93],[-282.6,413.9,14.35],[-287.9,420.0,14.76],[-293.1,426.0,15.15],[-298.3,432.1,15.54],[-303.5,438.1,15.91],[-308.8,444.0,16.29],[-314.2,449.9,16.72],[-319.6,455.7,17.12],[-325.1,461.5,17.51],[-330.8,467.1,17.88],[-336.7,472.5,18.21],[-342.7,477.8,18.53],[-348.7,483.0,18.81],[-354.7,488.3,19.03],[-360.6,493.5,19.23],[-366.7,498.7,19.41],[-372.7,503.9,19.59],[-378.9,509.0,19.76],[-385.0,514.1,19.91],[-391.2,519.2,20.06],[-397.4,524.2,20.2],[-403.7,529.1,20.34],[-410.1,533.9,20.47],[-416.5,538.6,20.59],[-422.8,543.5,20.69],[-429.0,548.5,20.78],[-435.0,553.7,20.88],[-440.7,559.3,20.98],[-446.2,565.1,21.07],[-451.5,571.0,21.18],[-456.8,577.0,21.3],[-462.1,583.0,21.45],[-467.4,588.9,21.62],[-472.6,595.0,21.83],[-477.4,601.2,22.09],[-481.5,608.0,22.4],[-484.8,615.2,22.77],[-487.8,622.6,23.2],[-490.8,630.0,23.68],[-493.6,637.4,24.21],[-495.5,645.0,24.78],[-495.9,652.6,25.37],[-494.9,660.4,25.96],[-493.0,668.1,26.52],[-491.2,675.8,27.04],[-489.9,683.6,27.52],[-489.0,691.5,27.95],[-488.8,699.4,28.34],[-489.6,707.3,28.68],[-491.4,714.9,28.99],[-493.9,722.4,29.26],[-496.5,729.9,29.52],[-499.2,737.4,29.76],[-501.7,745.0,29.95],[-504.2,752.6,30.12],[-506.7,760.1,30.28],[-509.3,767.7,30.43],[-512.1,775.1,30.57],[-515.5,782.3,30.71],[-520.1,788.5,30.84],[-525.8,793.7,31.0],[-532.4,798.2,31.19],[-539.2,802.4,31.39],[-545.9,806.6,31.57],[-552.6,810.9,31.73],[-559.2,815.4,31.86],[-565.4,820.3,31.98],[-571.3,825.7,32.05],[-576.7,831.5,32.11],[-582.0,837.5,32.2],[-587.4,843.4,32.34],[-592.8,849.3,32.52],[-598.1,855.2,32.74],[-603.4,861.2,33.0],[-608.6,867.2,33.3],[-613.7,873.3,33.61],[-619.0,879.3,33.93],[-624.2,885.3,34.25],[-629.5,891.3,34.59],[-634.7,897.4,34.91],[-639.9,903.4,35.2],[-645.4,909.2,35.47],[-651.5,914.1,35.75],[-658.4,917.3,36.03],[-665.8,918.2,36.33],[-673.5,917.1,36.63],[-681.2,914.9,36.94],[-688.8,912.5,37.27],[-696.4,910.1,37.58],[-704.0,907.6,37.85],[-711.6,905.2,38.08],[-719.2,902.7,38.26],[-726.8,900.3,38.4],[-734.5,897.9,38.51],[-742.2,896.2,38.6],[-750.0,895.6,38.67],[-757.7,896.5,38.76],[-765.3,898.6,38.85],[-772.8,901.5,38.97],[-780.2,904.5,39.1],[-787.6,907.6,39.28],[-794.9,910.6,39.47],[-802.3,913.7,39.7],[-809.7,916.8,39.95],[-817.1,919.6,40.21],[-824.7,922.1,40.49],[-832.4,924.3,40.78],[-840.2,926.3,41.08],[-847.9,928.2,41.38],[-855.7,930.1,41.66],[-863.4,932.1,41.92],[-871.1,934.3,42.19],[-878.7,936.6,42.46],[-886.3,939.2,42.71],[-893.7,942.1,42.95],[-900.9,945.4,43.2],[-907.8,949.3,43.44],[-914.5,953.7,43.68],[-921.0,958.3,43.91],[-927.5,963.0,44.13],[-933.9,967.7,44.36],[-940.5,972.3,44.59],[-947.1,976.7,44.82],[-953.6,981.3,45.05],[-960.1,986.0,45.29],[-966.5,990.7,45.53],[-973.0,995.5,45.76],[-979.5,1000.0,45.98],[-986.3,1004.2,46.2],[-993.2,1008.1,46.42],[-1000.4,1011.6,46.62],[-1007.6,1015.0,46.79],[-1014.9,1018.3,46.98],[-1022.2,1021.7,47.16],[-1029.4,1025.1,47.31],[-1036.6,1028.4,47.46],[-1043.9,1031.7,47.61],[-1051.2,1034.9,47.78],[-1058.5,1038.2,47.93],[-1065.8,1041.5,48.07],[-1073.1,1044.7,48.21],[-1080.4,1047.9,48.35],[-1087.7,1051.1,48.47],[-1095.0,1054.2,48.56],[-1102.4,1057.4,48.65],[-1109.7,1060.6,48.73],[-1117.0,1063.8,48.82],[-1124.4,1066.9,48.89],[-1131.7,1070.1,48.97],[-1139.1,1073.2,49.08],[-1146.4,1076.3,49.19],[-1153.8,1079.4,49.29],[-1161.1,1082.5,49.39],[-1168.5,1085.6,49.49],[-1175.9,1088.6,49.6],[-1183.3,1091.6,49.7],[-1190.7,1094.7,49.79],[-1198.0,1097.8,49.9],[-1205.4,1100.9,50.03],[-1212.7,1104.2,50.17],[-1219.9,1107.5,50.32],[-1227.2,1110.9,50.47],[-1234.2,1114.7,50.63],[-1240.6,1119.2,50.8],[-1246.1,1124.7,50.99],[-1250.6,1131.2,51.18],[-1254.4,1138.1,51.38],[-1258.0,1145.3,51.58],[-1261.6,1152.4,51.78],[-1265.1,1159.6,51.97],[-1268.5,1166.8,52.15],[-1271.9,1174.0,52.32],[-1275.3,1181.2,52.49],[-1278.6,1188.4,52.67],[-1281.9,1195.7,52.86],[-1285.3,1202.9,53.05],[-1288.6,1210.2,53.25],[-1292.1,1217.3,53.45],[-1295.8,1224.4,53.64],[-1299.8,1231.2,53.8],[-1304.2,1237.9,53.96],[-1308.8,1244.4,54.12],[-1313.7,1250.8,54.27],[-1318.7,1257.0,54.42],[-1323.8,1263.0,54.56],[-1329.1,1269.0,54.69],[-1334.5,1274.9,54.79],[-1340.1,1280.5,54.89],[-1345.9,1285.9,54.97],[-1352.0,1291.1,55.05],[-1358.1,1296.2,55.13],[-1364.2,1301.4,55.21],[-1370.2,1306.7,55.3],[-1375.9,1312.3,55.39],[-1381.2,1318.2,55.47],[-1386.0,1324.5,55.53],[-1390.3,1331.1,55.58],[-1394.5,1338.0,55.62],[-1398.5,1344.8,55.66],[-1402.7,1351.7,55.71],[-1406.8,1358.5,55.76],[-1411.0,1365.3,55.8],[-1415.1,1372.1,55.85],[-1419.2,1378.9,55.91],[-1423.2,1385.8,55.96],[-1427.1,1392.7,56.01],[-1430.8,1399.7,56.04],[-1434.4,1406.9,56.09],[-1437.7,1414.2,56.14],[-1440.9,1421.5,56.19],[-1444.1,1428.8,56.23],[-1447.3,1436.1,56.24],[-1450.7,1443.3,56.25],[-1454.3,1450.3,56.25],[-1458.1,1457.4,56.23],[-1462.2,1464.2,56.18],[-1466.5,1470.9,56.14],[-1471.4,1477.2,56.11],[-1476.7,1483.1,56.08],[-1482.5,1488.5,56.06],[-1488.9,1493.2,56.04],[-1495.8,1497.1,56.03],[-1503.1,1500.4,56.04],[-1510.6,1503.1,56.06],[-1518.2,1505.5,56.1],[-1525.8,1507.9,56.17],[-1533.4,1510.2,56.25],[-1541.0,1512.7,56.34],[-1548.6,1515.1,56.44],[-1556.2,1517.6,56.54],[-1563.8,1520.1,56.66],[-1571.5,1522.5,56.76],[-1579.1,1525.0,56.87],[-1586.7,1527.4,56.97],[-1594.3,1529.8,57.09],[-1601.9,1532.2,57.2],[-1609.5,1534.7,57.33],[-1617.1,1537.2,57.46],[-1624.7,1539.8,57.59],[-1632.3,1542.3,57.73],[-1639.9,1544.7,57.89],[-1647.5,1546.9,58.07],[-1655.3,1548.8,58.26],[-1663.1,1550.5,58.45],[-1671.0,1551.9,58.68],[-1678.9,1553.2,58.94],[-1686.8,1554.4,59.06],[-1692.7,1555.3,59.19]];
+const RIDERS=[
+ {n:'Mario',c:0xfb8c00},{n:'Geppino',c:0xe53935},{n:'Rocco',c:0x1e88e5},
+ {n:'Ciccio',c:0x43a047},{n:'Jack',c:0xfdd835},{n:'Marco',c:0x8e24aa}
+];
+const IDX=Object.fromEntries(RIDERS.map((r,i)=>[r.n,i]));
+const V3=THREE.Vector3,D=Math.PI/180,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),sstep=t=>t*t*(3-2*t);
+const $=id=>document.getElementById(id);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+$('scene').appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,70,230);
+const camera=new THREE.PerspectiveCamera(50,1,0.5,600);
+const controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minDistance=5;controls.maxDistance=90;
+scene.add(new THREE.HemisphereLight(0xdff2ff,0x5a7a3a,.75));
+const sun=new THREE.DirectionalLight(0xfff1d6,1.1);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:120});
+scene.add(sun,sun.target);
+
+// ---------- geometria dei percorsi: punti [x,z,y]; verso di marcia +z => a destra c'è -x ----------
+const line=(a,b,st=5,y=0)=>{const n=Math.max(1,Math.round(Math.hypot(b[0]-a[0],b[1]-a[1])/st)),o=[];for(let i=0;i<=n;i++)o.push([a[0]+(b[0]-a[0])*i/n,a[1]+(b[1]-a[1])*i/n,y]);return o;};
+const arcP=(cx,cz,r,a0,a1,y=0,st=10)=>{const o=[],n=Math.max(1,Math.round(Math.abs(a1-a0)/st));for(let i=0;i<=n;i++){const a=(a0+(a1-a0)*i/n)*D;o.push([cx+r*Math.cos(a),cz+r*Math.sin(a),y]);}return o;};
+const RC1=[0,115];
+// rotonda in cima: sistema locale con l'arrivo lungo +z
+const TE=TR[TR.length-1],TB=TR[TR.length-5],YT=TE[2];
+const hE=Math.atan2(TE[0]-TB[0],TE[1]-TB[1]),fX=Math.sin(hE),fZ=Math.cos(hE),ZC=25;
+const W=p=>[TE[0]+p[1]*fX+p[0]*fZ,TE[1]+p[1]*fZ-p[0]*fX,YT];
+const RC2=W([0,ZC]);
+const loc=a=>a.map(W);
+function buildPath(pts,step=.5){
+  const c=new THREE.CatmullRomCurve3(pts.map(p=>new V3(p[0],p[2]||0,p[1])),false,'centripetal');
+  const L=c.getLength(),N=Math.ceil(L/step),P=c.getSpacedPoints(N),px=[],py=[],pz=[],tx=[],tz=[];
+  P.forEach(p=>{px.push(p.x);py.push(p.y);pz.push(p.z);});
+  for(let i=0;i<=N;i++){const a=Math.max(0,i-1),b=Math.min(N,i+1),dx=px[b]-px[a],dz=pz[b]-pz[a],l=Math.hypot(dx,dz)||1;tx.push(dx/l);tz.push(dz/l);}
+  return {px,py,pz,tx,tz,N,len:L,step:L/N};
+}
+function at(p,s,off,out){
+  s=clamp(s,0,p.len);const f=s/p.step,i=Math.min(p.N-1,Math.floor(f)),t=f-i;
+  const x=p.px[i]+(p.px[i+1]-p.px[i])*t,y=p.py[i]+(p.py[i+1]-p.py[i])*t,z=p.pz[i]+(p.pz[i+1]-p.pz[i])*t;
+  let ax=p.tx[i]+(p.tx[i+1]-p.tx[i])*t,az=p.tz[i]+(p.tz[i+1]-p.tz[i])*t;const l=Math.hypot(ax,az)||1;ax/=l;az/=l;
+  out.set(x-az*off,y,z+ax*off);return Math.atan2(ax,az);
+}
+const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
+const tA=new V3(),tB=new V3();
+const curv=(p,s)=>wrap(at(p,s+1.5,0,tA)-at(p,s-1.5,0,tA))/3;
+const slope=(p,s)=>{at(p,s+2,0,tA);at(p,s-2,0,tB);return (tA.y-tB.y)/4;};
+function nearestS(p,x,z,s0=0,s1=1e9){let b=1e9,bs=0;for(let i=Math.floor(s0/p.step);i<=Math.min(p.N,s1/p.step);i++){const d=Math.hypot(p.px[i]-x,p.pz[i]-z);if(d<b){b=d;bs=i*p.step;}}return bs;}
+
+const START=[...line([0,-100],[0,95]),...arcP(...RC1,10.5,-100,-340),[16,115,0],...line([20,115],[55,115]),...arcP(55,125,10,-90,0),...line([65,125],[65,135])];
+const TOP_IN=loc([[0,4],[0,8]]);
+const P1=buildPath([...START,...TR,...TOP_IN,...loc(arcP(0,ZC,10.5,-100,-1330)),...loc([[0,ZC+16],...line([0,ZC+20],[0,ZC+170],10)])]);
+const P1c=buildPath([...START,...TR,...TOP_IN,...loc(arcP(0,ZC,10.5,-100,-340)),...loc([[16,ZC],...line([20,ZC],[170,ZC],10)])]);
+const P2=buildPath([...line([-140,115],[-20,115]),...arcP(...RC1,8.5,170,-80),[0,96,0],...line([0,95],[0,-100])]);
+const P5=buildPath([...loc([...line([170,ZC],[18,ZC],10),...arcP(0,ZC,8.5,-10,-80),[0,6]]),...TR.slice(0,-1).reverse(),...line([65,135],[65,125]),...arcP(55,125,10,0,-90),...line([55,115],[18,115]),...arcP(...RC1,10.5,-10,-170),...line([-20,115],[-140,115])]);
+
+const sArc0=nearestS(P1,55,115),sTr=nearestS(P1,65,140),sBan=nearestS(P1,65,133);
+const e2=W(arcP(0,ZC,10.5,-100,-100)[0]);
+function firstNear(p,x,z,s0){for(let i=Math.floor(s0/p.step);i<=p.N;i++)if(Math.hypot(p.px[i]-x,p.pz[i]-z)<1.2)return nearestS(p,x,z,i*p.step,i*p.step+4);return p.len;}
+const sC1=firstNear(P1,e2[0],e2[1],sTr+500),lapLen=nearestS(P1,e2[0],e2[1],sC1+40,sC1+120)-sC1;
+const sR1a=nearestS(P1,0,98),sR1b=nearestS(P1,16,115);
+const climbLen=sC1-sTr;
+
+// ---------- strade e terreno ----------
+const tc=document.createElement('canvas');tc.width=128;tc.height=256;
+{const g=tc.getContext('2d');g.fillStyle='#4b4e53';g.fillRect(0,0,128,256);
+ for(let i=0;i<1500;i++){g.fillStyle=`rgba(255,255,255,${Math.random()*.07})`;g.fillRect(Math.random()*128,Math.random()*256,2,2);}
+ g.fillStyle='#f2f2f2';g.fillRect(6,0,4,256);g.fillRect(118,0,4,256);g.fillRect(62,0,4,115);}
+const roadTex=new THREE.CanvasTexture(tc);roadTex.wrapT=THREE.RepeatWrapping;roadTex.encoding=THREE.sRGBEncoding;roadTex.anisotropy=4;
+const roadM=new THREE.MeshLambertMaterial({map:roadTex});
+const SAMP=[];
+function ribbon(pts){
+  const p=buildPath(pts,1),pos=[],uv=[],idx=[],prof=[[-4.3,-.7,-.04],[-3.5,0,0],[3.5,0,1],[4.3,-.7,1.04]];
+  for(let i=0;i<=p.N;i++){const s=i*p.step;
+    for(const [o,dy,u] of prof){pos.push(p.px[i]-p.tz[i]*o,p.py[i]+.1+dy,p.pz[i]+p.tx[i]*o);uv.push(1-u,s/10);}
+    if(i%6===0)SAMP.push([p.px[i],p.pz[i],p.py[i]]);
+    if(i<p.N)for(let k=0;k<3;k++){const a=i*4+k;idx.push(a,a+1,a+4,a+1,a+5,a+4);}}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,roadM);m.receiveShadow=true;scene.add(m);
+}
+ribbon(line([0,-160],[0,106],10));ribbon(line([-9,115],[-180,115],10));
+ribbon([...line([9,115],[55,115]),...arcP(55,125,10,-90,0),...line([65,125],[65,135]),...TR,...TOP_IN,W([0,ZC-9])]);
+ribbon(loc(line([-9,ZC],[-180,ZC],10)));ribbon(loc(line([9,ZC],[180,ZC],10)));ribbon(loc(line([0,ZC+9],[0,ZC+180],10)));
+const white=new THREE.MeshBasicMaterial({color:0xf2f2f2}),ringM=new THREE.MeshLambertMaterial({color:0x4b4e53});
+function roundabout(c,y){
+  const flat=(g,m,yy)=>{const o=new THREE.Mesh(g,m);o.rotation.x=-Math.PI/2;o.position.set(c[0],yy,c[1]);o.receiveShadow=true;scene.add(o);};
+  flat(new THREE.RingGeometry(7,14,72),ringM,y+.14);flat(new THREE.RingGeometry(13.55,13.75,72),white,y+.16);flat(new THREE.RingGeometry(7.4,7.55,72),white,y+.16);
+  const isl=new THREE.Mesh(new THREE.CylinderGeometry(7,7.1,.4,48),new THREE.MeshLambertMaterial({color:0x5e9c3c}));isl.position.set(c[0],y+.2,c[1]);isl.receiveShadow=true;scene.add(isl);
+  const curb=new THREE.Mesh(new THREE.TorusGeometry(7.05,.13,6,72),new THREE.MeshLambertMaterial({color:0xdddddd}));curb.rotation.x=-Math.PI/2;curb.position.set(c[0],y+.3,c[1]);scene.add(curb);
+  for(let a=0;a<360;a+=20)for(const r of[3,10.5,14])SAMP.push([c[0]+r*Math.cos(a*D),c[1]+r*Math.sin(a*D),y]);
+}
+roundabout(RC1,0);roundabout(RC2,YT);
+
+// terreno: segue la quota delle strade, colline dolci lontano dall'asfalto
+function ground(x,z){
+  let sw=0,sy=0,dm=1e9;
+  for(const s of SAMP){const d2=(s[0]-x)**2+(s[1]-z)**2;if(d2<dm)dm=d2;const w=1/((d2+30)*(d2+30));sw+=w;sy+=w*s[2];}
+  dm=Math.sqrt(dm);const hill=(Math.sin(x*.013)+Math.cos(z*.011)+Math.sin((x+z)*.0071))*5*clamp((dm-14)/70,0,1);
+  return [sy/sw+hill-(dm<6?.45:0)-clamp((dm-4)/8,0,1)*.3,dm];
+}
+let bx0=1e9,bx1=-1e9,bz0=1e9,bz1=-1e9;SAMP.forEach(s=>{bx0=Math.min(bx0,s[0]);bx1=Math.max(bx1,s[0]);bz0=Math.min(bz0,s[1]);bz1=Math.max(bz1,s[1]);});
+bx0-=260;bx1+=260;bz0-=260;bz1+=260;
+{const nx=Math.round((bx1-bx0)/10),nz=Math.round((bz1-bz0)/10),g=new THREE.PlaneGeometry(bx1-bx0,bz1-bz0,nx,nz);g.rotateX(-Math.PI/2);
+ const p=g.attributes.position,cx=(bx0+bx1)/2,cz=(bz0+bz1)/2;
+ for(let i=0;i<p.count;i++){const x=p.getX(i)+cx,z=p.getZ(i)+cz;p.setY(i,ground(x,z)[0]);}
+ g.computeVertexNormals();const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x4f8b35}));m.position.set(cx,0,cz);m.receiveShadow=true;scene.add(m);}
+
+// edifici lungo la strada: case, bar, distributore, pizzeria, lampioni
+const BLD=[];
+const lam=c=>new THREE.MeshLambertMaterial({color:c});
+const M={glass:lam(0x2a3540),door:lam(0x5d4037),tile:lam(0xb5532f),gray:lam(0x9e9e9e),dark:lam(0x37474f),white:lam(0xf5f5f0),wood:lam(0x8d6e63),cream:lam(0xf3e5c6)};
+function sign(text,bg,fg,w=512,h=128){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+  const draw=()=>{g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=fg;let fs=h*.72;do{g.font=`800 ${fs}px "Barlow Condensed",Impact,"Arial Narrow",sans-serif`;fs-=2;}while(g.measureText(text).width>w*.9&&fs>10);
+    g.textAlign='center';g.textBaseline='middle';g.fillText(text,w/2,h*.54);};
+  draw();const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;if(document.fonts)document.fonts.ready.then(()=>{draw();t.needsUpdate=true;});
+  return new THREE.MeshLambertMaterial({map:t});}
+function stripes(a,b){const c=document.createElement('canvas');c.width=64;c.height=8;const g=c.getContext('2d');for(let i=0;i<8;i++){g.fillStyle=i%2?a:b;g.fillRect(i*8,0,8,8);}
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return new THREE.MeshLambertMaterial({map:t});}
+function bx(g,w,h,d,m,x,y,z,sh=true){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=sh;o.receiveShadow=true;g.add(o);return o;}
+// facciata con finestre: il fronte guarda +z
+function windows(g,w,d,floors,fh,y0=0,door=true){
+  const n=Math.max(1,Math.floor(w/2.6));
+  for(let f=0;f<floors;f++)for(let i=0;i<n;i++){const x=-w/2+(i+.5)*w/n;
+    if(f===0&&door&&i===Math.floor(n/2)){bx(g,1.1,2.2,.08,M.door,x,y0+1.1,d/2+.03,false);continue;}
+    bx(g,.95,1.3,.08,M.glass,x,y0+f*fh+1.6,d/2+.03,false);bx(g,.95,1.3,.08,M.glass,x,y0+f*fh+1.6,-d/2-.03,false);
+    if(f>0&&i%2===0){bx(g,1.6,.12,.9,M.white,x,y0+f*fh+.9,d/2+.45,false);bx(g,1.6,.7,.05,M.dark,x,y0+f*fh+1.25,d/2+.88,false);}}
+}
+const WALLS=[0xf6e3b4,0xe9c8a0,0xf2d0c4,0xefeae0,0xd9e2c8,0xf1c27d,0xe8d6cf];
+function house(seed){
+  const g=new THREE.Group(),w=7+(seed%3)*1.5,d=7+(seed%2)*1.5,fl=1+(seed%3),fh=3,h=fl*fh,wall=lam(WALLS[seed%WALLS.length]);
+  bx(g,w,h+3,d,wall,0,(h-3)/2,0);windows(g,w,d,fl,fh);
+  if(seed%2){const sh=new THREE.Shape([new THREE.Vector2(-d/2-.4,0),new THREE.Vector2(d/2+.4,0),new THREE.Vector2(0,1.9)]);
+    const rg=new THREE.ExtrudeGeometry(sh,{depth:w+.6,bevelEnabled:false});rg.translate(0,0,-(w+.6)/2);
+    const r=new THREE.Mesh(rg,M.tile);r.rotation.y=Math.PI/2;r.position.y=h;r.castShadow=true;g.add(r);}
+  else{bx(g,w,.6,.15,wall,0,h+.3,d/2-.08,false);bx(g,w,.6,.15,wall,0,h+.3,-d/2+.08,false);bx(g,.15,.6,d,wall,w/2-.08,h+.3,0,false);bx(g,.15,.6,d,wall,-w/2+.08,h+.3,0,false);}
+  // cancello e muretto
+  bx(g,w+4,1,.3,M.white,0,.5,d/2+3,true);
+  return [g,Math.max(w,d)/2+2];
+}
+function bar(name){
+  const g=new THREE.Group();bx(g,10,6.4,7,M.cream,0,.2,0);windows(g,10,7,1,3,0,true);
+  bx(g,10.1,.25,.2,lam(0x8b0000),0,3.1,3.6,false);
+  const s=new THREE.Mesh(new THREE.PlaneGeometry(6,1.3),sign(name,'#8b0000','#fff'));s.position.set(0,3.9,3.53);g.add(s);
+  const aw=new THREE.Mesh(new THREE.BoxGeometry(9,.08,2.4),stripes('#c62828','#fafafa'));aw.position.set(0,2.9,4.6);aw.rotation.x=.25;aw.castShadow=true;g.add(aw);
+  for(const x of[-3,0,3]){bx(g,.08,.75,.08,M.dark,x,.37,7,false);bx(g,.8,.05,.8,M.white,x,.76,7,false);
+    for(const dx of[-.6,.6])bx(g,.4,.45,.4,M.wood,x+dx,.22,7,false);
+    const u=new THREE.Mesh(new THREE.ConeGeometry(1.5,.6,8),lam(0xf5f5f5));u.position.set(x,2.3,7);u.castShadow=true;g.add(u);bx(g,.05,2.1,.05,M.gray,x,1.3,7,false);}
+  bx(g,12,.12,6,lam(0xbfa98a),0,.06,6.5,false);
+  return [g,8];
+}
+function pizzeria(){
+  const g=new THREE.Group();bx(g,11,7,8,lam(0xf4d6a0),0,.5,0);windows(g,11,8,1,3.5,0,true);
+  const s=new THREE.Mesh(new THREE.PlaneGeometry(7,1.4),sign('PIZZERIA','#1b5e20','#fff'));s.position.set(0,3.9,4.03);g.add(s);
+  const aw=new THREE.Mesh(new THREE.BoxGeometry(10,.08,2),stripes('#2e7d32','#fafafa'));aw.position.set(0,2.9,4.9);aw.rotation.x=.25;aw.castShadow=true;g.add(aw);
+  bx(g,1.2,2.2,1,lam(0xbdbdbd),4.6,7,-2);return [g,8];
+}
+function distributore(){
+  const g=new THREE.Group(),green=lam(0x2e7d32);
+  bx(g,18,.25,12,lam(0x8a8d91),0,.12,2,false);
+  for(const x of[-5,5])for(const z of[0,4])bx(g,.4,4.5,.4,M.white,x,2.35,z);
+  bx(g,13,.7,7,M.white,0,4.9,2);bx(g,13.05,.25,7.05,green,0,4.55,2,false);
+  for(const x of[-2.5,2.5]){bx(g,.9,.3,3.2,M.gray,x,.4,2,false);for(const z of[1.2,2.8]){bx(g,.6,1.6,.45,green,x,1.35,z);bx(g,.5,.3,.47,M.white,x,1.9,z,false);}}
+  bx(g,7,3.2,4,M.white,0,1.6,-5.5);bx(g,6,1.8,.06,M.glass,0,1.5,-3.48,false);
+  const sh=new THREE.Mesh(new THREE.PlaneGeometry(5,1),sign('SELF 24H','#2e7d32','#fff'));sh.position.set(0,2.9,-3.46);g.add(sh);
+  bx(g,1.4,6,.5,green,8,3,6.5);const t=new THREE.Mesh(new THREE.PlaneGeometry(1.3,4.2),sign('CARBURANTI','#ffffff','#1b5e20',128,420));t.position.set(8,3.3,6.76);g.add(t);
+  return [g,10];
+}
+function lamp(x,z,y,rot){const g=new THREE.Group();bx(g,.14,7,.14,M.gray,0,3.5,0);bx(g,.1,.1,1.8,M.gray,0,6.95,.85,false);bx(g,.35,.15,.6,new THREE.MeshBasicMaterial({color:0xfff8e1}),0,6.85,1.6,false);
+  g.position.set(x,y,z);g.rotation.y=rot;scene.add(g);}
+// posa accanto alla strada (side +1 = destra del senso di marcia del gruppo)
+function placeBy(s,side,dist,make){
+  for(const dd of[dist,dist+4,dist+8]){const h=at(P1,s,side*dd,tA),x=tA.x,z=tA.z,[y,dm]=ground(x,z);
+    const ok=dm>dd-2&&[-6,6].every(k=>ground(x+Math.sin(h)*k,z+Math.cos(h)*k)[1]>dd-3);if(!ok)continue;
+    const [g,r]=make();g.position.set(x,y,z);
+    // il fronte (+z locale) guarda la strada
+    const tx=Math.sin(h),tz=Math.cos(h),rx=-tz,rz=tx;g.rotation.y=Math.atan2(-side*rx,-side*rz);
+    const base=new THREE.Mesh(new THREE.BoxGeometry(r*1.6,4,r*1.6),lam(0xb0a48c));base.position.y=-2.05;g.add(base);
+    scene.add(g);BLD.push([x,z,r]);return;}
+}
+function placeAt(x,z,face,make){const [y]=ground(x,z),[g,r]=make();g.position.set(x,y,z);g.rotation.y=Math.atan2(face[0]-x,face[1]-z);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(r*1.6,4,r*1.6),lam(0xb0a48c));base.position.y=-2.05;g.add(base);scene.add(g);BLD.push([x,z,r]);}
+let hs=0;const H=()=>house(hs++);
+[[22,-1],[40,1],[68,-1],[118,1],[176,-1]].forEach(([s,sd])=>placeBy(s,sd,13,H));
+placeBy(96,-1,13,()=>bar('BAR SPORT'));
+placeBy(150,1,16,distributore);
+placeBy(sArc0-22,1,13,H);
+placeBy(sTr+48,-1,13,()=>bar('BAR DELLE CAVE'));
+for(let s=sTr+150,k=0;s<sC1-60;s+=150+((k*37)%60),k++){if(Math.abs(s-(sTr+700))<60||Math.abs(s-(sTr+1300))<60)continue;placeBy(s,k%2?1:-1,13,H);if(k%3===0)placeBy(s+18,k%2?1:-1,13,H);}
+placeBy(sTr+700,1,16,distributore);
+placeBy(sTr+1300,-1,13,pizzeria);
+placeAt(...W([17,8]).slice(0,2),RC2,()=>bar('BAR DELLA ROTONDA'));
+placeAt(...W([-18,9]).slice(0,2),RC2,H);placeAt(...W([-19,42]).slice(0,2),RC2,H);placeAt(...W([19,43]).slice(0,2),RC2,H);
+for(let s=5;s<190;s+=28){const h=at(P1,s,5,tA);lamp(tA.x,tA.z,ground(tA.x,tA.z)[0]+.3,h-Math.PI/2);}
+for(const a of[45,135,225,315]){const p=W([16.5*Math.cos(a*D),ZC+16.5*Math.sin(a*D)]);lamp(p[0],p[1],YT+.1,Math.atan2(RC2[0]-p[0],RC2[1]-p[1]));}
+const nearBld=(x,z,m)=>BLD.some(b=>Math.hypot(b[0]-x,b[1]-z)<b[2]+m);
+
+// alberi (instanced) e pareti di tufo delle cave
+{const N=1500,trunk=new THREE.InstancedMesh(new THREE.CylinderGeometry(.14,.2,1,6),new THREE.MeshLambertMaterial({color:0x6d4c33}),N),
+  leaf=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),N);
+ leaf.castShadow=true;const o=new THREE.Object3D(),col=new THREE.Color(),cs=[0x3f7d3a,0x4f8f3f,0x2f6b34,0x5b8f2f];let n=0;
+ while(n<N){const s=SAMP[Math.floor(Math.random()*SAMP.length)],a=Math.random()*6.283,r=9+Math.random()**1.5*110,x=s[0]+Math.cos(a)*r,z=s[1]+Math.sin(a)*r;
+  const [y,dm]=ground(x,z);if(dm<8.5||nearBld(x,z,2))continue;const h=1.4+Math.random()*1.8,k=.9+Math.random()*.8;
+  o.position.set(x,y+h/2,z);o.scale.set(1,h,1);o.rotation.set(0,0,0);o.updateMatrix();trunk.setMatrixAt(n,o.matrix);
+  o.position.set(x,y+h+.6*k,z);o.scale.setScalar(k*(1+Math.random()*.5));o.rotation.y=Math.random()*3;o.updateMatrix();leaf.setMatrixAt(n,o.matrix);
+  leaf.setColorAt(n,col.setHex(cs[n%4]));n++;}
+ scene.add(trunk,leaf);
+ const tufo=new THREE.MeshLambertMaterial({color:0xd9c08f,flatShading:true});
+ for(let k=0;k<40;k++){const s=P1.N*(sTr+60+Math.random()*(climbLen-120))/P1.len|0,side=Math.random()<.5?-1:1,r=22+Math.random()*45;
+  const x=P1.px[s]-P1.tz[s]*side*r,z=P1.pz[s]+P1.tx[s]*side*r,[y,dm]=ground(x,z);if(dm<16||nearBld(x,z,8))continue;
+  const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1,0),tufo);m.scale.set(6+Math.random()*10,3+Math.random()*7,5+Math.random()*8);m.position.set(x,y+1,z);m.rotation.y=Math.random()*3;m.castShadow=true;m.receiveShadow=true;scene.add(m);}
+}
+
+// striscione "INIZIANO LE CAVE" sopra la strada
+{const c=document.createElement('canvas');c.width=1024;c.height=180;const g=c.getContext('2d');
+ const draw=()=>{g.fillStyle='#c62828';g.fillRect(0,0,1024,180);g.fillStyle='#fff';g.fillRect(0,10,1024,6);g.fillRect(0,164,1024,6);
+  let fs=120;do{g.font=`800 ${fs}px "Barlow Condensed",Impact,"Arial Narrow",sans-serif`;fs-=4;}while(g.measureText('INIZIANO LE CAVE').width>950&&fs>40);g.textAlign='center';g.textBaseline='middle';g.fillText('INIZIANO LE CAVE',512,96);};
+ draw();const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;tex.anisotropy=4;
+ if(document.fonts)document.fonts.ready.then(()=>{draw();tex.needsUpdate=true;});
+ const b=new THREE.Group(),mat=new THREE.MeshLambertMaterial({map:tex,side:THREE.FrontSide}),pole=new THREE.MeshLambertMaterial({color:0x9aa0a6});
+ const f=new THREE.Mesh(new THREE.PlaneGeometry(10,1.76),mat);f.rotation.y=Math.PI;f.position.y=4.6;const bk=new THREE.Mesh(new THREE.PlaneGeometry(10,1.76),mat);bk.position.set(0,4.6,.02);
+ for(const x of[-5.1,5.1]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,5.7,8),pole);p.position.set(x,2.85,.01);p.castShadow=true;b.add(p);}
+ f.castShadow=true;b.add(f,bk);at(P1,sBan,0,tA);b.position.copy(tA);scene.add(b);}
+
+// ---------- ciclista ----------
+const UP=new V3(0,1,0),tmp=new V3();
+function limb(m,a,b){tmp.subVectors(b,a);const L=tmp.length();m.position.copy(a).addScaledVector(tmp,.5);m.scale.set(1,L,1);m.quaternion.setFromUnitVectors(UP,tmp.normalize());}
+const unitCyl=r=>new THREE.CylinderGeometry(r,r,1,8);
+const black=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6}),skin=new THREE.MeshStandardMaterial({color:0xe0ac82,roughness:.8});
+const metal=new THREE.MeshStandardMaterial({color:0xb0b4ba,metalness:.7,roughness:.3});
+function makeRider(d){
+  const grp=new THREE.Group(),jersey=new THREE.MeshStandardMaterial({color:d.c,roughness:.7}),frameM=new THREE.MeshStandardMaterial({color:d.c,metalness:.3,roughness:.4});
+  grp.rotation.order='YXZ';
+  const add=m=>{m.castShadow=true;grp.add(m);return m;},V=(x,y,z)=>new V3(x,y,z),wheels=[];
+  for(const z of[-.52,.52]){const w=new THREE.Group();w.position.set(0,.34,z);
+    const ty=new THREE.Mesh(new THREE.TorusGeometry(.33,.025,8,32),black);ty.rotation.y=Math.PI/2;ty.castShadow=true;w.add(ty);
+    for(let k=0;k<3;k++){const s=new THREE.Mesh(new THREE.BoxGeometry(.01,.64,.01),metal);s.rotation.x=k*Math.PI/3;w.add(s);}
+    grp.add(w);wheels.push(w);}
+  const P={bb:V(0,.3,0),seat:V(0,.88,-.16),head:V(0,.82,.42),rear:V(0,.34,-.52),front:V(0,.34,.52),bar:V(0,1,.46)};
+  [[P.bb,P.seat],[P.bb,P.head],[P.seat,P.head],[P.bb,P.rear],[P.seat,P.rear],[P.head,P.front],[P.head,P.bar]].forEach(([a,b])=>limb(add(new THREE.Mesh(unitCyl(.022),frameM)),a,b));
+  const bar=add(new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.42,6),black));bar.rotation.z=Math.PI/2;bar.position.copy(P.bar);
+  add(new THREE.Mesh(new THREE.BoxGeometry(.12,.04,.26),black)).position.set(0,.92,-.17);
+  limb(add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,1,10),jersey)),V(0,.96,-.17),V(0,1.36,.22));
+  const head=add(new THREE.Mesh(new THREE.SphereGeometry(.11,14,12),skin));head.position.set(0,1.5,.34);
+  const hm=add(new THREE.Mesh(new THREE.SphereGeometry(.125,14,10,0,Math.PI*2,0,Math.PI/2),jersey));hm.position.set(0,1.52,.32);hm.rotation.x=.25;
+  for(const x of[-.16,.16]){const s=V(x,1.33,.2),h=V(x*.9,1,.44),e=V(x*1.15,1.16,.36);
+    limb(add(new THREE.Mesh(unitCyl(.045),jersey)),s,e);limb(add(new THREE.Mesh(unitCyl(.038),skin)),e,h);}
+  const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(unitCyl(.065),black)),shin:add(new THREE.Mesh(unitCyl(.045),skin)),
+    crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),metal)),hip:V(sd*.09,.96,-.15)}));
+  grp.userData={wheels,legs,head,phase:Math.random()*6.28,lean:0,crank:0};scene.add(grp);return grp;
+}
+const L1=.46,L2=.48,knee=new V3(),foot=new V3(),dv=new V3(),XA=new V3(1,0,0);
+function pedal(r,ang,stop){for(const l of r.userData.legs){const a=ang+(l.sd>0?Math.PI:0);
+  foot.set(l.sd*.11,.3-Math.cos(a)*.17,-Math.sin(a)*.17);if(stop&&l.sd<0)foot.set(-.36,-.02,.05);
+  l.crank.position.set(l.sd*.07,.3-Math.cos(a)*.085,-Math.sin(a)*.085);l.crank.rotation.x=a+Math.PI/2;
+  dv.subVectors(foot,l.hip);const d=Math.min(dv.length(),L1+L2-.001),th=Math.acos((L1*L1+d*d-L2*L2)/(2*L1*d));dv.normalize();
+  knee.copy(dv).applyAxisAngle(XA,-th).multiplyScalar(L1).add(l.hip);limb(l.thigh,l.hip,knee);limb(l.shin,knee,foot);}}
+
+// ---------- auto ----------
+const COLS=[0xc62828,0x1565c0,0xeeeeee,0x263238,0x9e9e9e,0x2e7d32,0xf9a825,0x6a1b9a,0x00838f,0x795548];
+function makeCar(col){
+  const g=new THREE.Group(),body=new THREE.MeshStandardMaterial({color:col,metalness:.4,roughness:.35}),glass=new THREE.MeshStandardMaterial({color:0x1c2a36,metalness:.6,roughness:.15});
+  const b=new THREE.Mesh(new THREE.BoxGeometry(1.8,.65,4.2),body);b.position.y=.6;
+  const c=new THREE.Mesh(new THREE.BoxGeometry(1.6,.6,2.1),glass);c.position.set(0,1.2,-.25);
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(1.62,.08,1.9),body);roof.position.set(0,1.52,-.25);
+  [b,c,roof].forEach(m=>{m.castShadow=true;g.add(m);});
+  for(const x of[-.85,.85])for(const z of[-1.35,1.35]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.25,14),black);w.rotation.z=Math.PI/2;w.position.set(x,.33,z);g.add(w);}
+  const lm=new THREE.MeshBasicMaterial({color:0xfff7d6}),rm=new THREE.MeshBasicMaterial({color:0xb71c1c});
+  for(const x of[-.6,.6]){const f=new THREE.Mesh(new THREE.BoxGeometry(.35,.15,.05),lm);f.position.set(x,.7,2.11);const r=new THREE.Mesh(new THREE.BoxGeometry(.35,.15,.05),rm);r.position.set(x,.7,-2.11);g.add(f,r);}
+  g.rotation.order='YXZ';scene.add(g);return g;
+}
+const cars=[];
+const addCar=(path,s,cruise,follow)=>cars.push({path,s,v:cruise,cruise,follow,off:1.75,mesh:makeCar(COLS[cars.length%COLS.length]),active:s>=0,cool:0,pos:new V3(),fx:0,fz:1});
+addCar(P1c,10,13,true);addCar(P1c,-60,12.5,true);addCar(P1c,-150,13,true);
+for(let k=0;k<3;k++)addCar(P2,k*P2.len/3,12,false);
+for(let k=0;k<5;k++)addCar(P5,k*P5.len/5,12.5,false);
+
+// ---------- copione della corsa sulla salita (p = avanzamento della testa sulla salita) ----------
+// [p, distacco dalla testa in metri (a 7,2 m/s), distanza dal centro strada]
+// ps: lo strappo vero del segmento (km 2); pr: Rocco cede a 1500 m (reali) dalla rotonda in cima
+const ps=.327,a=ps-.04,b=ps+.02,c=ps+.08,pr=1-1500/6150;
+const KF={
+ Jack:[[0,0,2.75],[.85,0,2.75],[.93,0,2.6]],
+ Marco:[[0,0,1.95],[.85,0,1.95],[.93,1.9,2.6]],
+ Rocco:[[0,2.4,2.6],[a,2.4,2.6],[b,7,2.6],[c,12,2.6],[pr,12,2.6],[pr+.04,15.6,2.6],[pr+.065,15.8,2.6],[pr+.16,36,2.6]],
+ Geppino:[[0,4.3,2.6],[a,4.3,2.6],[b,8.9,2.6],[c,13.9,2.6],[pr,13.9,2.6],[pr+.02,13.85,1.45],[pr+.04,13.9,2.6],[pr+.065,14.1,2.6],[pr+.16,3.8,2.6]],
+ Ciccio:[[0,9,2.75],[a,9,2.75],[b,16,2.75],[c,30,2.75],[1,420,2.75]],
+ Mario:[[0,9,1.95],[a,9,1.95],[b,16,1.95],[c,30,1.95],[1,420,1.95]]
+};
+function kf(name,p){const k=KF[name];if(p<=k[0][0])return[k[0][1],k[0][2]];
+  for(let i=1;i<k.length;i++)if(p<=k[i][0]){const t=sstep((p-k[i-1][0])/(k[i][0]-k[i-1][0]));return[k[i-1][1]+(k[i][1]-k[i-1][1])*t,k[i-1][2]+(k[i][2]-k[i-1][2])*t];}
+  const l=k[k.length-1];return[l[1],l[2]];}
+const RING_ORDER=['Jack','Marco','Geppino','Rocco'],G_ORDER=['Marco','Jack','Ciccio','Mario','Geppino','Rocco'];
+// strada del ritorno di Jack e Marco: un giro di rotonda e giù per la salita
+const PJ=buildPath([...loc(arcP(0,ZC,10.5,-100,-440)),...loc([[0,6]]),...TR.slice().reverse()]);
+const sPJ_TE=nearestS(PJ,TE[0],TE[1]),sP1_TE=nearestS(P1,TE[0],TE[1],sTr+500);
+const eqS=s=>sP1_TE-(s-sPJ_TE);
+const pStop=W([10.5*Math.cos(-1305*D),ZC+10.5*Math.sin(-1305*D)]),sStop=nearestS(P1,pStop[0],pStop[1],sC1+3*lapLen,sC1+4*lapLen);
+
+// ---------- stato ----------
+const pack=RIDERS.map(dd=>{const r=makeRider(dd);const el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${dd.n}</b><i></i>`;$('tags').appendChild(el);r.userData.tag=el;r.userData.s=0;r.userData.off=2.6;return r;});
+const U=n=>pack[IDX[n]].userData;
+RIDERS.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Segui: '+r.n;$('chi').appendChild(o);});
+let S;
+function reset(){
+  S={t:0,lead:90,v:8.5,form:1,mode:'strada',t0:0,sG:0,vArr:7,vRing:6,vMC:6.2,arr:{},sub:'giri',sR:null,vR:6,jumped:false,form4:1};
+  pack.forEach(r=>{Object.assign(r.userData,{path:P1,st:'strada',stopped:false,hrel:0,v:8.5,lastP:null,j:false});});
+  cars.forEach((c,i)=>{if(c.follow){c.s=[10,-60,-150][i];c.active=c.s>=0;c.cool=0;c.off=1.75;}});
+  $('arrivi').textContent='';firstCam=true;
+}
+let firstCam=true;reset();
+
+function oldSlot(i){const gS=2.1*i,gP=2.4*Math.floor(i/2),oS=2.6,oP=i%2?1.95:2.75;return[gS+(gP-gS)*S.form,oS+(oP-oS)*S.form];}
+const toward=(u,o,dt,k=1.5)=>{u.off+=(o-u.off)*Math.min(1,dt*k);};
+function arrive(n){if(S.arr[n]===undefined){S.arr[n]=S.t-S.t0;showArr();}}
+function step(dt){
+  S.t+=dt;
+  if(S.mode==='strada'){
+    let maxK=0;for(let q=0;q<25;q+=2.5)maxK=Math.max(maxK,Math.abs(curv(P1,S.lead+q)));
+    const curvy=maxK>.02,onClimb=S.lead>sTr,gr=slope(P1,S.lead)*66.7;
+    const vt=onClimb?clamp(8.6-.55*gr,5.8,9.2):(curvy?6:8.5);
+    S.v+=(vt-S.v)*Math.min(1,dt*1.2);S.lead+=S.v*dt;
+    let carBehind=false;for(const cc of cars)if(cc.follow&&cc.active){const q=S.lead-cc.s;if(q>0&&q<45)carBehind=true;}
+    S.form+=((curvy||carBehind?0:1)-S.form)*Math.min(1,dt*.8);
+    const p=(S.lead-sTr)/climbLen,tr=sstep(clamp((S.lead-sArc0)/(sTr+40-sArc0),0,1)),sc=S.v/7.2;
+    pack.forEach((r,i)=>{const u=r.userData,[g0,o0]=oldSlot(i),[g1,o1]=kf(RIDERS[i].n,p);
+      const g=g0+(g1*sc-g0)*tr;let o=o0+(o1-o0)*tr;if(g1<g0)o-=.5*Math.sin(Math.PI*tr);
+      u.s=S.lead-g+Math.sin(S.t*.4+u.phase)*.12;u.off=o+Math.sin(S.t*.5+u.phase)*.05;u.v=S.v;});
+    if(S.lead>=sC1){S.mode='cima';S.t0=S.t;S.sG=S.lead;S.vArr=S.v;S.vMC=clamp(S.v*.8,5.5,7);
+      pack.forEach((r,i)=>{const u=r.userData,n=RIDERS[i].n;u.st=n==='Jack'?'giro':(n==='Mario'||n==='Ciccio')?'sale':'arrivo';});arrive('Jack');}
+    return carsStep(dt);
+  }
+  // ---- in cima ----
+  if(S.sub==='giri'){S.sG+=S.vRing*dt;if(S.sG>=sC1+3*lapLen)S.sub='divisi';}
+  if(S.sR!==null){
+    let maxK=0;for(let q=0;q<20;q+=2.5)maxK=Math.max(maxK,Math.abs(curv(P1,S.sR+q)));
+    S.form4+=((maxK>.02?0:1)-S.form4)*Math.min(1,dt*.8);
+    S.vR+=((S.sR>sC1-30?6:S.vMC)-S.vR)*Math.min(1,dt);S.sR+=S.vR*dt;
+    if(!S.jumped&&S.sR>=sC1){S.jumped=true;S.sR+=3*lapLen;}
+    if(S.sR>P1.len-25){reset();return;}
+  }
+  pack.forEach((r,i)=>{const u=r.userData,n=RIDERS[i].n;u.stopped=false;
+    switch(u.st){
+    case'arrivo':u.v=S.vArr;u.s+=u.v*dt;toward(u,2.6,dt);
+      if(u.s>=sC1){u.st='giro';arrive(n);const tgt=S.sG-2.1*RING_ORDER.indexOf(n),k=Math.max(0,Math.round((tgt-u.s)/lapLen));u.s+=k*lapLen;}break;
+    case'sale':u.v=S.vMC;u.s+=u.v*dt;toward(u,n==='Ciccio'?2.75:1.95,dt);break;
+    case'giro':{const tgt=S.sG-2.1*RING_ORDER.indexOf(n);
+      if(S.sub==='giri'){u.v=S.vRing+clamp((tgt-u.s)*.7,-2,3);u.s+=u.v*dt;toward(u,2.6,dt);}
+      else if(n==='Jack'||n==='Marco'){u.v=S.vRing;u.s+=u.v*dt;if(u.s>=sC1+3*lapLen){u.st='scende';u.path=PJ;u.s-=sC1+3*lapLen;}}
+      else{const t2=n==='Geppino'?sStop:sStop-2.2;u.v=clamp((t2-u.s)*.8,0,S.vRing);u.s+=u.v*dt;toward(u,3.5,dt,1);if(t2-u.s<.15){u.st='fermo';}}
+      break;}
+    case'fermo':u.v=0;u.stopped=true;toward(u,3.5,dt,1);
+      if(S.jumped){const tgt=S.sR-slot4(n)[0];if(tgt>u.s+.3){u.st='gruppo';u.j=true;}}break;
+    case'scende':u.v=u.s<sPJ_TE?6:8.5;u.s+=u.v*dt;toward(u,2.6,dt);
+      if(n==='Marco'&&u.s>sPJ_TE&&eqS(u.s)<=U('Ciccio').s-3){for(const m of['Jack','Marco']){const w=U(m);w.st='inversione';w.path=P1;w.s0=eqS(w.s);w.phi=0;w.s=w.s0;w.off=-2.6;}}
+      break;
+    case'inversione':u.phi=Math.min(Math.PI,u.phi+dt*Math.PI/2.4);u.s=u.s0-2.3*Math.sin(u.phi);u.off=-.3-2.3*Math.cos(u.phi);u.hrel=Math.atan2(Math.sin(u.phi),-Math.cos(u.phi));u.v=3;
+      if(u.phi>=Math.PI){u.st='gruppo';u.hrel=0;if(S.sR===null){S.sR=Math.max(U('Ciccio').s,U('Mario').s)+2.4;S.vR=S.vMC;S.form4=1;U('Ciccio').st='gruppo';U('Mario').st='gruppo';}}
+      break;
+    case'gruppo':{if(!u.j&&u.s>=sC1&&u.s<sC1+lapLen){u.j=true;u.s+=3*lapLen;if(n==='Ciccio'||n==='Mario')arrive(n);}
+      const [g,o]=slot4(n),tgt=S.sR-g+(u.j?0:-3*lapLen*(S.jumped?1:0))+(u.j&&!S.jumped?3*lapLen:0);u.v=clamp(S.vR+(tgt-u.s)*.7,0,9.5);u.s+=u.v*dt;
+      toward(u,(n==='Jack'||n==='Marco')&&tgt-u.s>2.5&&!S.jumped?1:o,dt);break;}
+    }
+  });
+  carsStep(dt);
+}
+function slot4(n){const ri=G_ORDER.indexOf(n),gS=2.1*ri,gP=2.4*Math.floor(ri/2),f=S.form4;return[gS+(gP-gS)*f,2.3+((ri%2?1.95:2.75)-2.3)*f];}
+function carsStep(dt){
+  const obst=[];pack.forEach(r=>obst.push(r.position));cars.forEach(cc=>{cc.pos.isCar=true;cc.active&&obst.push(cc.pos);});
+  const onP1=pack.filter(r=>r.userData.path===P1).map(r=>r.userData.s),ref=Math.max(...onP1);
+  for(const cc of cars){
+    if(!cc.active){cc.cool-=dt;const sp=ref-95-Math.random()*30;
+      if(cc.cool<=0&&sp>0&&sp<sC1-60&&onP1.every(s=>Math.abs(s-sp)>35)&&cars.every(o=>o===cc||!o.active||o.path!==cc.path||Math.abs(o.s-sp)>25)){cc.s=sp;cc.active=true;cc.v=cc.cruise;cc.off=1.75;}continue;}
+    if(cc.follow){let near=false;for(const s of onP1){const q=s-cc.s;if(q>-9&&q<28)near=true;}
+      const inRing=(cc.s>sR1a-15&&cc.s<sR1b+5)||cc.s>sC1-20,bend=Math.abs(curv(cc.path,cc.s+8))>.02||Math.abs(curv(cc.path,cc.s+20))>.02;
+      const inTop=cc.s>sC1-6&&cc.s<sC1+55;cc.overt=inTop||(near&&(cc.overt||(!inRing&&!bend)));cc.off+=((cc.overt?.15:1.75)-cc.off)*Math.min(1,dt*1.6);}
+    let blocked=false;for(const o of obst){if(o===cc.pos)continue;const dx=o.x-cc.pos.x,dz=o.z-cc.pos.z,al=dx*cc.fx+dz*cc.fz,sd=Math.abs(-dx*cc.fz+dz*cc.fx);if(al>.5&&al<10&&sd<(o.isCar?1.6:(cc.overt?1.2:2.1))){blocked=true;break;}}
+    cc.v=blocked?Math.max(0,cc.v-14*dt):Math.min(cc.cruise*(Math.abs(curv(cc.path,cc.s+6))>.02?.6:1),cc.v+4*dt);
+    cc.s+=cc.v*dt;
+    if(cc.s>cc.path.len){if(cc.follow){cc.active=false;cc.cool=3+Math.random()*5;continue;}cc.s=0;}
+  }
+}
+function showArr(){const l=Object.entries(S.arr).sort((x,y)=>x[1]-y[1]);
+  $('arrivi').textContent='In cima: '+l.map(([n,t],i)=>i===0?n:`${n} +${Math.round(t)}″`).join(' · ');}
+
+// ---------- disegno ----------
+const center=new V3(),fwd=new V3(0,0,1),camGoal=new V3(),look=new V3(),lastCenter=new V3(),proj=new V3();
+function place(){
+  pack.forEach(r=>{const u=r.userData,h=at(u.path,u.s,u.off,r.position);r.rotation.y=h-u.hrel;
+    const lean=u.stopped?-.13:Math.atan(u.v*u.v*curv(u.path,u.s)/9.8);u.lean+=(lean-u.lean)*.1;r.rotation.z=-u.lean*.8;r.rotation.x=u.hrel?0:-Math.atan(slope(u.path,u.s));
+    const mv=u.lastP?Math.min(2,r.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(r.position);
+    if(!u.stopped)u.crank+=mv;pedal(r,u.crank+u.phase,u.stopped);u.wheels.forEach(w=>w.rotation.x=u.crank*2.94);});
+  for(const cc of cars){cc.mesh.visible=cc.active;if(!cc.active)continue;const h=at(cc.path,cc.s,cc.off,cc.pos);cc.fx=Math.sin(h);cc.fz=Math.cos(h);cc.mesh.position.copy(cc.pos);cc.mesh.rotation.y=h;cc.mesh.rotation.x=-Math.atan(slope(cc.path,cc.s));}
+}
+let view='segui',paused=false,mult=3,spread=0;
+function setView(v){view=v;document.querySelectorAll('nav [data-v]').forEach(bb=>bb.classList.toggle('on',bb.dataset.v===v));controls.enabled=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
+document.querySelectorAll('nav [data-v]').forEach(bb=>bb.addEventListener('click',()=>setView(bb.dataset.v)));
+renderer.domElement.addEventListener('pointerdown',()=>{if(view!=='libera')setView('libera');});
+$('pausa').addEventListener('click',()=>{paused=!paused;$('pausa').textContent=paused?'Riparti':'Pausa';$('pausa').classList.toggle('on',paused);});
+$('reset').addEventListener('click',reset);
+$('vel').addEventListener('click',()=>{mult={1:2,2:3,3:5,5:1}[mult];$('vel').textContent='×'+mult;});
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+
+const clock=new THREE.Clock();
+function phase(){
+  if(S.mode==='cima'){
+    const J=U('Jack'),G=U('Geppino');
+    if(S.sub==='giri'){const giro=clamp(Math.floor((S.sG-sC1)/lapLen)+1,1,3);return`In cima: giro ${giro} di 3 della rotonda, in attesa di Mario e Ciccio`;}
+    if(J.st==='giro'||J.st==='scende')return S.sR===null&&J.st==='scende'&&J.s>sPJ_TE?'Jack e Marco scendono incontro a Mario e Ciccio':'Mario e Ciccio non si vedono: Jack e Marco tornano indietro, Geppino e Rocco si accostano';
+    if(J.st==='inversione')return'Jack e Marco incontrano Mario e Ciccio e fanno inversione';
+    if(!S.jumped)return'Marco, Jack, Ciccio e Mario risalgono insieme';
+    if(G.st!=='gruppo')return'Arrivano da Geppino e Rocco, fermi a bordo strada';
+    return'Tutti insieme si riparte';}
+  const L=S.lead;if(L<sR1a)return'Rettilineo verso la rotonda';if(L<sR1b)return'Rotonda: a sinistra';if(L<sArc0)return'Breve rettilineo, poi a destra';if(L<sTr-12)return'Svolta a destra';
+  const p=(L-sTr)/climbLen;if(p<.03)return'Iniziano le Cave';if(p<a)return'La strada sale: davanti Jack e Marco, poi Rocco con Geppino a ruota, più indietro Ciccio e Mario';
+  if(p<c)return'La strada impenna: Jack e Marco aumentano il ritmo';if(p<pr)return'Jack e Marco hanno una decina di metri, Geppino resta a ruota di Rocco';
+  if(p<pr+.04)return'A 1,5 km dalla rotonda Rocco cede, Geppino lo supera';if(p<pr+.065)return'Rocco tiene la ruota di Geppino';
+  if(p<pr+.16)return'Geppino accelera per riprendere Jack e Marco, Rocco si stacca';return'Ultimo tratto';}
+function frame(){
+  const dt=Math.min(clock.getDelta(),.05);
+  if(!paused){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}}
+  place();
+  // chi seguire: il gruppo attorno a Jack, oppure un corridore
+  const who=+$('chi').value,lead=who>=0?pack[who]:pack[IDX.Jack];
+  if(who>=0){center.copy(lead.position);spread=3;}
+  else{center.set(0,0,0);let n=0,mx=0;pack.forEach(r=>{const dd=r.position.distanceTo(lead.position);if(dd<20){center.add(r.position);n++;mx=Math.max(mx,dd);}});center.divideScalar(n);spread=mx*1.2;}
+  const h=at(lead.userData.path,lead.userData.s,0,tB);fwd.lerp(tmp.set(Math.sin(h),0,Math.cos(h)),firstCam?1:Math.min(1,dt*1.5)).normalize();
+  const rx=-fwd.z,rz=fwd.x,cy=center.y;
+  if(view==='libera'){camera.position.add(tmp.subVectors(center,lastCenter));controls.target.copy(center).setY(cy+1);controls.update();}
+  else{
+    if(view==='segui')camGoal.set(center.x-fwd.x*11-rx*3.5,cy+4.4,center.z-fwd.z*11-rz*3.5),look.set(center.x+fwd.x*4,cy+1,center.z+fwd.z*4);
+    if(view==='lato'){const hf=2*Math.atan(Math.tan(camera.fov*D/2)*camera.aspect),dl=clamp((spread+3)/(2*Math.tan(hf/2))*1.1,8,45);camGoal.set(center.x-rx*dl+fwd.x*1.5,cy+3.4+dl*.18,center.z-rz*dl+fwd.z*1.5);look.set(center.x,cy+1.1,center.z);}
+    if(view==='alto')camGoal.set(center.x-fwd.x*18,cy+38,center.z-fwd.z*18),look.set(center.x+fwd.x*10,cy,center.z+fwd.z*10);
+    camera.position.lerp(camGoal,firstCam?1:Math.min(1,dt*2.5));camera.lookAt(look);
+  }
+  firstCam=false;lastCenter.copy(center);
+  sun.position.set(center.x-20,center.y+40,center.z+14);sun.target.position.copy(center);
+  $('info').textContent=phase();
+  const lu=lead.userData,onP1=lu.path===P1,ls=lu.s,onClimb=onP1&&ls>sTr&&ls<sC1;
+  $('pend').textContent=onClimb?`Pendenza ${(slope(P1,ls)*66.7).toFixed(1).replace('.',',')}% · alla rotonda ${(((sC1-ls)/climbLen)*6.15).toFixed(1).replace('.',',')} km`:'';
+  $('quota').textContent=lead.position.y>.5?`Dislivello +${Math.round(Math.max(0,lead.position.y)/.6)} m`:'';
+  pack.forEach((r,i)=>{const u=r.userData;u.head.getWorldPosition(proj);proj.y+=.42+(i%2?0:.38);proj.project(camera);
+    const vis=proj.z<1&&Math.abs(proj.x)<1.2&&Math.abs(proj.y)<1.2;u.tag.style.opacity=vis?1:0;u.tag.style.zIndex=Math.round((1-proj.z)*1e5);
+    u.tag.style.transform=`translate(${(proj.x*.5+.5)*innerWidth}px,${(-proj.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
+  renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+frame();
+}
+</script>
+</body>
+</html>
