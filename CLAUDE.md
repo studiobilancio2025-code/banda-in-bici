@@ -1,0 +1,37 @@
+# La banda in bici — istruzioni per Claude
+
+Sito statico su GitHub Pages: https://studiobilancio2025-code.github.io/banda-in-bici/
+Proprietario: Geppino (Giovangiuseppe Bilancio). Parlagli sempre in italiano, in modo semplice: non è uno sviluppatore.
+
+## Cosa c'è
+- `index.html` — scena 3D "La salita dei Prof." (segmento Strava del 22/09/2026), con foto satellitare. File unico con dati e immagini incorporati (~9 MB).
+- `cave.html` — salita delle Cave con la "banda" (corsa con copione scritto a mano, non dati veri degli amici).
+- `varcaturo.html` — tratto Varcaturo – Lago Patria.
+- `crea.html` — **l'app**: costruisce da sola la scena 3D partendo da più file GPX. È generata da `app/crea_src.html` con `python3 app/build.py` (inserisce il CSS di Leaflet). Modifica sempre `app/crea_src.html`, poi rigenera `crea.html`.
+
+## Come funziona crea.html
+1. **GPX**: si caricano più file (uno per ciclista). I file arrivano quasi sempre dall'app Android "Esporta GPX per Strava": tempi **relativi** (anno 1970, e il primo punto può non essere a 0), niente battiti/cadenza/watt, a volte pause senza punti. Se un GPX ha ora vera o estensioni (hr, cad, power) vengono usate.
+2. **Sincronizzazione**: il primo file è l'orologio di riferimento. Per gli altri si cerca lo spostamento `off` (t_rif = t_ciclista + off) che massimizza i secondi in cui le tracce distano < 12 m, contando **solo i secondi in movimento** (nelle soste qualunque spostamento sembrerebbe giusto). Ricerca a 10 s su ±90 min, poi al secondo. Chi non ha mai pedalato col primo diventa "fantasma": parte con lui all'inizio del tratto (`gshift`).
+   - Verifica di riferimento: Geppino 21067817870 + Mario 21067822670 (21/11/2026) → off Mario ≈ −1685 s nel sistema dell'app (−1829 s se si contano i 144 s iniziali del file di Mario), insieme ~84 min; sul segmento "Le Cave" Geppino 14'19", Mario 19'17", Mario +4'59" in cima.
+3. **Tratto**: mappa Leaflet con foto Esri, si tocca partenza e arrivo; passaggi di ciascuno al punto più vicino (< 40 m).
+4. **Scena**: percorso = traccia del riferimento da 150 m prima a 200 m dopo, agganciata alle strade OSM (< 14 m). Dal browser: OpenStreetMap API (`api.openstreetmap.org/api/0.6/map`, CORS ok, se 400 divide il riquadro in 4) e tile Esri World Imagery (CORS ok) zoom 17 (±380 m) e 18 (±120 m). Dai pixel delle foto: colore dei tetti (mediana dentro la pianta) e alberi (indice verde 2G−R−B > 14) su griglia da 5 m. Ogni ciclista è proiettato sul percorso secondo per secondo; in corsia si mettono in fila o a coppie quando sono vicini.
+5. **Visuali**: Dalla moto, Di lato, Drone dietro, Drone davanti, Elicottero, Libera; "Inquadra" sceglie il ciclista. Velocità ×1…×20. Classifica dal vivo con distacchi in tempo.
+6. **Volti**: foto caricata per ciascun ciclista → ritaglio quadrato 256 px → disco col volto sulla testa (testa un po' più grande).
+7. **Salva scena**: crea un HTML unico con i dati (solo la finestra del tratto ± 4 min) in `<script id="scena" type="application/json">`; aprendolo la scena si costruisce da sola (mappe e foto scaricate al momento). Su Android usa la condivisione (WhatsApp), altrimenti scarica il file.
+
+## Regole importanti
+- **Mai** mettere file GPX/FIT/TCX nel repository (è pubblico e i file contengono la casa dei ciclisti): c'è `.gitignore`. I file di prova vanno caricati nella sessione.
+- Pubblicare dati di altri ciclisti solo col loro consenso (Geppino lo chiede su WhatsApp).
+- Strava: non usare l'API per mostrare a Geppino i dati di altri (regole Strava dal 2024). I file li esportano gli amici o li scarica Geppino con l'app.
+- three.js **0.147.0** da jsdelivr: `examples/js/` (OrbitControls) non esiste dalla 0.148. In 0.147 `InstancedMesh` non calcola il proprio boundingSphere: impostarlo a mano sulla geometria clonata (vedi alberi), altrimenti sparisce.
+- Pedali in avanti: piede a `(x, .3−cos a·.17, −sin a·.17)`, pedivella `rotation.x = a + π/2`.
+- Strisce (strip) con offset crescenti, altrimenti le facce guardano in basso.
+- Fonti da citare sempre: "© OpenStreetMap · Esri, Maxar, Earthstar Geographics".
+- Overpass API e altimetria Esri non sono utilizzabili (bloccata / valori sbagliati): il terreno segue la quota della traccia.
+
+## Da fare / idee
+- Mini-altimetria con pallino; fantasma del miglior tempo; luce all'ora vera dell'uscita.
+- Modalità leggera automatica sui telefoni lenti (meno alberi, ombre ridotte).
+- Pagina indice con l'elenco delle scene.
+- Gestione di uscite lunghe (> 8 km di tratto): limitare tile e alberi.
+- Caricamento diretto delle scene salvate nel repository (oggi: Geppino manda il file e lo si carica a mano).

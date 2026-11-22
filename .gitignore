@@ -1,0 +1,6 @@
+# file personali: mai nel repository pubblico
+*.gpx
+*.fit
+*.tcx
+prove/
+test_*
