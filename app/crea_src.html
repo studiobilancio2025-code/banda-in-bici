@@ -46,6 +46,8 @@ h2 i{font-style:normal;background:var(--ink);color:#fff;border-radius:50%;width:
 .ok{color:#1b7a34;font-weight:600}.warn{color:#b26a00;font-weight:600}
 .seglist{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin:8px 0;padding-right:2px}
 .seg{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:600 17px "Barlow Condensed";cursor:pointer;min-height:44px;color:var(--ink)}
+.rider .save{font:700 17px "Barlow Condensed";min-height:44px;padding:0 14px;border-radius:10px;border:2px solid var(--ink);background:#ffd400;color:var(--ink);cursor:pointer}
+.rider .save.done{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32}
 .seg.on{border:2px solid var(--ink);background:#fff8cc}
 .seg span{color:var(--mut);white-space:nowrap;font-weight:600;flex:none}
 .bchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
@@ -198,13 +200,14 @@ function syncRider(r){
 }
 // ---------- la banda: ciclisti salvati sul telefono (nome, colore, volto, altezza, fisico) ----------
 const PK='banda.ciclisti';let BANDA=[];try{BANDA=JSON.parse(localStorage.getItem(PK)||'[]');}catch(e){}
-const saveBanda=()=>{try{localStorage.setItem(PK,JSON.stringify(BANDA));}catch(e){}};
+const saveBanda=()=>{try{localStorage.setItem(PK,JSON.stringify(BANDA));return true;}catch(e){alert('Non riesco a salvare sul telefono (memoria piena?). Prova a togliere qualche ciclista dalla banda.');return false;}};
 const keyN=n=>(n||'').trim().toLowerCase();
-function applyProf(r,p){Object.assign(r,{name:p.name,color:p.color,face:p.face,alt:p.alt||'media',fis:p.fis||'normale',prof:p.name});}
-function upsert(r){const p={name:r.name.trim(),color:r.color,face:r.face,alt:r.alt,fis:r.fis};if(!p.name)return;
-  const i=BANDA.findIndex(q=>keyN(q.name)===keyN(r.prof||r.name));if(i>=0)BANDA[i]=p;else BANDA.push(p);r.prof=p.name;saveBanda();renderBanda();}
+function applyProf(r,p){Object.assign(r,{name:p.name,color:p.color,face:p.face,alt:p.alt||'media',fis:p.fis||'normale',prof:p.name,dirty:false});}
+function upsert(r){const p={name:r.name.trim(),color:r.color,face:r.face,alt:r.alt,fis:r.fis};if(!p.name)return false;
+  const i=BANDA.findIndex(q=>keyN(q.name)===keyN(p.name));if(i>=0)BANDA[i]=p;else BANDA.push(p);
+  if(!saveBanda())return false;r.prof=p.name;r.dirty=false;renderBanda();return true;}
 function renderBanda(){const b=$('banda');
-  b.innerHTML=`<b style="font:800 20px 'Barlow Condensed'">La banda</b> <span class="meta">${BANDA.length?'· ciclisti salvati su questo telefono: si riconoscono da soli dal nome del file':'· ancora vuota: dopo aver caricato un GPX, tocca "Salva nella banda"'}</span>
+  b.innerHTML=`<b style="font:800 20px 'Barlow Condensed'">La banda</b> <span class="meta">${BANDA.length?'· ciclisti salvati su questo telefono: si riconoscono da soli dal nome del file':'· ancora vuota: dopo aver caricato un GPX, scrivi il nome e tocca "Salva" sotto il ciclista'}</span>
   ${BANDA.length?`<div class="bchips">${BANDA.map((p,i)=>`<span class="bchip"><i style="border-color:${p.color};${p.face?`background-image:url(${p.face})`:''}"></i>${p.name}<button data-rm="${i}" aria-label="Togli ${p.name}">×</button></span>`).join('')}</div>`:''}
   <div class="btns" style="margin-top:6px">${BANDA.length?'<button class="small" id="bexp">Esporta la banda</button>':''}<label class="small" style="display:inline-grid;place-items:center">Importa<input id="bimp" type="file" accept=".json,application/json" style="display:none"></label></div>`;}
 $('banda').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
@@ -233,24 +236,24 @@ function renderRiders(){
     <div><div class="rrow"><input type="text" value="${r.name.replace(/"/g,'')}" data-i="${i}" aria-label="Nome"><div class="sw">${COLORS.map(c=>`<button style="background:${c}" class="${c===r.color?'on':''}" data-i="${i}" data-c="${c}" aria-label="Colore"></button>`).join('')}</div>
     <button class="x" data-del="${i}" aria-label="Togli">×</button></div>
     <div class="rrow">${BANDA.length?`<select data-i="${i}" data-k="who" aria-label="Chi è"><option value="">Già salvato? scegli il nome</option>${BANDA.map(p=>`<option ${keyN(p.name)===keyN(r.prof)?'selected':''} value="${p.name.replace(/"/g,'')}">${p.name}</option>`).join('')}</select>`:''}
-    ${r.prof?'<span class="inb">✓ nella banda (le modifiche si salvano da sole)</span>':`<span class="meta">Scrivi il nome: si salva da solo nella banda</span>`}</div>
+    </div><div class="rrow"><button class="save${r.prof&&!r.dirty?' done':''}" data-save="${i}">${r.prof&&!r.dirty?'✓ Salvato nella banda':'💾 Salva '+(r.name.trim()||'ciclista')+' nella banda'}</button>${r.dirty&&r.prof?'<span class="warn">modifiche non salvate</span>':''}</div>
     <div class="rrow"><select data-i="${i}" data-k="alt" aria-label="Altezza">${['bassa','media','alta'].map(v=>`<option ${v===r.alt?'selected':''} value="${v}">Altezza ${v}</option>`).join('')}</select>
     <select data-i="${i}" data-k="fis" aria-label="Fisico">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===r.fis?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>
     <div class="meta"><b>${it(km.toFixed(1))} km</b> · ${fmt(P[P.length-1].t)} · ${P.length} punti${P.some(p=>p.pw!=null)?' · watt':''}${P.some(p=>p.hr!=null)?' · battiti':''} · ${st}</div></div></div>`;}).join('');
 }
 function distOf(r){let d=0;const g=r.g;for(let s=1;s<g.n;s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
-$('riders').addEventListener('input',e=>{const i=e.target.dataset.i;if(e.target.type==='text'){riders[i].name=e.target.value.slice(0,18);computeSeg(true);}});
+$('riders').addEventListener('input',e=>{const i=e.target.dataset.i;if(e.target.type==='text'){const r=riders[i];r.name=e.target.value.slice(0,18);r.dirty=true;
+  const b=document.querySelector(`[data-save="${i}"]`);if(b){b.className='save';b.textContent='💾 Salva '+(r.name.trim()||'ciclista')+' nella banda';}computeSeg(true);}});
 // appena scrivi un nome vero (diverso da quello del file) il ciclista entra nella banda da solo
-const named=r=>r.name.trim()&&keyN(r.name)!==keyN(r.fname);
-$('riders').addEventListener('focusout',e=>{const i=e.target.dataset.i,r=riders[i];if(e.target.type==='text'&&r&&(r.prof||named(r))){upsert(r);renderRiders();}});
+// si salva solo col pulsante "Salva" di ciascun ciclista
 $('riders').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.save!==undefined){upsert(riders[b.dataset.save]);renderRiders();}
-  if(b.dataset.c){const r=riders[b.dataset.i];r.color=b.dataset.c;if(r.prof)upsert(r);renderRiders();drawMap();computeSeg(true);}
+  if(b.dataset.save!==undefined){const r=riders[b.dataset.save];if(!r.name.trim()){alert('Scrivi prima il nome del ciclista.');return;}upsert(r);renderRiders();}
+  if(b.dataset.c){const r=riders[b.dataset.i];r.color=b.dataset.c;r.dirty=true;renderRiders();drawMap();computeSeg(true);}
   if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();renderSegs();}});
 $('riders').addEventListener('change',e=>{const k=e.target.dataset.k;if(k==='who'){const r=riders[e.target.dataset.i],p=BANDA.find(q=>q.name===e.target.value);if(p){applyProf(r,p);renderRiders();drawMap();computeSeg(true);}return;}
-  if(k){const r=riders[e.target.dataset.i];r[k]=e.target.value;if(r.prof)upsert(r);return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
+  if(k){const r=riders[e.target.dataset.i];r[k]=e.target.value;r.dirty=true;renderRiders();return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),s=Math.min(img.width,img.height)*.85;
-    g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);if(riders[i].prof||named(riders[i]))upsert(riders[i]);renderRiders();URL.revokeObjectURL(img.src);};
+    g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);riders[i].dirty=true;renderRiders();URL.revokeObjectURL(img.src);};
   img.src=URL.createObjectURL(f);});
 
 // ---------- 2. mappa, tratto, classifica ----------
