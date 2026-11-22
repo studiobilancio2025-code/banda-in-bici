@@ -78,6 +78,8 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #scene{position:fixed;inset:0;background:#8ec9ee}
 #scene canvas{display:block;width:100%;height:100%;touch-action:none}
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+#lines{position:fixed;inset:0;pointer-events:none;z-index:2;display:block}
+.tag.side i{display:none}
 .tag{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;will-change:transform}
 .tag b{background:var(--tag);color:var(--ink);font-weight:800;font-size:16px;line-height:1;padding:4px 8px 3px;border-radius:6px;border:2px solid var(--ink);white-space:nowrap;box-shadow:0 2px 0 var(--ink)}
 .tag i{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid var(--ink);margin-top:2px}
@@ -145,6 +147,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 
 <div id="loading"><div><b id="ltxt">Preparo la scena…</b><span id="lsub"></span><div class="bar"><i id="lbar"></i></div></div></div>
 <div id="scene"></div>
+<svg id="lines" width="100%" height="100%"></svg>
 <div id="tags"></div>
 <div id="hud"><h1 id="htitle"></h1><div class="chips"><span id="cv"></span><span id="cp"></span><span id="cw" class="w"></span></div></div>
 <div id="live"></div>
@@ -644,7 +647,9 @@ function make3D(PATH,ROADS,BLDS){
   // --- telecronaca: racconto in italiano dagli eventi della corsa, a voce (sintesi vocale del telefono) e scritto ---
   let tele=true,CR=null,lastSay=-99,capT=0,lastPick='';
   const realNow=()=>performance.now()/1000;
-  const pick=a=>{const b=a.length>1?a.filter(x=>x!==lastPick):a;lastPick=b[Math.floor(Math.random()*b.length)];return lastPick;};
+  // sceglie una frase evitando quelle usate di recente (si confronta l'inizio, perché i numeri cambiano)
+  const RECENT=[],sig=x=>x.replace(/[\d,.]+/g,'#').slice(0,28);
+  const pick=a=>{let b=a.filter(x=>!RECENT.includes(sig(x)));if(!b.length)b=a.filter(x=>x!==lastPick);if(!b.length)b=a;lastPick=b[Math.floor(Math.random()*b.length)];RECENT.push(sig(lastPick));if(RECENT.length>40)RECENT.shift();return lastPick;};
   const dS=t=>{t=Math.max(0,Math.round(t));const m=Math.floor(t/60),x=t%60;return m?(m===1?'un minuto':m+' minuti')+(x?' e '+(x===1?'un secondo':x+' secondi'):''):(x===1?'un secondo':x+' secondi');};
   const dM=m=>m>=1000?it((m/1000).toFixed(1))+' chilometri':Math.round(m/10)*10+' metri';
   const nick=o=>(o.r.nick||'').trim();
@@ -697,21 +702,27 @@ function make3D(PATH,ROADS,BLDS){
   const len0=o=>{const a=begS(o),b=endS(o);return isNaN(a)||isNaN(b)?segLen():b-a;};
   const kmh=v=>Math.round(v*3.6);
   function vNow(o,sec){const a=sOf(o,tNow-sec);return isNaN(a)?o.v:(o.cur-a)/sec;}
-  function tecLead(L){const out=[],w=avgOf(L,'pw',60),va=vam(L),hr=hrOf(L),cd=avgOf(L,'cad',30);
-    if(w)out.push(`${NN(L)} nell'ultimo minuto ha tenuto ${Math.round(w)} watt di media: ${w>320?'ritmo altissimo':w>220?'un passo regolare, da cronoman':'sta gestendo, non è a tutta'}.`);
-    if(va!=null&&va>350)out.push(`Guarda la VAM, Gigi: ${Math.round(va/10)*10} metri all'ora di dislivello. ${va>900?'Numeri da scalatore vero.':'Bel passo, senza strafare.'}`);
-    if(hr&&L.hrMax)out.push(`Il cuore di ${NN(L)} è a ${Math.round(hr)} battiti, il ${Math.round(hr/L.hrMax*100)} per cento del suo massimo di oggi${hr/L.hrMax>.95?': è proprio al limite.':': ha ancora un po\' di margine.'}`);
-    if(cd)out.push(cd<65?`${NN(L)} pedala duro, sulle ${Math.round(cd)} pedalate al minuto: spinge di forza più che di agilità.`:cd>90?`Cadenza alta per ${NN(L)}, ${Math.round(cd)} pedalate al minuto: risparmia le gambe, lavora di cuore.`:`Cadenza giusta per ${NN(L)}, intorno alle ${Math.round(cd)} pedalate: è la zona più efficiente.`);
-    const ah=ahead(L,400);if(ah!=null&&ah>.045)out.push(`Attenzione, nei prossimi 400 metri la strada sale al ${it((ah*100).toFixed(1))} per cento: lì si decide molto.`);
-    else if(ah!=null&&ah<-.02)out.push(`Adesso arriva un tratto in discesa: si recupera fiato, ma chi è dietro può rientrare.`);
-    else if(ah!=null&&Math.abs(ah)<.015&&L.v>6)out.push(`Il prossimo tratto è quasi piatto: qui conta stare a ruota, si risparmia tanta energia.`);
+  // frasi del tecnico per tipo (k): ogni tipo torna solo dopo 4 minuti di corsa e mai con la stessa frase
+  const V=a=>a[Math.floor(Math.random()*a.length)];
+  function tecLead(L){const out=[],n=NN(L),w=avgOf(L,'pw',60),va=vam(L),hr=hrOf(L),cd=avgOf(L,'cad',30);
+    if(w){const W=Math.round(w),q=w>320?'ritmo altissimo':w>220?'un passo regolare, da cronoman':'sta gestendo, non è a tutta';
+      out.push({k:'w',t:V([`${n} nell'ultimo minuto ha tenuto ${W} watt di media: ${q}.`,`I watt di ${n}? ${W} di media nell'ultimo minuto. ${w>260?'Spinge forte.':'Si sta risparmiando.'}`,`Potenza media di ${n}: ${W} watt. ${w>300?'Così non si può andare avanti per sempre.':'Ritmo sostenibile.'}`])});}
+    if(va!=null&&va>350){const A=Math.round(va/10)*10;out.push({k:'vam',t:V([`Guarda la VAM, Gigi: ${A} metri all'ora di dislivello. ${va>900?'Numeri da scalatore vero.':'Bel passo, senza strafare.'}`,`${n} sta salendo a ${A} metri di dislivello all'ora: ${va>800?'roba seria':'un passo onesto'}.`,`Se continuasse così per un'ora, ${n} guadagnerebbe ${A} metri di quota. ${va>900?'Da professionista!':'Niente male.'}`])});}
+    if(hr&&L.hrMax){const P=Math.round(hr/L.hrMax*100),H=Math.round(hr);out.push({k:'hr',t:V([`Il cuore di ${n} è a ${H} battiti, il ${P} per cento del suo massimo di oggi${P>95?': è proprio al limite.':': ha ancora un po\' di margine.'}`,`${H} battiti per ${n}. ${P>95?'Siamo in zona rossa.':P>88?'Si comincia a fare sul serio.':'Respira ancora bene.'}`,`Cardiofrequenzimetro di ${n}: ${H}. ${P>92?'Più di così non si può tirare a lungo.':'C\'è ancora benzina.'}`])});}
+    if(cd){const C=Math.round(cd);out.push({k:'cad',t:cd<65?V([`${n} pedala duro, sulle ${C} pedalate al minuto: spinge di forza più che di agilità.`,`Rapporto lungo per ${n}: ${C} pedalate al minuto, gamba piena.`]):cd>90?V([`Cadenza alta per ${n}, ${C} pedalate al minuto: risparmia le gambe, lavora di cuore.`,`${n} frulla: ${C} pedalate. Stile moderno.`]):V([`Cadenza giusta per ${n}, intorno alle ${C} pedalate: è la zona più efficiente.`,`${C} pedalate al minuto per ${n}: né troppo agile né troppo duro.`])});}
+    const ah=ahead(L,400);if(ah!=null&&ah>.045)out.push({k:'ah',t:V([`Attenzione, nei prossimi 400 metri la strada sale al ${it((ah*100).toFixed(1))} per cento: lì si decide molto.`,`Davanti c'è un tratto al ${it((ah*100).toFixed(1))} per cento. Bisogna arrivarci con un po' di riserva.`])});
+    else if(ah!=null&&ah<-.02)out.push({k:'ah',t:V(['Adesso arriva un tratto in discesa: si recupera fiato, ma chi è dietro può rientrare.','Strada che scende: qui si tira il fiato e si beve.'])});
+    else if(ah!=null&&Math.abs(ah)<.015&&L.v>6)out.push({k:'ah',t:V(['Il prossimo tratto è quasi piatto: qui conta stare a ruota, si risparmia tanta energia.','Tratto pianeggiante in arrivo: chi è da solo paga il vento.'])});
     return out;}
   function tecPair(L,S,g){const out=[],dv=vNow(L,20)-vNow(S,20);
-    if(g<3&&L.v>7)out.push(`A questa velocità, a ${kmh(L.v)} all'ora, chi sta a ruota fatica molto meno. ${NN(S)} fa bene a restare lì dietro.`);
-    if(g<3&&L.v<=7)out.push(`In salita la scia conta poco, Gigi: qui contano le gambe. Si vedrà chi ne ha di più.`);
-    if(Math.abs(dv)>.4)out.push(`La differenza di velocità è chiara: ${NN(L)} va a ${kmh(vNow(L,20))} all'ora, ${NN(S)} a ${kmh(vNow(S,20))}.`);
-    const hS=hrOf(S);if(hS&&S.hrMax&&hS/S.hrMax>.94)out.push(`${NN(S)} è a ${Math.round(hS)} battiti: oltre la soglia non si può restare a lungo.`);
-    return out.concat(tecLead(L).slice(0,2));}
+    if(g<3&&L.v>7)out.push({k:'scia',t:V([`A questa velocità, a ${kmh(L.v)} all'ora, chi sta a ruota fatica molto meno. ${NN(S)} fa bene a restare lì dietro.`,`${NN(S)} si gode la scia di ${NN(L)}: è un bel risparmio di energia.`])});
+    if(g<3&&L.v<=7)out.push({k:'scia',t:V([`In salita la scia conta poco, Gigi: qui contano le gambe. Si vedrà chi ne ha di più.`,'Andando piano la ruota serve a poco: è una sfida a viso aperto.'])});
+    if(Math.abs(dv)>.4)out.push({k:'dv',t:V([`La differenza di velocità è chiara: ${NN(L)} va a ${kmh(vNow(L,20))} all'ora, ${NN(S)} a ${kmh(vNow(S,20))}.`,`${kmh(vNow(L,20))} all'ora per ${NN(L)}, ${kmh(vNow(S,20))} per ${NN(S)}: ${dv>0?'il buco si allarga':'il buco si chiude'}.`])});
+    const hS=hrOf(S);if(hS&&S.hrMax&&hS/S.hrMax>.94)out.push({k:'hrS',t:V([`${NN(S)} è a ${Math.round(hS)} battiti: oltre la soglia non si può restare a lungo.`,`Occhio a ${NN(S)}: ${Math.round(hS)} battiti, è al gancio.`])});
+    return out.concat(tecLead(L));}
+  function tecPick(list){const C=CR;C.tecT=C.tecT||{};C.tecUsed=C.tecUsed||new Set();
+    const ok=list.filter(x=>tNow>(C.tecT[x.k]??-1e9)+240&&!C.tecUsed.has(sig(x.t)));if(!ok.length)return null;
+    const fresh=ok.filter(x=>C.tecT[x.k]==null),x=V(fresh.length?fresh:ok);C.tecT[x.k]=tNow;C.tecUsed.add(sig(x.t));return x.t;}
   const BATTUTE=['{n} giura che oggi non aveva le gambe. Ci crediamo poco.','Occhio a {n}: quando sta zitto, vuol dire che sta soffrendo.','{n} pedala con la grinta di chi deve rientrare per pranzo.',
     'Per {n} questa salita è una questione personale.','{n} dirà che c\'era vento contro. Per lui c\'è sempre vento contro.','{n} ha già in testa il caffè dell\'arrivo.',
     'Dicono che {n} si sia allenato tutta la settimana. Di nascosto.','{n} fa finta di niente, ma guarda il computerino ogni dieci secondi.','Al bar già lo sanno: {n} racconterà questa salita per una settimana.'];
@@ -806,7 +817,7 @@ function make3D(PATH,ROADS,BLDS){
         else if(p!=null&&g<p-4)t=pick([`${nm(S)} sta rientrando! Il distacco scende a ${dS(g)}.`,`Bella reazione di ${nm(S)}: ora è a ${dS(g)}.`]);
         else t=pick([`${nm(L)} in testa, ${nm(S)} a ${dS(g)}.`,`Distacco stabile: ${dS(g)} tra ${nm(L)} e ${nm(S)}.`,`${nm(S)} tiene botta: sempre ${dS(g)} da ${nm(L)}.`,`Situazione congelata: ${nm(L)} davanti, ${nm(S)} a ${dS(g)}.`]);
         if(z)t+=` Dietro soffre ${nm(z)}.`;else if(live.length>2){const Z=live[live.length-1];t+=` In coda ${nm(Z)}, a ${dS(gapSec(L,Z))}.`;}
-        if(said(t,1,tr>15||tr<-8?.6:.2)){tecSay(tr>15?`${NN(S)} è calato: andava a ${kmh(vNow(S,60))} all'ora, adesso a ${kmh(vNow(S,15))}. Quando si va oltre la soglia, il conto arriva.`:pick(tecPair(L,S,g)),.5);return;}}
+        if(said(t,1,tr>15||tr<-8?.6:.2)){tecSay(tr>15?`${NN(S)} è calato: andava a ${kmh(vNow(S,60))} all'ora, adesso a ${kmh(vNow(S,15))}. Quando si va oltre la soglia, il conto arriva.`:tecPick(tecPair(L,S,g)),.5);return;}}
       else{if(said(pick([`${nm(L)} va a ${Math.round(L.v*3.6)} all'ora.`,`Mancano ${dM(rem)} per ${nm(L)}.`,`${nm(L)} tiene un bel ritmo: ${Math.round(L.v*3.6)} all'ora, mancano ${dM(rem)}.`]),1,.2))return;}}
     // fisico: pendenza, velocità, watt, battiti, cadenza
     const sl=slope(PR,L.cur);
@@ -817,7 +828,7 @@ function make3D(PATH,ROADS,BLDS){
       if(hr&&o.hrMax&&hr>=o.hrMax-2&&tNow>o.x.ta+60&&cool('hr',90)&&said(pick([`Il cuore di ${nm(o)} batte a ${Math.round(hr)}: è al limite!`,`${Math.round(hr)} battiti per ${nm(o)}: zona rossa!`,`${nm(o)} è a tutta: cuore a ${Math.round(hr)} battiti.`]),1,.6))return;
       if(cd!=null&&cd>25&&cd<55&&slo>.04&&cool('cd',80)&&said(pick([`${nm(o)} spinge un rapporto duro: ${Math.round(cd)} pedalate al minuto.`,`${nm(o)} è piantato: ${Math.round(cd)} pedalate al minuto, gamba dura!`]),1,.3))return;
       if(cd!=null&&cd>98&&cool('cd',80)&&said(`${nm(o)} frulla a ${Math.round(cd)} pedalate al minuto!`,1,.4))return;}
-    if(tNow>=C.nextTec&&realNow()-lastSay>6&&!busyQ()){C.nextTec=tNow+70+Math.random()*40;const S=live[1],L2=pick(S?tecPair(L,S,gapSec(L,S)):tecLead(L));if(L2&&say(L2,1,0,'t'))return;}
+    if(tNow>=C.nextTec&&realNow()-lastSay>6&&!busyQ()){C.nextTec=tNow+70+Math.random()*40;const S=live[1],L2=tecPick(S?tecPair(L,S,gapSec(L,S)):tecLead(L));if(L2&&say(L2,1,0,'t'))return;}
     // battute nei momenti tranquilli
     if(tNow>=C.nextFill&&rem>600&&realNow()-lastSay>10){C.nextFill=tNow+100+Math.random()*60;const o=live[Math.floor(Math.random()*live.length)],b=battuta(o);if(b&&said(b,1,.1))return;}
   }
@@ -870,6 +881,7 @@ function make3D(PATH,ROADS,BLDS){
     cv0.copy(P.center);cv0.y+=1.2;const a=Math.sin(t*.18)*.4;cr0.copy(P.dir).applyAxisAngle(new V3(0,1,0),a);goal.copy(cv0).addScaledVector(cr0,18);goal.y+=4.5;look.copy(cv0);look.y-=1.6;return dt*1.2;}
   function endCer(){if(CER.P){scene.remove(CER.P.G);}const was=CER.on||CER.done;CER={on:false,done:false};RID.forEach(o=>{o.pod=null;});$('pres').style.display='none';$('pres').classList.remove('cer');if(was)first=true;}
   // --- camera ---
+  let lastSvg='';
   const center=new V3(),fwd=new V3(0,0,1),goal=new V3(),look=new V3(),last=new V3(),proj3=new V3(),t2=new V3();let first=true;
   function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;baseFov=camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
   addEventListener('resize',resize);
@@ -881,7 +893,7 @@ function make3D(PATH,ROADS,BLDS){
     t2.subVectors(P[0],P[P.length-1]).setY(0);if(t2.length()<15){const hd=at(PR,lv[0].cur,0,tA);t2.set(Math.sin(hd),0,Math.cos(hd));}
     gdir.lerp(t2.normalize(),first?1:Math.min(1,dt*.8)).normalize();
     let al=0,la=0;P.forEach(p=>{const dx=p.x-gmid.x,dz=p.z-gmid.z;al=Math.max(al,Math.abs(dx*gdir.x+dz*gdir.z));la=Math.max(la,Math.abs(-dx*gdir.z+dz*gdir.x));});
-    const tv=Math.tan(camera.fov*D/2),th=tv*camera.aspect,want=clamp(Math.max((al+10)/(tv*.6),(la+8)/(th*.42))+25,45,2200);
+    const tv=Math.tan(camera.fov*D/2),th=tv*camera.aspect,want=clamp(Math.max((al+10)/(tv*.36),(la+8)/(th*.3))+25,45,2600);
     gD+=(want-gD)*(first?1:Math.min(1,dt*1.5));
     goal.set(gmid.x-gdir.x*gD*.5,gmid.y+gD*.87,gmid.z-gdir.z*gD*.5);look.set(gmid.x-gdir.x*gD*.16,gmid.y,gmid.z-gdir.z*gD*.16);}
   function setView(v){view=v;shot=null;first=true;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
@@ -953,8 +965,20 @@ function make3D(PATH,ROADS,BLDS){
     const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur),gapOf=(L,q)=>{let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));};
     if(lv.length>1&&!CER.on&&!CER.done){$('live').style.display='block';$('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
     const showGap=lv.length>1&&(view==='gruppo'||(view==='regia'&&shot&&shot.type==='gruppo'));
+    // nelle viste dall'alto i nomi vanno ai lati, collegati ai ciclisti con una freccia
+    const aerial=camera.position.y-center.y>32&&!INTRO.on&&!CER.on&&!CER.done,W=innerWidth,Hh=innerHeight,ann=[];
     RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=q.pod?q.pod.place+'° '+q.r.name:showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
-      u.tag.style.opacity=proj3.z<1?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${(proj3.x*.5+.5)*innerWidth}px,${(-proj3.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
+      const sx=(proj3.x*.5+.5)*W,sy=(-proj3.y*.5+.5)*Hh,on=proj3.z<1;
+      if(aerial&&on){ann.push({q,u,sx:clamp(sx,6,W-6),sy:clamp(sy,6,Hh-6)});return;}
+      u.tag.classList.remove('side');u.tag.style.opacity=on?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${sx}px,${sy}px) translate(-50%,-100%)`;});
+    let svg='';
+    if(ann.length){const ub=id=>{const e=$(id);if(e.style.display==='none'||getComputedStyle(e).opacity<.1)return 92;return e.getBoundingClientRect().bottom+8;},navTop=$('nav').getBoundingClientRect().top-40;
+      for(const left of[true,false]){const top=ub(left?'cron':'live'),bot=Math.max(top+40,navTop),g=ann.filter(a=>(a.sx<W/2)===left).sort((a,b)=>a.sy-b.sy);let y=top;
+        g.forEach(a=>{a.by=clamp(a.sy-50,y,bot);y=a.by+34;});for(let k=g.length-1;k>=0;k--){const lim=k===g.length-1?bot:g[k+1].by-34;if(g[k].by>lim)g[k].by=lim;}
+        g.forEach(a=>{const el=a.u.tag,w=el.offsetWidth||90,bx=left?10:W-10-w,ax=left?bx+w:bx,ay=a.by+14,c=a.q.r.color;
+          el.classList.add('side');el.style.opacity=1;el.style.zIndex=1e6;el.style.transform=`translate(${bx}px,${a.by}px)`;
+          svg+=`<line x1="${ax}" y1="${ay}" x2="${a.sx}" y2="${a.sy}" stroke="#10151c" stroke-width="5" stroke-linecap="round"/><line x1="${ax}" y1="${ay}" x2="${a.sx}" y2="${a.sy}" stroke="${c}" stroke-width="2.5" marker-end="url(#ah)"/><circle cx="${a.sx}" cy="${a.sy}" r="4.5" fill="${c}" stroke="#10151c" stroke-width="2"/>`;});}}
+    if(svg!==lastSvg){$('lines').innerHTML='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#10151c"/></marker></defs>'+svg;lastSvg=svg;}
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
   return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
@@ -970,7 +994,7 @@ function showScene(){$('setup').style.display='none';$('htitle').textContent=$('
   $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();setTimeout(go,150);};}
 // "Modifica": si torna all'impostazione; la scena verrà ricostruita con i dati nuovi
 $('mod').addEventListener('click',()=>{if(window.__SCENA&&!map){window.__SCENA=false;setTimeout(()=>{renderRiders();drawMap();drawMarks();renderSegs();},50);}if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
-  $('setup').style.display='block';['hud','nav','fonti','live','fine','cron','pres'].forEach(i=>$(i).style.display='none');if(window.speechSynthesis)speechSynthesis.cancel();});
+  $('setup').style.display='block';['hud','nav','fonti','live','fine','cron','pres'].forEach(i=>$(i).style.display='none');$('lines').innerHTML='';if(window.speechSynthesis)speechSynthesis.cancel();});
 
 // ---------- 4. salvataggio della scena in un file unico ----------
 // dati del tratto: solo la finestra del tratto ± 4 minuti (niente partenza da casa)
