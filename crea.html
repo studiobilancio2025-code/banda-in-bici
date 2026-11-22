@@ -750,6 +750,10 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 .chips span:empty{display:none}
 #cron{position:fixed;left:max(3vw,10px);top:96px;z-index:3;max-width:min(calc(100vw - 200px),420px);background:rgba(16,21,28,.8);color:#fff;border-radius:8px;padding:6px 10px;font:600 17px/1.25 "Barlow Condensed";display:none;transition:opacity .6s}
 #cron b{color:var(--tag);margin-right:6px}
+#play{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:radial-gradient(circle at 50% 40%,#263445,#10151c);color:#fff;text-align:center;padding:20px}
+#play h2{font:800 36px "Barlow Condensed";margin:0 0 14px}#play .pf{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:22px}
+#play .pf span{display:flex;flex-direction:column;align-items:center;gap:4px;font:700 18px "Barlow Condensed"}#play .pf i{width:72px;height:72px;border-radius:50%;border:4px solid;background:#555 center/cover}
+#play .btn{background:var(--tag);color:var(--ink);border-color:var(--tag);font-size:26px;min-height:60px;padding:0 30px}
 #pres{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:4;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
 #pres .ph{width:min(42vw,190px);height:min(42vw,190px);border-radius:50%;border:6px solid;background:#ccc center/cover;box-shadow:0 6px 24px #0008;display:grid;place-items:center;font:800 64px "Barlow Condensed";color:#fff}
 #pres.cer{top:50%}#pres.cer .ph{width:96px;height:96px;font-size:40px;border-width:4px}#pres.cer b{font-size:24px}
@@ -807,6 +811,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="live"></div>
 <div id="cron"><b>🎙️ Gigi</b><span></span></div>
 <div id="pres"></div>
+<div id="play"></div>
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
 <div id="fine"></div>
 <div id="nav">
@@ -1034,7 +1039,7 @@ addEventListener('pointerdown',()=>{if(FX.ctx&&FX.ctx.state==='suspended'&&!wind
 
 // ---------- 3. scena 3D ----------
 let built=false;
-$('vai').addEventListener('click',()=>{FX.init();if(window.speechSynthesis)speechSynthesis.speak(new SpeechSynthesisUtterance(''));})
+$('vai').addEventListener('click',()=>unlockAudio())
 $('vai').addEventListener('click',()=>buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);}));
 const prog=(t,s,p)=>{$('ltxt').textContent=t;$('lsub').textContent=s||'';$('lbar').style.width=(p*100|0)+'%';};
 const loading=v=>{$('loading').style.display=v?'grid':'none';};
@@ -1325,7 +1330,7 @@ function make3D(PATH,ROADS,BLDS){
     if(!window.speechSynthesis||!tele){it.to=setTimeout(done,est*1000);return;}
     const u=new SpeechSynthesisUtterance(it.txt);u.lang='it-IT';const v=it.who==='t'?VOICE2:VOICE;if(v)u.voice=v;const same=VOICE2===VOICE;
     u.rate=(it.who==='t'?.97:1.02)+it.ex*.07+(mult>=10?.06:0);u.pitch=it.who==='t'?(same?.78:.95):1+it.ex*.07;
-    u.onstart=()=>FX.duck(true);u.onend=u.onerror=done;it.to=setTimeout(()=>{if(!fin){speechSynthesis.cancel();done();}},(est*2+3)*1000);speechSynthesis.speak(u);}
+    const ts=realNow();u.onstart=()=>FX.duck(true);u.onend=u.onerror=()=>{const el=realNow()-ts;if(el<est*.3)setTimeout(done,(est-el)*1000);else done();};it.to=setTimeout(()=>{if(!fin){speechSynthesis.cancel();done();}},(est*2+3)*1000);speechSynthesis.speak(u);}
   const busyQ=()=>!!QB||Q.length>0||speaking();
   function say(txt,pri,ex,who){if(!tele)return false;const now=realNow();who=who||'c';txt=txt.charAt(0).toUpperCase()+txt.slice(1);
     if(pri<2){if(now-lastSay<3||busyQ())return false;}else if(Q.filter(q=>q.pri>=2).length>=2)Q.splice(Q.findIndex(q=>q.pri>=2),1);
@@ -1615,8 +1620,15 @@ function make3D(PATH,ROADS,BLDS){
   }
   return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
-function showScene(){$('setup').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');$('htitle').textContent=$('titolo').value;S3.start();
-}
+// voce e suoni partono solo dopo un tocco: nelle scene salvate (aperte da WhatsApp) si chiede un tocco prima di cominciare
+function unlockAudio(){window.__unlocked=true;FX.init();try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}}
+function showScene(){$('setup').style.display='none';$('htitle').textContent=$('titolo').value;
+  const go=()=>{$('play').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');S3.start();};
+  if(window.__unlocked){go();return;}
+  const P=riders.filter((r,i)=>SEG&&SEG.res[i]&&SEG.res[i].ok);
+  $('play').innerHTML=`<div><h2>${$('titolo').value}</h2><div class="pf">${P.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
+    <button class="btn" id="playgo">▶ Guarda la corsa</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
+  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();setTimeout(go,150);};}
 // "Modifica": si torna all'impostazione; la scena verrà ricostruita con i dati nuovi
 $('mod').addEventListener('click',()=>{if(window.__SCENA&&!map){window.__SCENA=false;setTimeout(()=>{renderRiders();drawMap();drawMarks();renderSegs();},50);}if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
   $('setup').style.display='block';['hud','nav','fonti','live','fine','cron','pres'].forEach(i=>$(i).style.display='none');if(window.speechSynthesis)speechSynthesis.cancel();});
