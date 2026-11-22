@@ -161,6 +161,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="sharebox"><div><h3>Manda la corsa</h3>
   <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
   <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
+  <button class="btn l" data-sh="dl">⬇️ Scarica sul telefono<small>il file va nella cartella Download</small></button>
   <button class="btn l" data-sh="x" style="min-height:40px">Annulla</button></div></div>
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
 <div id="fine"></div>
@@ -1054,12 +1055,12 @@ async function shareLink(){if(!window.CompressionStream){alert('Questo telefono 
   try{await navigator.clipboard.writeText(url);alert('Link copiato: incollalo su WhatsApp.');}catch(e){prompt('Copia questo link e mandalo su WhatsApp:',url);}}
 $('salva').addEventListener('click',()=>{$('sharebox').style.display='grid';});
 $('sharebox').addEventListener('click',e=>{const b=e.target.closest('button');if(e.target.id==='sharebox'||(b&&b.dataset.sh==='x')){$('sharebox').style.display='none';return;}
-  if(!b)return;$('sharebox').style.display='none';if(b.dataset.sh==='link')shareLink();if(b.dataset.sh==='file')shareFile();});
-async function shareFile(){
+  if(!b)return;$('sharebox').style.display='none';if(b.dataset.sh==='link')shareLink();if(b.dataset.sh==='file')shareFile();if(b.dataset.sh==='dl')shareFile(true);});
+async function shareFile(onlyDl){
   const data=packData();
   const html=SRC.replace('<body>','<body><script id="scena" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>');
   const name=($('titolo').value||'scena').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_')+'.html',file=new File([html],name,{type:'text/html'});
-  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:$('titolo').value});return;}}catch(e){if(e.name==='AbortError')return;}
+  if(!onlyDl)try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:$('titolo').value});return;}}catch(e){if(e.name==='AbortError')return;}
   const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
 }
 // scena salvata (file o link): si costruisce subito
