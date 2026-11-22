@@ -7,6 +7,7 @@ Proprietario: Geppino (Giovangiuseppe Bilancio). Parlagli sempre in italiano, in
 - `index.html` — scena 3D "La salita dei Prof." (segmento Strava del 22/09/2026), con foto satellitare. File unico con dati e immagini incorporati (~9 MB).
 - `cave.html` — salita delle Cave con la "banda" (corsa con copione scritto a mano, non dati veri degli amici).
 - `varcaturo.html` — tratto Varcaturo – Lago Patria.
+- `scene/` — **corse pubblicate** (solo col consenso di tutti i ciclisti presenti): `scene/index.html` è l'elenco (aggiungere le nuove in cima, sotto il commento `CORSE`); ogni corsa è `scene/<tratto>-AAAA-MM-GG.html` = `crea.html` **attuale** con dentro solo il `<script id="scena">` preso dal file che manda Geppino (così ha sempre l'ultima versione dell'app). Pubblicata: Salita dei Gradilli 100% del 22/11/2026 (Geppino, Rocco, Alessandro, Filippo, Jack).
 - `crea.html` — **l'app**: costruisce da sola la scena 3D partendo da più file GPX. È generata da `app/crea_src.html` con `python3 app/build.py` (inserisce il CSS di Leaflet). Modifica sempre `app/crea_src.html`, poi rigenera `crea.html`.
 
 ## Come funziona crea.html
@@ -46,6 +47,5 @@ Geppino chiede "scarica da Strava l'uscita di oggi": con il connettore Strava si
 ## Da fare / idee
 - Mini-altimetria con pallino; fantasma del miglior tempo; luce all'ora vera dell'uscita.
 - Modalità leggera automatica sui telefoni lenti (meno alberi, ombre ridotte).
-- Pagina indice con l'elenco delle scene.
 - Gestione di uscite lunghe (> 8 km di tratto): limitare tile e alberi.
 - Caricamento diretto delle scene salvate nel repository (oggi: Geppino manda il file e lo si carica a mano).
