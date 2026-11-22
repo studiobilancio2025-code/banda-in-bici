@@ -705,6 +705,10 @@ h2 i{font-style:normal;background:var(--ink);color:#fff;border-radius:50%;width:
 .meta{color:var(--mut);font-size:14px}
 .meta b{color:var(--ink)}
 .ok{color:#1b7a34;font-weight:600}.warn{color:#b26a00;font-weight:600}
+.seglist{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;margin:8px 0;padding-right:2px}
+.seg{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:600 17px "Barlow Condensed";cursor:pointer;min-height:44px;color:var(--ink)}
+.seg.on{border:2px solid var(--ink);background:#fff8cc}
+.seg span{color:var(--mut);white-space:nowrap;font-weight:600;flex:none}
 .bchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
 .bchip{display:flex;align-items:center;gap:6px;background:#f6f4ef;border:1px solid var(--line);border-radius:22px;padding:3px 4px 3px 3px;font:600 17px "Barlow Condensed"}
 .bchip i{width:32px;height:32px;border-radius:50%;border:3px solid;background:#ddd center/cover;flex:none}
@@ -767,6 +771,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 
   <h2><i>2</i>Il tratto</h2>
   <input id="titolo" type="text" value="Il nostro segmento" aria-label="Nome del tratto">
+  <div id="segs"></div>
   <p class="hint" id="hint">Carica almeno un GPX per vedere la mappa.</p>
   <div id="map"></div>
   <div class="btns"><button class="btn l" id="rifai" disabled>Rifai la scelta</button></div>
@@ -823,7 +828,8 @@ function parseGPX(txt,name){
     if(t0===null){t0=ms;abs=!isNaN(ms)&&new Date(ms).getUTCFullYear()>1990;}
     pts.push({lat:+p.getAttribute('lat'),lon:+p.getAttribute('lon'),ele:child(p,'ele')??0,t:isNaN(ms)?pts.length:(ms-t0)/1000,
       hr:child(p,'hr'),cad:child(p,'cad'),pw:child(p,'power')??child(p,'PowerInWatts')});}
-  return {name,pts,abs,t0:abs?t0:null,off:0,sync:null,color:COLORS[riders.length%COLORS.length],face:null,alt:'media',fis:'normale'};
+  const segs=[...doc.getElementsByTagNameNS('*','segmento')].map(e=>({nome:e.getAttribute('nome'),km:+e.getAttribute('km'),tempo:+e.getAttribute('tempo'),a:[+e.getAttribute('lat1'),+e.getAttribute('lon1')],b:[+e.getAttribute('lat2'),+e.getAttribute('lon2')]}));
+  return {name,pts,abs,t0:abs?t0:null,off:0,sync:null,segs,color:COLORS[riders.length%COLORS.length],face:null,alt:'media',fis:'normale'};
 }
 function proj(lat,lon){return[-(lon-REF.lon)*111320*REF.c,(lat-REF.lat)*110540];}
 function unproj(x,z){return[REF.lat+z/110540,REF.lon-x/(111320*REF.c)];}
@@ -873,7 +879,7 @@ async function addFiles(fl){
     const fn=keyN(f.name),p=BANDA.find(q=>keyN(q.name)&&fn.includes(keyN(q.name)));if(p)applyProf(r,p);
     riders.push(r);grid(r);if(riders.length>1)syncRider(r);else r.sync={ok:true,together:0};}
     catch(e){$('hint').textContent='Il file '+f.name+' non è un GPX valido.';}}
-  renderRiders();drawMap();computeSeg();
+  renderRiders();drawMap();computeSeg();renderSegs();
 }
 $('files').addEventListener('change',e=>addFiles([...e.target.files]));
 function renderRiders(){
@@ -895,7 +901,7 @@ $('riders').addEventListener('focusout',e=>{const i=e.target.dataset.i;if(e.targ
 $('riders').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.save!==undefined){upsert(riders[b.dataset.save]);renderRiders();}
   if(b.dataset.c){const r=riders[b.dataset.i];r.color=b.dataset.c;if(r.prof)upsert(r);renderRiders();drawMap();computeSeg(true);}
-  if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();}});
+  if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();renderSegs();}});
 $('riders').addEventListener('change',e=>{const k=e.target.dataset.k;if(k==='who'){const r=riders[e.target.dataset.i],p=BANDA.find(q=>q.name===e.target.value);if(p){applyProf(r,p);renderRiders();drawMap();computeSeg(true);}return;}
   if(k){const r=riders[e.target.dataset.i];r[k]=e.target.value;if(r.prof)upsert(r);return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),s=Math.min(img.width,img.height)*.85;
@@ -918,7 +924,15 @@ let marks=[];
 function drawMarks(){marks.forEach(m=>m.remove());marks=[];
   for(const [p,lab,c] of [[A,'Partenza','#1b7a34'],[B,'Arrivo','#c62828']])if(p)marks.push(L.circleMarker(p,{radius:9,color:'#fff',weight:3,fillColor:c,fillOpacity:1}).bindTooltip(lab,{permanent:true,direction:'top'}).addTo(map));
   $('hint').textContent=!A?'Tocca sulla mappa il punto di partenza del tratto.':!B?'Ora tocca il punto di arrivo.':'Tratto scelto. Puoi rifare la scelta o creare la scena.';$('rifai').disabled=!A;}
-$('rifai').addEventListener('click',()=>{A=B=null;SEG=null;drawMarks();computeSeg();});
+$('rifai').addEventListener('click',()=>{A=B=null;SEG=null;segSel=-1;drawMarks();computeSeg();renderSegs();});
+// segmenti di Strava (scritti nel GPX completo che prepara Claude): un tocco e il tratto è scelto
+let segSel=-1;
+function renderSegs(){const S=riders[0]&&riders[0].segs||[],box=$('segs');
+  if(!S.length){box.innerHTML='';return;}
+  box.innerHTML=`<p class="hint" style="margin-bottom:0">Scegli uno dei ${S.length} segmenti di Strava, oppure tocca tu partenza e arrivo sulla mappa.</p><div class="seglist">${S.map((g,i)=>`<button class="seg ${i===segSel?'on':''}" data-s="${i}">${g.nome}<span>${it(g.km.toFixed(1))} km · ${fmt(g.tempo)}</span></button>`).join('')}</div>`;}
+$('segs').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;const g=riders[0].segs[+b.dataset.s];segSel=+b.dataset.s;
+  A=g.a.slice();B=g.b.slice();$('titolo').value=g.nome;computeSeg();if(map){drawMarks();map.fitBounds([A,B],{padding:[40,40]});}renderSegs();
+  $('map').scrollIntoView({behavior:'smooth',block:'center'});});
 // passaggio di un ciclista vicino a un punto (in tempo di riferimento)
 const offE=r=>r.off+(r.gshift||0);
 function passage(r,x,z,from,to){let best=[1e9,-1];const g=r.g;for(let s=0;s<g.n;s++){const T=s+r.off;if(T<from||T>to||isNaN(g.X[s]))continue;const d=Math.hypot(g.X[s]-x,g.Z[s]-z);if(d<best[0])best=[d,T];}return best;}
