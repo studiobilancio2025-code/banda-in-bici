@@ -16,7 +16,7 @@ Proprietario: Geppino (Giovangiuseppe Bilancio). Parlagli sempre in italiano, in
 3. **Tratto**: mappa Leaflet con foto Esri, si tocca partenza e arrivo; passaggi di ciascuno al punto più vicino (< 40 m).
 4. **Scena**: percorso = traccia del riferimento da 150 m prima a 200 m dopo, agganciata alle strade OSM (< 14 m). Dal browser: OpenStreetMap API (`api.openstreetmap.org/api/0.6/map`, CORS ok, se 400 divide il riquadro in 4) e tile Esri World Imagery (CORS ok) zoom 17 (±380 m) e 18 (±120 m). Dai pixel delle foto: colore dei tetti (mediana dentro la pianta) e alberi (indice verde 2G−R−B > 14) su griglia da 5 m. Ogni ciclista è proiettato sul percorso secondo per secondo; in corsia si mettono in fila o a coppie quando sono vicini.
 5. **Visuali**: Dalla moto, Di lato, Drone dietro, Drone davanti, Elicottero, Libera; "Inquadra" sceglie il ciclista. Velocità ×1…×20. Classifica dal vivo con distacchi in tempo.
-6. **Volti**: foto caricata per ciascun ciclista → ritaglio quadrato 256 px → disco col volto sulla testa (testa un po' più grande).
+6. **Volti e morfotipo**: altezza (bassa/media/alta) scala tutto il ciclista con la bici; fisico (magro/normale/robusto/grasso) ingrossa busto, braccia e gambe, il grasso ha la pancia. foto caricata per ciascun ciclista → ritaglio quadrato 256 px → disco col volto sulla testa (testa un po' più grande).
 7. **Salva scena**: crea un HTML unico con i dati (solo la finestra del tratto ± 4 min) in `<script id="scena" type="application/json">`; aprendolo la scena si costruisce da sola (mappe e foto scaricate al momento). Su Android usa la condivisione (WhatsApp), altrimenti scarica il file.
 
 ## Regole importanti

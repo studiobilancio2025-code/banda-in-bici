@@ -36,6 +36,7 @@ h2 i{font-style:normal;background:var(--ink);color:#fff;border-radius:50%;width:
 .face span{font-size:12px;text-align:center;line-height:1.1;color:var(--mut)}
 .face input{display:none}
 .rrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rrow select{font:600 16px "Barlow Condensed";min-height:40px;border:1px solid var(--line);border-radius:8px;padding:0 8px;background:#fff;margin-top:6px}
 .rrow input[type=text]{font:600 18px "Barlow Condensed";padding:6px 10px;border:1px solid var(--line);border-radius:8px;width:150px;min-height:40px}
 .sw{display:flex;gap:4px}
 .sw button{width:26px;height:26px;border-radius:50%;border:2px solid #fff;outline:1px solid var(--line);padding:0;cursor:pointer}
@@ -154,7 +155,7 @@ function parseGPX(txt,name){
     if(t0===null){t0=ms;abs=!isNaN(ms)&&new Date(ms).getUTCFullYear()>1990;}
     pts.push({lat:+p.getAttribute('lat'),lon:+p.getAttribute('lon'),ele:child(p,'ele')??0,t:isNaN(ms)?pts.length:(ms-t0)/1000,
       hr:child(p,'hr'),cad:child(p,'cad'),pw:child(p,'power')??child(p,'PowerInWatts')});}
-  return {name,pts,abs,t0:abs?t0:null,off:0,sync:null,color:COLORS[riders.length%COLORS.length],face:null};
+  return {name,pts,abs,t0:abs?t0:null,off:0,sync:null,color:COLORS[riders.length%COLORS.length],face:null,alt:'media',fis:'normale'};
 }
 function proj(lat,lon){return[-(lon-REF.lon)*111320*REF.c,(lat-REF.lat)*110540];}
 function unproj(x,z){return[REF.lat+z/110540,REF.lon-x/(111320*REF.c)];}
@@ -193,6 +194,8 @@ function renderRiders(){
     return `<div class="rider"><label class="face" style="border-color:${r.color}">${r.face?`<img src="${r.face}" alt="">`:'<span>foto<br>volto</span>'}<input type="file" accept="image/*" data-i="${i}"></label>
     <div><div class="rrow"><input type="text" value="${r.name.replace(/"/g,'')}" data-i="${i}" aria-label="Nome"><div class="sw">${COLORS.map(c=>`<button style="background:${c}" class="${c===r.color?'on':''}" data-i="${i}" data-c="${c}" aria-label="Colore"></button>`).join('')}</div>
     <button class="x" data-del="${i}" aria-label="Togli">×</button></div>
+    <div class="rrow"><select data-i="${i}" data-k="alt" aria-label="Altezza">${['bassa','media','alta'].map(v=>`<option ${v===r.alt?'selected':''} value="${v}">Altezza ${v}</option>`).join('')}</select>
+    <select data-i="${i}" data-k="fis" aria-label="Fisico">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===r.fis?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>
     <div class="meta"><b>${it(km.toFixed(1))} km</b> · ${fmt(P[P.length-1].t)} · ${P.length} punti${P.some(p=>p.pw!=null)?' · watt':''}${P.some(p=>p.hr!=null)?' · battiti':''} · ${st}</div></div></div>`;}).join('');
 }
 function distOf(r){let d=0;const g=r.g;for(let s=1;s<g.n;s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
@@ -200,7 +203,7 @@ $('riders').addEventListener('input',e=>{const i=e.target.dataset.i;if(e.target.
 $('riders').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.c){riders[b.dataset.i].color=b.dataset.c;renderRiders();drawMap();computeSeg(true);}
   if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();}});
-$('riders').addEventListener('change',e=>{if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
+$('riders').addEventListener('change',e=>{if(e.target.dataset.k){riders[e.target.dataset.i][e.target.dataset.k]=e.target.value;return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),s=Math.min(img.width,img.height)*.85;
     g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);renderRiders();URL.revokeObjectURL(img.src);};
   img.src=URL.createObjectURL(f);});
@@ -415,8 +418,10 @@ function make3D(PATH,ROADS,BLDS){
   const UP=new V3(0,1,0),tmp=new V3();
   function limb(m,a,b){tmp.subVectors(b,a);const Lg=tmp.length();m.position.copy(a).addScaledVector(tmp,.5);m.scale.set(1,Lg,1);m.quaternion.setFromUnitVectors(UP,tmp.normalize());}
   const unitCyl=r=>new THREE.CylinderGeometry(r,r,1,8),black=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6}),skin=new THREE.MeshStandardMaterial({color:0xe0ac82,roughness:.8}),metal=new THREE.MeshStandardMaterial({color:0xb0b4ba,metalness:.7,roughness:.3});
-  function makeRider(color,face){
-    const grp=new THREE.Group(),jersey=new THREE.MeshStandardMaterial({color,roughness:.7}),frameM=new THREE.MeshStandardMaterial({color,metalness:.3,roughness:.4});grp.rotation.order='YXZ';
+  // morfotipo: altezza scala tutto (bici compresa), fisico ingrossa busto, braccia e gambe; il grasso ha la pancia
+  const ALT={bassa:.92,media:1,alta:1.09},FIS={magro:.78,normale:1,robusto:1.22,grasso:1.45};
+  function makeRider(color,face,alt='media',fis='normale'){
+    const W=FIS[fis]||1,grp=new THREE.Group(),jersey=new THREE.MeshStandardMaterial({color,roughness:.7}),frameM=new THREE.MeshStandardMaterial({color,metalness:.3,roughness:.4});grp.rotation.order='YXZ';
     const add=m=>{m.castShadow=true;grp.add(m);return m;},V=(x,y,z)=>new V3(x,y,z),wheels=[];
     for(const z of[-.52,.52]){const w=new THREE.Group();w.position.set(0,.34,z);const ty=new THREE.Mesh(new THREE.TorusGeometry(.33,.025,8,32),black);ty.rotation.y=Math.PI/2;ty.castShadow=true;w.add(ty);
       for(let k=0;k<3;k++){const s=new THREE.Mesh(new THREE.BoxGeometry(.01,.64,.01),metal);s.rotation.x=k*Math.PI/3;w.add(s);}grp.add(w);wheels.push(w);}
@@ -424,14 +429,15 @@ function make3D(PATH,ROADS,BLDS){
     [[P.bb,P.seat],[P.bb,P.head],[P.seat,P.head],[P.bb,P.rear],[P.seat,P.rear],[P.head,P.front],[P.head,P.bar]].forEach(([a,b])=>limb(add(new THREE.Mesh(unitCyl(.022),frameM)),a,b));
     const bar=add(new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.42,6),black));bar.rotation.z=Math.PI/2;bar.position.copy(P.bar);
     add(new THREE.Mesh(new THREE.BoxGeometry(.12,.04,.26),black)).position.set(0,.92,-.17);
-    limb(add(new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,1,10),jersey)),V(0,.96,-.17),V(0,1.36,.22));
+    limb(add(new THREE.Mesh(new THREE.CylinderGeometry(.15*W,.13*W,1,10),jersey)),V(0,.96,-.17),V(0,1.36,.22));
+    if(fis==='grasso'){const pb=add(new THREE.Mesh(new THREE.SphereGeometry(.17,14,10),jersey));pb.scale.set(1.15,.95,1.1);pb.position.set(0,1.05,.08);}
     const R=face?.15:.11,head=add(new THREE.Mesh(new THREE.SphereGeometry(R,16,12),skin));head.position.set(0,1.5+(R-.11)*.8,.34);
     const hm=add(new THREE.Mesh(new THREE.SphereGeometry(R*1.12,16,10,0,Math.PI*2,0,Math.PI/2.1),jersey));hm.position.set(0,head.position.y+.02,.32);hm.rotation.x=-.15;
     if(face){const t=new THREE.TextureLoader().load(face);t.encoding=THREE.sRGBEncoding;const f=new THREE.Mesh(new THREE.CircleGeometry(R*.93,24),new THREE.MeshBasicMaterial({map:t}));
       f.position.set(0,head.position.y-.01,head.position.z+R*.98);grp.add(f);}
-    for(const x of[-.16,.16]){const s=V(x,1.33,.2),h=V(x*.9,1,.44),e=V(x*1.15,1.16,.36);limb(add(new THREE.Mesh(unitCyl(.045),jersey)),s,e);limb(add(new THREE.Mesh(unitCyl(.038),skin)),e,h);}
-    const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(unitCyl(.065),black)),shin:add(new THREE.Mesh(unitCyl(.045),skin)),crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),metal)),hip:V(sd*.09,.96,-.15)}));
-    grp.userData={wheels,legs,head,phase:Math.random()*6.28,lean:0,crank:0,wheel:0};scene.add(grp);return grp;}
+    for(const x of[-.16,.16]){const s=V(x,1.33,.2),h=V(x*.9,1,.44),e=V(x*1.15,1.16,.36);limb(add(new THREE.Mesh(unitCyl(.045*Math.sqrt(W)),jersey)),s,e);limb(add(new THREE.Mesh(unitCyl(.038*Math.sqrt(W)),skin)),e,h);}
+    const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(unitCyl(.065*W),black)),shin:add(new THREE.Mesh(unitCyl(.045*Math.sqrt(W)),skin)),crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),metal)),hip:V(sd*.09,.96,-.15)}));
+    grp.scale.setScalar(ALT[alt]||1);grp.userData={wheels,legs,head,phase:Math.random()*6.28,lean:0,crank:0,wheel:0};scene.add(grp);return grp;}
   const L1=.46,L2=.48,knee=new V3(),foot=new V3(),dv=new V3(),XA=new V3(1,0,0);
   function pedal(r,ang){for(const l of r.userData.legs){const a=ang+(l.sd>0?Math.PI:0);foot.set(l.sd*.11,.3-Math.cos(a)*.17,-Math.sin(a)*.17);
     l.crank.position.set(l.sd*.07,.3-Math.cos(a)*.085,-Math.sin(a)*.085);l.crank.rotation.x=a+Math.PI/2;dv.subVectors(foot,l.hip);const d=Math.min(dv.length(),L1+L2-.001),th=Math.acos((L1*L1+d*d-L2*L2)/(2*L1*d));dv.normalize();
@@ -457,7 +463,7 @@ function make3D(PATH,ROADS,BLDS){
       const sm=new Float64Array(n).fill(NaN);for(let k=0;k<n;k++){let a=0,c=0;for(let j=k-3;j<=k+3;j++)if(j>=0&&j<n&&!isNaN(s[j])){a+=s[j];c++;}if(c&&!isNaN(s[k]))sm[k]=a/c;}
       for(let k=1;k<n;k++)if(!isNaN(sm[k])&&!isNaN(sm[k-1])&&sm[k]<sm[k-1])sm[k]=sm[k-1];
       const pw=r.pts.some(p=>p.pw!=null)?r.pts:null;
-      const m=makeRider(new THREE.Color(r.color).getHex(),r.face),el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${r.name}</b><i></i>`;$('tags').appendChild(el);m.userData.tag=el;
+      const m=makeRider(new THREE.Color(r.color).getHex(),r.face,r.alt,r.fis),el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${r.name}</b><i></i>`;$('tags').appendChild(el);m.userData.tag=el;
       return{r,x,s:sm,m,off:2.4,pw,v:0,cur:0,vis:false};});
     $('chi').innerHTML=RID.map((o,i)=>`<option value="${i}">Inquadra: ${o.r.name}</option>`).join('');
     // auto in marcia e parcheggiate
@@ -541,7 +547,7 @@ $('mod').addEventListener('click',()=>{if(S3)S3.stop();S3=null;built=false;$('sc
 // ---------- 4. salvataggio della scena in un file unico ----------
 $('salva').addEventListener('click',async()=>{
   const ok=SEG.res.filter(x=>x.ok),w0=Math.min(...ok.map(x=>x.ta))-240,w1=Math.max(...ok.map(x=>x.tb))+240;
-  const data={titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,
+  const data={titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,
     pts:r.pts.filter(p=>p.t+offE(r)>=w0&&p.t+offE(r)<=w1).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])}))};
   const html=SRC.replace('<body>','<body><script id="scena" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>');
   const name=($('titolo').value||'scena').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_')+'.html',file=new File([html],name,{type:'text/html'});
@@ -551,7 +557,7 @@ $('salva').addEventListener('click',async()=>{
 // scena salvata: si costruisce subito
 const pre=document.getElementById('scena');
 if(pre){window.__SCENA=true;const d=JSON.parse(pre.textContent);$('titolo').value=d.titolo;
-  riders=d.riders.map(r=>({name:r.name,color:r.color,face:r.face,off:r.off,ghost:r.ghost,sync:r.sync,abs:r.abs,pts:r.pts.map(p=>({lat:p[0],lon:p[1],ele:p[2],t:p[3],hr:p[4],cad:p[5],pw:p[6]}))}));
+  riders=d.riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt||'media',fis:r.fis||'normale',off:r.off,ghost:r.ghost,sync:r.sync,abs:r.abs,pts:r.pts.map(p=>({lat:p[0],lon:p[1],ele:p[2],t:p[3],hr:p[4],cad:p[5],pw:p[6]}))}));
   const p0=riders[0].pts[0];REF={lat:p0.lat,lon:p0.lon,c:Math.cos(p0.lat*D)};riders.forEach(r=>{const t0=r.pts[0].t;r.pts.forEach(p=>p.t-=t0);r.off+=t0;grid(r);});
   A=d.A;B=d.B;$('setup').style.display='none';
   computeSeg();
