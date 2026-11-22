@@ -754,7 +754,10 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #nav button,#nav select{font:600 16px "Barlow Condensed";min-height:42px;padding:0 12px;border-radius:21px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
 #nav button.on{background:var(--ink);color:#fff}
 #nav button:focus-visible,#nav select:focus-visible,.btn:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
-#fonti{position:fixed;right:8px;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 100px);z-index:3;font-size:11px;color:#fff;text-shadow:0 1px 2px #000c;pointer-events:none;display:none}
+.tlrow{width:min(94vw,640px);gap:6px;align-items:center;flex-wrap:nowrap;max-width:none}
+#tl{flex:1;min-width:0;height:34px;accent-color:#ffd400}
+#tlt{color:#fff;font:800 14px "Barlow Condensed";text-shadow:0 1px 2px #000c;white-space:nowrap;min-width:64px;text-align:right}
+#fonti{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 64px);z-index:3;font-size:11px;color:#fff;text-shadow:0 1px 2px #000c;pointer-events:none;display:none}
 #fine{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;background:#fff;border-radius:14px;padding:16px 18px;width:min(92vw,420px);display:none;box-shadow:0 10px 40px #0006}
 #fine h2{margin:0 0 6px}
 </style>
@@ -790,10 +793,11 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="fine"></div>
 <div id="nav">
   <div class="row" id="views">
-    <button data-v="moto" class="on">Dalla moto</button><button data-v="lato">Di lato</button>
+    <button data-v="regia" class="on">Regia automatica</button><button data-v="moto">Dalla moto</button><button data-v="lato">Di lato</button>
     <button data-v="dd">Drone dietro</button><button data-v="df">Drone davanti</button>
     <button data-v="eli">Elicottero</button><button data-v="libera">Libera</button>
   </div>
+  <div class="row tlrow"><button id="rew" aria-label="Indietro di 10 secondi">−10"</button><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><button id="ff" aria-label="Avanti di 10 secondi">+10"</button><span id="tlt"></span></div>
   <div class="row">
     <select id="chi" aria-label="Chi inquadrare"></select>
     <button id="molt" aria-label="Velocità della scena">×5</button>
@@ -1175,14 +1179,15 @@ function make3D(PATH,ROADS,BLDS){
       const pw=r.pts.some(p=>p.pw!=null)?r.pts:null;
       const m=makeRider(new THREE.Color(r.color).getHex(),r.face,r.alt,r.fis),el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${r.name}</b><i></i>`;$('tags').appendChild(el);m.userData.tag=el;
       return{r,x,s:sm,m,off:2.4,pw,v:0,cur:0,vis:false};});
-    $('chi').innerHTML=RID.map((o,i)=>`<option value="${i}">Inquadra: ${o.r.name}</option>`).join('');
+    $('chi').innerHTML='<option value="-1">Inquadra: automatico</option>'+RID.map((o,i)=>`<option value="${i}">Inquadra: ${o.r.name}</option>`).join('');
+    $('tl').min=T0;$('tl').max=T1;
     // auto in marcia e parcheggiate
     const addCar=(path,s,cruise,follow)=>cars.push({path,s,v:cruise,cruise,follow,off:1.7,mesh:makeCar(COLS[cars.length%COLS.length]),active:s>=0,cool:0,pos:new V3(),fx:0,fz:1});
     addCar(PR,30,11,true);addCar(PR,-60,10.5,true);for(let k=0;k<Math.max(4,Math.round(PR.len/700));k++)addCar(PO,k*PO.len/Math.max(4,Math.round(PR.len/700)),11,false);
     for(let s=40;s<PR.len;s+=60+Math.random()*90){const sd=Math.random()<.5?-1:1;if(Math.random()<.4)continue;const h=at(PR,s,sd*4.4,tA);if(bldHit(tA.x,tA.z,1.6))continue;const mm=makeCar(COLS[Math.floor(Math.random()*COLS.length)]);mm.position.copy(tA);mm.position.y+=.25;mm.rotation.y=sd>0?h:h+Math.PI;}
     reset();
   }
-  let tNow=0,paused=false,mult=5,view='moto',follow=0;
+  let tNow=0,paused=false,mult=5,view='regia',follow=-1;
   function reset(){tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);}
   const sAt=(o,t)=>{const k=t-T0,i=Math.floor(k),u=k-i,a=o.s[i],b=o.s[i+1];if(isNaN(a))return isNaN(b)?NaN:b;if(isNaN(b))return a;return a+(b-a)*u;};
   function step(dt){
@@ -1209,22 +1214,39 @@ function make3D(PATH,ROADS,BLDS){
     $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='Pausa';};}
   // --- camera ---
   const center=new V3(),fwd=new V3(0,0,1),goal=new V3(),look=new V3(),last=new V3(),proj3=new V3(),t2=new V3();let first=true;
-  function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
+  function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;baseFov=camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
   addEventListener('resize',resize);
-  function setView(v){view=v;document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
+  function setView(v){view=v;shot=null;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
   document.querySelectorAll('#views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
   renderer.domElement.addEventListener('pointerdown',()=>{if(view!=='libera')setView('libera');controls.autoRotate=false;});
-  $('chi').addEventListener('change',e=>{follow=+e.target.value;first=true;});
+  $('chi').addEventListener('change',e=>{follow=+e.target.value;first=true;shot=null;});
   $('pausa').addEventListener('click',()=>{paused=!paused;$('pausa').textContent=paused?'Riparti':'Pausa';$('pausa').classList.toggle('on',paused);});
   $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='Pausa';});
   $('molt').addEventListener('click',()=>{mult={1:2,2:5,5:10,10:20,20:1}[mult];$('molt').textContent='×'+mult;});
+  // avanti e indietro nella corsa
+  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);}
+  let dragging=false;const tl=$('tl');
+  tl.addEventListener('pointerdown',()=>dragging=true);addEventListener('pointerup',()=>dragging=false);
+  tl.addEventListener('input',()=>seek(+tl.value));
+  $('rew').addEventListener('click',()=>seek(tNow-10));$('ff').addEventListener('click',()=>seek(tNow+10));
+  // regia automatica: cambi d'inquadratura, zoom e panoramiche
+  const SHOTS=['moto','lato','dd','df','eli','pano','zoom','bordo','gru','pano','bordo'];let shot=null,shotT=0,baseFov=50;
+  function leader(){return RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur)[0];}
+  function pickSubject(){if(follow>=0&&RID[follow].vis)return RID[follow];const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur);if(!lv.length)return null;
+    // se due sono vicini ma non appaiati, c'è battaglia: si inquadra chi insegue
+    for(let k=1;k<lv.length;k++){const d=lv[k-1].cur-lv[k].cur;if(d>3&&d<20&&Math.random()<.5)return lv[k];}
+    return Math.random()<.5?lv[0]:lv[Math.floor(Math.random()*lv.length)];}
+  function newShot(){let type;do{type=SHOTS[Math.floor(Math.random()*SHOTS.length)];}while(shot&&type===shot.type);
+    const subj=pickSubject();shot={type,subj,h0:Math.random()*6.28,dur:type==='bordo'?11:type==='eli'?6:6+Math.random()*4};shotT=0;first=true;
+    if(type==='bordo'&&subj){at(PR,Math.min(PR.len-5,subj.cur+Math.max(25,subj.v*5)),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}}
   const clock=new THREE.Clock();let running=false;
   function frame(){
     if(!running)return;
     const dt=Math.min(clock.getDelta(),.05);
     if(!paused){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}}
     place(dt);
-    const o=RID[follow]&&RID[follow].vis?RID[follow]:RID.find(q=>q.vis)||RID[0];if(!o){requestAnimationFrame(frame);return;}
+    let o;if(view==='regia'){shotT+=dt;if(!shot||shotT>shot.dur||!shot.subj||!shot.subj.vis)newShot();o=shot.subj;}
+    if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
     center.copy(o.m.position);const h=at(PR,o.cur,0,tB);fwd.lerp(t2.set(Math.sin(h),0,Math.cos(h)),first?1:Math.min(1,dt*1.5)).normalize();
     const rx=-fwd.z,rz=fwd.x,cy=center.y,F=(a,b,c)=>goal.set(center.x+fwd.x*a+rx*b,cy+c,center.z+fwd.z*a+rz*b);
     if(view==='libera'){camera.position.add(t2.subVectors(center,last));controls.target.copy(center).setY(cy+1);controls.update();}
@@ -1234,8 +1256,21 @@ function make3D(PATH,ROADS,BLDS){
       if(view==='dd'){F(-24,-3,13);look.set(center.x+fwd.x*6,cy+.5,center.z+fwd.z*6);}
       if(view==='df'){F(13,-1.5,5);look.set(center.x,cy+1.2,center.z);}
       if(view==='eli'){F(-45,-20,120);look.set(center.x+fwd.x*15,cy,center.z+fwd.z*15);}
-      camera.position.lerp(goal,first?1:Math.min(1,dt*2.2));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
+      let fov=baseFov,lerpK=dt*2.2;
+      if(view==='regia'){const T=shot.type,k=Math.min(1,shotT/shot.dur),e=k*k*(3-2*k);look.set(center.x,cy+1,center.z);
+        if(T==='moto'){F(-7,-2.6,3.2);look.set(center.x+fwd.x*3,cy+1,center.z+fwd.z*3);}
+        if(T==='lato'){F(1,-6.5,2.2);}
+        if(T==='dd'){F(-24,-3,13);look.set(center.x+fwd.x*6,cy+.5,center.z+fwd.z*6);}
+        if(T==='df'){F(13,-1.5,5);look.y=cy+1.2;}
+        if(T==='eli'){F(-45,-20,120);look.set(center.x+fwd.x*15,cy,center.z+fwd.z*15);}
+        if(T==='pano'){const a=shot.h0+shotT*.32;goal.set(center.x+Math.cos(a)*15,cy+4.5,center.z+Math.sin(a)*15);lerpK=dt*6;}
+        if(T==='zoom'){const d=46-37*e;F(-d*.75,-d*.45,4+20*(1-e));}
+        if(T==='gru'){F(30-38*e,-9+6*e,60-56*e);}
+        if(T==='bordo'&&shot.fixed){goal.copy(shot.fixed);lerpK=1;const dist=camera.position.distanceTo(center);fov=clamp(2*Math.atan(5/Math.max(1,dist))/D,14,baseFov);}}
+      if(Math.abs(camera.fov-fov)>.1){camera.fov=fov;camera.updateProjectionMatrix();}
+      camera.position.lerp(goal,first?1:Math.min(1,lerpK));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
     first=false;last.copy(center);sun.position.set(center.x-25,cy+45,center.z+15);sun.target.position.copy(center);
+    if(!dragging)tl.value=tNow;$('tlt').textContent=fmt(tNow-T0)+' / '+fmt(T1-T0);
     // dati in alto e classifica dal vivo
     $('cv').textContent=it((o.v*3.6).toFixed(1))+' km/h';$('cp').textContent=it((slope(PR,o.cur)*100).toFixed(1))+'%';
     let w='';if(o.pw){const tr=tNow-offE(o.r),P=o.r.pts;let j=0,lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}j=lo;const pv=P[j]&&P[j].pw;if(pv!=null)w=Math.round(pv)+' W';}$('cw').textContent=w;
@@ -1246,7 +1281,7 @@ function make3D(PATH,ROADS,BLDS){
       u.tag.style.opacity=proj3.z<1?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${(proj3.x*.5+.5)*innerWidth}px,${(-proj3.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
-  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();}},stop(){running=false;renderer.dispose();},debug:{step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();}},stop(){running=false;renderer.dispose();},debug:{seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 function showScene(){$('setup').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');$('htitle').textContent=$('titolo').value;S3.start();
   if(window.__SCENA){$('mod').style.display='none';$('salva').style.display='none';}}
