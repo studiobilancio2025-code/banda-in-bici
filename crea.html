@@ -705,6 +705,12 @@ h2 i{font-style:normal;background:var(--ink);color:#fff;border-radius:50%;width:
 .meta{color:var(--mut);font-size:14px}
 .meta b{color:var(--ink)}
 .ok{color:#1b7a34;font-weight:600}.warn{color:#b26a00;font-weight:600}
+.bchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.bchip{display:flex;align-items:center;gap:6px;background:#f6f4ef;border:1px solid var(--line);border-radius:22px;padding:3px 4px 3px 3px;font:600 17px "Barlow Condensed"}
+.bchip i{width:32px;height:32px;border-radius:50%;border:3px solid;background:#ddd center/cover;flex:none}
+.bchip button{border:0;background:none;font-size:18px;color:var(--mut);cursor:pointer;min-width:30px;min-height:30px}
+.small{font:600 16px "Barlow Condensed";min-height:40px;padding:0 14px;border-radius:20px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
+.inb{color:#1b7a34;font-weight:600;font-size:14px}
 .x{margin-left:auto;background:none;border:0;font-size:22px;cursor:pointer;color:var(--mut);min-height:40px;min-width:40px}
 #map{height:min(62vh,460px);border-radius:12px;border:1px solid var(--line);position:relative;z-index:1}
 .hint{font-weight:600;margin:8px 0}
@@ -755,6 +761,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <p class="sub">Carica i GPX dell'uscita, scegli il tratto sulla mappa e la scena 3D si costruisce da sola, con strade, case e foto satellitari vere.</p>
 
   <h2><i>1</i>I corridori</h2>
+  <div class="card" id="banda" style="margin-bottom:10px"></div>
   <label class="drop" id="drop"><b>Carica i file GPX</b>uno per ciclista · il primo fa da orologio di riferimento<input id="files" type="file" accept=".gpx,application/gpx+xml,text/xml" multiple></label>
   <div class="card" id="riders" style="margin-top:10px;display:none"></div>
 
@@ -840,9 +847,30 @@ function syncRider(r){
   let fine=[-1,best[1]];for(let d=best[1]-12;d<=best[1]+12;d++){const sc=score(d,1,12);if(sc>fine[0])fine=[sc,d];}
   r.off=fine[1];r.sync={ok:fine[0]>=120,together:fine[0]};
 }
+// ---------- la banda: ciclisti salvati sul telefono (nome, colore, volto, altezza, fisico) ----------
+const PK='banda.ciclisti';let BANDA=[];try{BANDA=JSON.parse(localStorage.getItem(PK)||'[]');}catch(e){}
+const saveBanda=()=>{try{localStorage.setItem(PK,JSON.stringify(BANDA));}catch(e){}};
+const keyN=n=>(n||'').trim().toLowerCase();
+function applyProf(r,p){Object.assign(r,{name:p.name,color:p.color,face:p.face,alt:p.alt||'media',fis:p.fis||'normale',prof:p.name});}
+function upsert(r){const p={name:r.name.trim(),color:r.color,face:r.face,alt:r.alt,fis:r.fis};if(!p.name)return;
+  const i=BANDA.findIndex(q=>keyN(q.name)===keyN(r.prof||r.name));if(i>=0)BANDA[i]=p;else BANDA.push(p);r.prof=p.name;saveBanda();renderBanda();}
+function renderBanda(){const b=$('banda');
+  b.innerHTML=`<b style="font:800 20px 'Barlow Condensed'">La banda</b> <span class="meta">${BANDA.length?'· ciclisti salvati su questo telefono: si riconoscono da soli dal nome del file':'· ancora vuota: dopo aver caricato un GPX, tocca "Salva nella banda"'}</span>
+  ${BANDA.length?`<div class="bchips">${BANDA.map((p,i)=>`<span class="bchip"><i style="border-color:${p.color};${p.face?`background-image:url(${p.face})`:''}"></i>${p.name}<button data-rm="${i}" aria-label="Togli ${p.name}">×</button></span>`).join('')}</div>`:''}
+  <div class="btns" style="margin-top:6px">${BANDA.length?'<button class="small" id="bexp">Esporta la banda</button>':''}<label class="small" style="display:inline-grid;place-items:center">Importa<input id="bimp" type="file" accept=".json,application/json" style="display:none"></label></div>`;}
+$('banda').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.rm!==undefined){BANDA.splice(+b.dataset.rm,1);saveBanda();renderBanda();}
+  if(b.id==='bexp'){const file=new File([JSON.stringify(BANDA)],'la_banda.json',{type:'application/json'});
+    try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'La banda'});return;}}catch(err){if(err.name==='AbortError')return;}
+    const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download='la_banda.json';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1000);}});
+$('banda').addEventListener('change',async e=>{if(e.target.id!=='bimp')return;const f=e.target.files[0];if(!f)return;
+  try{const arr=JSON.parse(await f.text());arr.forEach(p=>{if(!p.name)return;const i=BANDA.findIndex(q=>keyN(q.name)===keyN(p.name));if(i>=0)BANDA[i]=p;else BANDA.push(p);});saveBanda();renderBanda();
+    riders.forEach(r=>{const p=BANDA.find(q=>keyN(q.name)===keyN(r.prof));if(p)applyProf(r,p);});renderRiders();}catch(err){}});
+renderBanda();
 async function addFiles(fl){
   for(const f of fl){try{const r=parseGPX(await f.text(),f.name.replace(/\.gpx$/i,'').replace(/[_-]+/g,' ').slice(0,18));
     if(!REF){const p=r.pts[0];REF={lat:p.lat,lon:p.lon,c:Math.cos(p.lat*D)};}
+    const fn=keyN(f.name),p=BANDA.find(q=>keyN(q.name)&&fn.includes(keyN(q.name)));if(p)applyProf(r,p);
     riders.push(r);grid(r);if(riders.length>1)syncRider(r);else r.sync={ok:true,together:0};}
     catch(e){$('hint').textContent='Il file '+f.name+' non è un GPX valido.';}}
   renderRiders();drawMap();computeSeg();
@@ -855,18 +883,23 @@ function renderRiders(){
     return `<div class="rider"><label class="face" style="border-color:${r.color}">${r.face?`<img src="${r.face}" alt="">`:'<span>foto<br>volto</span>'}<input type="file" accept="image/*" data-i="${i}"></label>
     <div><div class="rrow"><input type="text" value="${r.name.replace(/"/g,'')}" data-i="${i}" aria-label="Nome"><div class="sw">${COLORS.map(c=>`<button style="background:${c}" class="${c===r.color?'on':''}" data-i="${i}" data-c="${c}" aria-label="Colore"></button>`).join('')}</div>
     <button class="x" data-del="${i}" aria-label="Togli">×</button></div>
+    <div class="rrow">${BANDA.length?`<select data-i="${i}" data-k="who" aria-label="Chi è"><option value="">Chi è? scegli dalla banda</option>${BANDA.map(p=>`<option ${keyN(p.name)===keyN(r.prof)?'selected':''} value="${p.name.replace(/"/g,'')}">${p.name}</option>`).join('')}</select>`:''}
+    ${r.prof?'<span class="inb">✓ nella banda (le modifiche si salvano da sole)</span>':`<button class="small" data-save="${i}">Salva nella banda</button>`}</div>
     <div class="rrow"><select data-i="${i}" data-k="alt" aria-label="Altezza">${['bassa','media','alta'].map(v=>`<option ${v===r.alt?'selected':''} value="${v}">Altezza ${v}</option>`).join('')}</select>
     <select data-i="${i}" data-k="fis" aria-label="Fisico">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===r.fis?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>
     <div class="meta"><b>${it(km.toFixed(1))} km</b> · ${fmt(P[P.length-1].t)} · ${P.length} punti${P.some(p=>p.pw!=null)?' · watt':''}${P.some(p=>p.hr!=null)?' · battiti':''} · ${st}</div></div></div>`;}).join('');
 }
 function distOf(r){let d=0;const g=r.g;for(let s=1;s<g.n;s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
 $('riders').addEventListener('input',e=>{const i=e.target.dataset.i;if(e.target.type==='text'){riders[i].name=e.target.value.slice(0,18);computeSeg(true);}});
+$('riders').addEventListener('focusout',e=>{const i=e.target.dataset.i;if(e.target.type==='text'&&riders[i]&&riders[i].prof)upsert(riders[i]);});
 $('riders').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.c){riders[b.dataset.i].color=b.dataset.c;renderRiders();drawMap();computeSeg(true);}
+  if(b.dataset.save!==undefined){upsert(riders[b.dataset.save]);renderRiders();}
+  if(b.dataset.c){const r=riders[b.dataset.i];r.color=b.dataset.c;if(r.prof)upsert(r);renderRiders();drawMap();computeSeg(true);}
   if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();}});
-$('riders').addEventListener('change',e=>{if(e.target.dataset.k){riders[e.target.dataset.i][e.target.dataset.k]=e.target.value;return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
+$('riders').addEventListener('change',e=>{const k=e.target.dataset.k;if(k==='who'){const r=riders[e.target.dataset.i],p=BANDA.find(q=>q.name===e.target.value);if(p){applyProf(r,p);renderRiders();drawMap();computeSeg(true);}return;}
+  if(k){const r=riders[e.target.dataset.i];r[k]=e.target.value;if(r.prof)upsert(r);return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),s=Math.min(img.width,img.height)*.85;
-    g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);renderRiders();URL.revokeObjectURL(img.src);};
+    g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);if(riders[i].prof)upsert(riders[i]);renderRiders();URL.revokeObjectURL(img.src);};
   img.src=URL.createObjectURL(f);});
 
 // ---------- 2. mappa, tratto, classifica ----------
