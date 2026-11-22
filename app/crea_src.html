@@ -91,9 +91,12 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #cron b{color:var(--tag);margin-right:6px}
 #pres{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%);z-index:4;display:none;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
 #pres .ph{width:min(42vw,190px);height:min(42vw,190px);border-radius:50%;border:6px solid;background:#ccc center/cover;box-shadow:0 6px 24px #0008;display:grid;place-items:center;font:800 64px "Barlow Condensed";color:#fff}
+#pres.cer{top:50%}#pres.cer .ph{width:96px;height:96px;font-size:40px;border-width:4px}#pres.cer b{font-size:24px}
+#pres em.pl{font:900 44px "Barlow Condensed";color:var(--ink);background:#fff;border:3px solid var(--ink);border-radius:50%;width:64px;height:64px;display:grid;place-items:center;margin-top:-40px;font-style:normal;box-shadow:0 3px 0 var(--ink)}
 #pres b{background:var(--tag);color:var(--ink);font:800 30px "Barlow Condensed";padding:4px 16px;border-radius:8px;border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
 #pres span{background:rgba(16,21,28,.85);color:#fff;font:700 20px "Barlow Condensed";padding:2px 12px;border-radius:6px}
 #pres.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}@keyframes pop{from{transform:translate(-50%,-50%) scale(.3);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+#cron.tec{background:rgba(13,71,161,.85)}
 #cron.hot{background:rgba(183,28,28,.88)}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
@@ -141,7 +144,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="tags"></div>
 <div id="hud"><h1 id="htitle"></h1><div class="chips"><span id="cv"></span><span id="cp"></span><span id="cw" class="w"></span></div></div>
 <div id="live"></div>
-<div id="cron"><b>🎙️</b><span></span></div>
+<div id="cron"><b>🎙️ Gigi</b><span></span></div>
 <div id="pres"></div>
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
 <div id="fine"></div>
@@ -606,9 +609,9 @@ function make3D(PATH,ROADS,BLDS){
     reset();
   }
   let tNow=0,paused=false,mult=5,view='regia',follow=-1;
-  function reset(){tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);crReset(T0);}
+  function reset(){endCer();tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);crReset(T0);}
   const sAt=(o,t)=>{const k=t-T0,i=Math.floor(k),u=k-i,a=o.s[i],b=o.s[i+1];if(isNaN(a))return isNaN(b)?NaN:b;if(isNaN(b))return a;return a+(b-a)*u;};
-  function step(dt){
+  function step(dt){if(CER.on||CER.done)return;
     tNow+=dt;if(tNow>T1){finish();tNow=T1;paused=true;$('pausa').textContent='Riparti';}
     const live=[];RID.forEach(o=>{const s=sAt(o,tNow);o.vis=!isNaN(s);if(o.vis){o.v=Math.max(0,(sAt(o,tNow+1)-sAt(o,tNow-1))/2)||o.v;o.cur=s;live.push(o);}});
     // posizione in corsia: in fila o a coppie quando sono vicini
@@ -622,12 +625,14 @@ function make3D(PATH,ROADS,BLDS){
       c.v=blocked?Math.max(0,c.v-14*dt):Math.min(c.cruise*(Math.abs(curv(c.path,c.s+6))>.03?.6:1),c.v+4*dt);c.s+=c.v*dt;if(c.s>c.path.len){if(c.follow){c.active=false;c.cool=4+Math.random()*6;continue;}c.s=0;}}
   }
   function place(dt){
-    RID.forEach(o=>{const m=o.m,u=m.userData;m.visible=o.vis;o.r.__tag=u.tag;if(!o.vis){u.tag.style.opacity=0;return;}
+    RID.forEach(o=>{const m=o.m,u=m.userData;if(o.pod){o.vis=o.pod.show;m.visible=o.vis;if(!o.vis){u.tag.style.opacity=0;return;}m.position.copy(o.pod.pos);m.rotation.set(0,o.pod.ry,0);return;}
+      m.visible=o.vis;o.r.__tag=u.tag;if(!o.vis){u.tag.style.opacity=0;return;}
       const h=at(PR,o.cur,o.off,m.position);m.rotation.y=h;const lean=Math.atan(o.v*o.v*curv(PR,o.cur)/9.8);u.lean+=(lean-u.lean)*.1;m.rotation.z=-u.lean*.8;m.rotation.x=-Math.atan(slope(PR,o.cur));
       const mv=u.lastP?Math.min(2,m.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(m.position);u.wheel+=mv/.34;u.crank+=mv/1.05;pedal(m,u.crank+u.phase);u.wheels.forEach(w=>w.rotation.x=u.wheel);});
     for(const c of cars){c.mesh.visible=c.active;if(!c.active)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
   }
-  function finish(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
+  function finish(){if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
+  function showFine(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
     $('fine').innerHTML=`<h2>Arrivo</h2><table>${ok.map((x,k)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${k?'+'+fmt(x.tb-l.tb):'1°'}</td></tr>`).join('')}</table><div class="btns"><button class="btn" id="dinuovo">Rivedi</button></div>`;
     $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='Pausa';};}
 
@@ -640,17 +645,34 @@ function make3D(PATH,ROADS,BLDS){
   const nick=o=>(o.r.nick||'').trim();
   const nm=o=>nick(o)&&Math.random()<.3?nick(o):o.r.name;   // ogni tanto il soprannome
   const NN=o=>o.r.name;
-  let VOICE=null;function pickVoice(){if(!window.speechSynthesis)return;const v=speechSynthesis.getVoices().filter(x=>/^it/i.test(x.lang));
-    VOICE=v.find(x=>/google/i.test(x.name))||v.find(x=>/natural|neural|premium|enhanced/i.test(x.name))||v.find(x=>!/compact/i.test(x.name))||v[0]||null;}
+  // due voci: Gigi (cronista) e Tonino (commento tecnico); se il telefono ha una sola voce italiana, Tonino parla più basso e più calmo
+  let VOICE=null,VOICE2=null;function pickVoice(){if(!window.speechSynthesis)return;const v=speechSynthesis.getVoices().filter(x=>/^it/i.test(x.lang));
+    const score=x=>(/natural|neural|premium|enhanced|online/i.test(x.name)?4:0)+(/google/i.test(x.name)?3:0)+(x.localService===false?1:0)-(/compact|eloquence/i.test(x.name)?3:0);
+    const sv=v.slice().sort((a,b)=>score(b)-score(a));VOICE=sv[0]||null;VOICE2=sv.find(x=>x!==VOICE&&score(x)>=score(VOICE)-3)||VOICE;}
   if(window.speechSynthesis){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
   const speaking=()=>window.speechSynthesis&&(speechSynthesis.speaking||speechSynthesis.pending);
-  // pri 2 = evento importante (interrompe), 1 = commento normale; ex = eccitazione 0..1 (voce più veloce e più alta)
-  function say(txt,pri,ex){if(!tele)return false;const now=realNow();if(pri<2&&now-lastSay<4.5)return false;
-    const busy=speaking();if(busy&&pri<2)return false;
-    txt=txt.charAt(0).toUpperCase()+txt.slice(1);lastSay=now;capT=now;const c=$('cron');c.style.display='block';c.lastChild.textContent=txt;c.style.opacity=1;c.classList.toggle('hot',(ex||0)>.6);
-    if(!window.speechSynthesis)return true;if(busy)speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';if(VOICE)u.voice=VOICE;ex=ex||0;
-    u.rate=(mult>=10?1.15:1.05)+ex*.15;u.pitch=1+ex*.18;u.onstart=()=>FX.duck(true);u.onend=u.onerror=()=>FX.duck(false);speechSynthesis.speak(u);return true;}
+  // coda delle frasi: nessuna frase viene interrotta a metà. pri 2 = evento importante (aspetta il suo turno, scade dopo 12 s),
+  // 1.5 = risposta del tecnico, 1 = commento (si dice solo se nessuno sta parlando), 3 = presentazione e premiazione (non scade)
+  const Q=[];let QB=null;
+  const WHO={c:'🎙️ Gigi',t:'🎧 Tonino'};
+  function showCap(it){capT=realNow();const c=$('cron');c.style.display='block';c.firstChild.textContent=WHO[it.who];c.lastChild.textContent=it.txt;c.style.opacity=1;c.classList.toggle('hot',it.ex>.6);c.classList.toggle('tec',it.who==='t');}
+  function pump(){if(QB)return;if(window.speechSynthesis&&speechSynthesis.speaking){setTimeout(pump,250);return;}const now=realNow();
+    for(let i=Q.length-1;i>=0;i--)if(Q[i].exp<now){const x=Q.splice(i,1)[0];if(x.cb)x.cb();}
+    if(!Q.length)return;let bi=0;Q.forEach((q,i)=>{if(q.pri>Q[bi].pri)bi=i;});const it=Q.splice(bi,1)[0];QB=it;showCap(it);
+    let fin=false;const done=()=>{if(fin)return;fin=true;clearTimeout(it.to);QB=null;FX.duck(false);if(it.cb)it.cb();setTimeout(pump,it.who==='t'?450:300);};
+    const est=it.txt.length/12.5+.7;
+    if(!window.speechSynthesis||!tele){it.to=setTimeout(done,est*1000);return;}
+    const u=new SpeechSynthesisUtterance(it.txt);u.lang='it-IT';const v=it.who==='t'?VOICE2:VOICE;if(v)u.voice=v;const same=VOICE2===VOICE;
+    u.rate=(it.who==='t'?.97:1.02)+it.ex*.07+(mult>=10?.06:0);u.pitch=it.who==='t'?(same?.78:.95):1+it.ex*.07;
+    u.onstart=()=>FX.duck(true);u.onend=u.onerror=done;it.to=setTimeout(()=>{if(!fin){speechSynthesis.cancel();done();}},(est*2+3)*1000);speechSynthesis.speak(u);}
+  const busyQ=()=>!!QB||Q.length>0||speaking();
+  function say(txt,pri,ex,who){if(!tele)return false;const now=realNow();who=who||'c';txt=txt.charAt(0).toUpperCase()+txt.slice(1);
+    if(pri<2){if(now-lastSay<3||busyQ())return false;}else if(Q.filter(q=>q.pri>=2).length>=2)Q.splice(Q.findIndex(q=>q.pri>=2),1);
+    lastSay=now;Q.push({txt,pri,ex:ex||0,who,exp:now+(pri>=2?12:5)});pump();return true;}
+  // il tecnico risponde subito dopo il cronista (a volte sì, a volte no, per non essere ripetitivo)
+  function tecSay(txt,p){if(!tele||!txt||Math.random()>(p??.55))return;Q.push({txt:txt.charAt(0).toUpperCase()+txt.slice(1),pri:1.5,ex:0,who:'t',exp:realNow()+15});pump();}
+  function sayCb(txt,who,cb,ex){Q.push({txt,pri:3,ex:ex||0,who,exp:1e12,cb});pump();}
+  function qClear(){Q.length=0;if(QB){clearTimeout(QB.to);QB=null;}if(window.speechSynthesis)speechSynthesis.cancel();}
   function gapSec(L,q){let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));}
   function ptOf(o){const tr=tNow-offE(o.r),P=o.r.pts;let lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}return P[lo];}
   const wattOf=o=>{const p=ptOf(o);return p&&p.pw;},hrOf=o=>{const p=ptOf(o);return p&&p.hr;},cadOf=o=>{const p=ptOf(o);return p&&p.cad;};
@@ -662,17 +684,40 @@ function make3D(PATH,ROADS,BLDS){
     for(let s=a;s<=b;s+=10){at(PR,s,0,tA);if(py!=null&&tA.y>py)up+=tA.y-py;py=tA.y;}
     for(let s=a;s+100<=b;s+=25){at(PR,s,0,tA);const y0=tA.y;at(PR,s+100,0,tA);mx=Math.max(mx,(tA.y-y0)/100);}
     at(PR,a,0,tA);const ya=tA.y;at(PR,b,0,tA);return{len:b-a,avg:(tA.y-ya)/(b-a),max:mx,up};}
+  // --- numeri per il commento tecnico ---
+  const yAt=sp=>{at(PR,sp,0,tA);return tA.y;};
+  const vam=o=>{const a=sOf(o,tNow-60),b=o.cur;if(isNaN(a)||isNaN(b)||tNow-60<o.x.ta)return null;return(yAt(b)-yAt(a))*60;};
+  function avgOf(o,key,sec,from){const P=o.r.pts,t1=tNow-offE(o.r),t0=from!=null?from-offE(o.r):t1-sec;let a=0,n=0;for(const p of P){if(p.t<t0||p.t>t1||p[key]==null)continue;a+=p[key];n++;}return n>5?a/n:null;}
+  const ahead=(o,d)=>{const b=Math.min(endS(o),o.cur+d);return b-o.cur>50?(yAt(b)-yAt(o.cur))/(b-o.cur):null;};
+  const len0=o=>{const a=begS(o),b=endS(o);return isNaN(a)||isNaN(b)?segLen():b-a;};
+  const kmh=v=>Math.round(v*3.6);
+  function vNow(o,sec){const a=sOf(o,tNow-sec);return isNaN(a)?o.v:(o.cur-a)/sec;}
+  function tecLead(L){const out=[],w=avgOf(L,'pw',60),va=vam(L),hr=hrOf(L),cd=avgOf(L,'cad',30);
+    if(w)out.push(`${NN(L)} nell'ultimo minuto ha tenuto ${Math.round(w)} watt di media: ${w>320?'ritmo altissimo':w>220?'un passo regolare, da cronoman':'sta gestendo, non è a tutta'}.`);
+    if(va!=null&&va>350)out.push(`Guarda la VAM, Gigi: ${Math.round(va/10)*10} metri all'ora di dislivello. ${va>900?'Numeri da scalatore vero.':'Bel passo, senza strafare.'}`);
+    if(hr&&L.hrMax)out.push(`Il cuore di ${NN(L)} è a ${Math.round(hr)} battiti, il ${Math.round(hr/L.hrMax*100)} per cento del suo massimo di oggi${hr/L.hrMax>.95?': è proprio al limite.':': ha ancora un po\' di margine.'}`);
+    if(cd)out.push(cd<65?`${NN(L)} pedala duro, sulle ${Math.round(cd)} pedalate al minuto: spinge di forza più che di agilità.`:cd>90?`Cadenza alta per ${NN(L)}, ${Math.round(cd)} pedalate al minuto: risparmia le gambe, lavora di cuore.`:`Cadenza giusta per ${NN(L)}, intorno alle ${Math.round(cd)} pedalate: è la zona più efficiente.`);
+    const ah=ahead(L,400);if(ah!=null&&ah>.045)out.push(`Attenzione, nei prossimi 400 metri la strada sale al ${it((ah*100).toFixed(1))} per cento: lì si decide molto.`);
+    else if(ah!=null&&ah<-.02)out.push(`Adesso arriva un tratto in discesa: si recupera fiato, ma chi è dietro può rientrare.`);
+    else if(ah!=null&&Math.abs(ah)<.015&&L.v>6)out.push(`Il prossimo tratto è quasi piatto: qui conta stare a ruota, si risparmia tanta energia.`);
+    return out;}
+  function tecPair(L,S,g){const out=[],dv=vNow(L,20)-vNow(S,20);
+    if(g<3&&L.v>7)out.push(`A questa velocità, a ${kmh(L.v)} all'ora, chi sta a ruota fatica molto meno. ${NN(S)} fa bene a restare lì dietro.`);
+    if(g<3&&L.v<=7)out.push(`In salita la scia conta poco, Gigi: qui contano le gambe. Si vedrà chi ne ha di più.`);
+    if(Math.abs(dv)>.4)out.push(`La differenza di velocità è chiara: ${NN(L)} va a ${kmh(vNow(L,20))} all'ora, ${NN(S)} a ${kmh(vNow(S,20))}.`);
+    const hS=hrOf(S);if(hS&&S.hrMax&&hS/S.hrMax>.94)out.push(`${NN(S)} è a ${Math.round(hS)} battiti: oltre la soglia non si può restare a lungo.`);
+    return out.concat(tecLead(L).slice(0,2));}
   const BATTUTE=['{n} giura che oggi non aveva le gambe. Ci crediamo poco.','Occhio a {n}: quando sta zitto, vuol dire che sta soffrendo.','{n} pedala con la grinta di chi deve rientrare per pranzo.',
     'Per {n} questa salita è una questione personale.','{n} dirà che c\'era vento contro. Per lui c\'è sempre vento contro.','{n} ha già in testa il caffè dell\'arrivo.',
     'Dicono che {n} si sia allenato tutta la settimana. Di nascosto.','{n} fa finta di niente, ma guarda il computerino ogni dieci secondi.','Al bar già lo sanno: {n} racconterà questa salita per una settimana.'];
   function battuta(o){const own=(o.r.bat||'').split('\n').map(x=>x.trim()).filter(Boolean).filter(x=>!CR.used.has(x)),gen=BATTUTE.filter(x=>!CR.used.has(x)),pool=own.length&&(Math.random()<.6||!gen.length)?own:gen;if(!pool.length)return null;const b=pool[Math.floor(Math.random()*pool.length)];CR.used.add(b);return b.replace(/\{n\}/g,nm(o));}
   function crReset(t){const ST=segStats();
-    CR={done:new Set(),order:[],ordT:0,nextGap:t+30,lastG:null,cool:{},hist:new Map(),histT:0,nextFill:t+80,used:new Set(),crisi:new Map(),lastAny:t,startT:Math.min(...RID.map(o=>o.x.ta)),st:ST,intro:t<=T0+1,hold:0,bellT:t+10};
+    CR={done:new Set(),order:[],ordT:0,nextGap:t+30,lastG:null,cool:{},hist:new Map(),histT:0,nextFill:t+80,nextTec:t+55,used:new Set(),crisi:new Map(),lastAny:t,startT:Math.min(...RID.map(o=>o.x.ta)),st:ST,intro:t<=T0+1,hold:0,bellT:t+10};
     RID.forEach(o=>{let m=0;o.r.pts.forEach(p=>{const T=p.t+offE(o.r);if(p.hr&&T>=o.x.ta&&T<=o.x.tb)m=Math.max(m,p.hr);});o.hrMax=m;});
     RID.forEach((o,i)=>{if(t>o.x.ta+1)CR.done.add('st'+i);if(t>o.x.tb+1)CR.done.add('ar'+i);});
     if(RID.every(o=>t>o.x.tb+1))CR.done.add('fine');
     const L=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur)[0];if(L){const rem=endS(L)-L.cur;[2000,1000,500,200].forEach(m=>{if(rem<m)CR.done.add('km'+m);});if(L.cur>(begS(L)+endS(L))/2)CR.done.add('meta');}
-    CR.order=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur);if(window.speechSynthesis)speechSynthesis.cancel();INTRO.on=false;$('pres').style.display='none';$('cron').style.opacity=0;FX.crowd(0);}
+    CR.order=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur);qClear();INTRO.on=false;$('pres').style.display='none';$('cron').style.opacity=0;FX.crowd(0);}
   const cool=(k,t)=>{if(tNow<(CR.cool[k]||-1e9))return false;CR.cool[k]=tNow+t;return true;};
   // prima del via la scena aspetta che il cronista finisca la presentazione
   // presentazione: discesa dal satellite fino alla partenza, poi i corridori uno per uno con la foto
@@ -682,19 +727,21 @@ function make3D(PATH,ROADS,BLDS){
     return t+'.';}
   function startIntro(){const P=RID.slice().sort((a,b)=>a.x.ta-b.x.ta),steps=[{text:introText()}];
     P.forEach((o,k)=>steps.push({o,text:(P.length>1?(k===0?'Ai nastri di partenza: ':k===P.length-1?'E infine ':'')+NN(o):`In gara ${NN(o)}`)+(nick(o)?`, detto ${nick(o)}`:'')+(P.length>1?'.':', da solo contro il cronometro.')}));
-    Object.assign(INTRO,{on:true,i:-1,steps,ended:-1,first:P[0]});FX.fanfare();nextStep();}
+    steps.splice(1,0,{who:'c',text:pick(['Con me, come sempre, per il commento tecnico, Tonino.','Al mio fianco per il commento tecnico c\'è Tonino.'])},
+      {who:'t',text:CR.st&&CR.st.avg>.03?pick(['Ciao Gigi. Tratto impegnativo: chi parte troppo forte poi lo paga nel finale.','Ciao a tutti. Qui bisogna dosare le forze, la salita non perdona.']):pick(['Ciao Gigi. Tratto veloce, conterà molto stare a ruota e gestire il vento.','Ciao a tutti. Percorso scorrevole: occhio ai rilanci dopo le curve.'])});
+    Object.assign(INTRO,{on:true,i:-1,steps,ended:-1,first:P[0],t0:realNow(),dd:Math.max(9,steps.filter(x=>!x.o).reduce((a,x)=>a+x.text.length/12.5+1,0))});FX.fanfare();nextStep();}
   function nextStep(){const I=INTRO;I.i++;if(I.i>=I.steps.length){I.on=false;$('pres').style.display='none';if(SAT)SAT.visible=false;first=true;return;}
-    const st=I.steps[I.i];I.stepT=realNow();I.est=st.text.length/12+.8;lastSay=realNow();capT=lastSay;const c=$('cron');c.style.display='block';c.lastChild.textContent=st.text;c.style.opacity=1;c.classList.remove('hot');
+    const st=I.steps[I.i];I.stepT=realNow();I.est=st.text.length/12+.8;lastSay=realNow();const k=I.i;sayCb(st.text,st.who||'c',()=>{if(INTRO.i===k)INTRO.ended=k;});
     const p=$('pres');if(st.o){const r=st.o.r,ini=r.name.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
       p.innerHTML=`<div class="ph" style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}">${r.face?'':ini}</div><b>${r.name}</b>${nick(st.o)?`<span>«${nick(st.o)}»</span>`:''}`;
-      p.style.display='flex';p.classList.remove('pop');void p.offsetWidth;p.classList.add('pop');if(I.i>1)FX.applause(1.2,.35);}else p.style.display='none';
-    if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(st.text),k=I.i;u.lang='it-IT';if(VOICE)u.voice=VOICE;u.rate=mult>=10?1.15:1.05;u.onstart=()=>FX.duck(true);u.onend=u.onerror=()=>{FX.duck(false);if(INTRO.i===k)INTRO.ended=k;};speechSynthesis.speak(u);}}
+      p.style.display='flex';p.classList.remove('pop');void p.offsetWidth;p.classList.add('pop');if(st.o!==I.first)FX.applause(1.2,.35);}else p.style.display='none';
+}
   function introTick(){const I=INTRO,el=realNow()-I.stepT,spoken=I.ended===I.i||(!window.speechSynthesis&&el>I.est)||el>I.est*2+2;
-    if(spoken&&(I.i>0?el>2.8:el>Math.max(7,I.est*.8)))nextStep();}
+    if(spoken&&el>(I.steps[I.i].o?2.8:1.2))nextStep();}
   // telecamera della presentazione
   const im0=new V3(),im1=new V3(),idir=new V3();
-  function introCam(dt){const I=INTRO,o=I.i>0?I.steps[I.i].o:I.first,el=realNow()-I.stepT;
-    if(I.i===0){const a=begS(o),b=endS(o),len=Math.max(200,b-a),H0=SAT?clamp(len*1.15,500,3200):clamp(len*.6,250,600),e0=clamp(el/Math.max(7,I.est),0,1),e=e0*e0*(3-2*e0);
+  function introCam(dt){const I=INTRO,st=I.steps[I.i]||{},o=st.o||I.first,el=realNow()-I.stepT;
+    if(!st.o){const a=begS(o),b=endS(o),len=Math.max(200,b-a),H0=SAT?clamp(len*1.15,500,3200):clamp(len*.6,250,600),e0=clamp((realNow()-I.t0)/I.dd,0,1),e=e0*e0*(3-2*e0);
       at(PR,(a+b)/2,0,im0);const hd=at(PR,isNaN(a)?0:a,0,im1);idir.set(Math.sin(hd),0,Math.cos(hd));
       const u=clamp((e-.1)/.9,0,1),h=H0*Math.pow(4/H0,e),gx=im0.x+(im1.x-idir.x*12-im0.x)*u,gz=im0.z+(im1.z-idir.z*12-im0.z)*u,gy=im0.y+(im1.y-im0.y)*u;
       goal.set(gx-idir.x*h*.2,gy+h,gz-idir.z*h*.2);look.set(im0.x+(im1.x+idir.x*8-im0.x)*u,gy+1.2*u,im0.z+(im1.z+idir.z*8-im0.z)*u);return 1;}
@@ -715,17 +762,15 @@ function make3D(PATH,ROADS,BLDS){
     const bySt=RID.map((o,i)=>[o,i]).sort((a,b)=>a[0].x.ta-b[0].x.ta);
     for(const [o,i] of bySt){if(C.done.has('st'+i)||tNow<o.x.ta)continue;C.done.add('st'+i);
       if(!C.done.has('via')){C.done.add('via');FX.fanfare(true);FX.applause(2,.5);
-        said(pick([`Via! ${nm(o)} lancia la corsa!`,`Si parte! ${nm(o)} apre le danze!`,`E via! Comincia la sfida!`]),2,.8);}
+        said(pick([`Via! ${nm(o)} lancia la corsa!`,`Si parte! ${nm(o)} apre le danze!`,`E via! Comincia la sfida!`]),2,.8);
+        tecSay(pick(['Partenza regolare. Nei primi metri meglio non andare fuori giri, il conto arriva dopo.','Si parte con calma, giustamente: il tratto è lungo.','Primi metri per trovare il ritmo. Occhio a chi scatta subito.']),.8);}
       else{const g=o.x.ta-C.startT;said(g<4?pick([`Insieme a lui c'è anche ${nm(o)}.`,`${nm(o)} è subito lì, a ruota.`,`Pronto anche ${nm(o)}, che non molla la ruota.`]):`${nm(o)} attacca il tratto con ${dS(g)} di ritardo: tocca inseguire!`,1);}}
     // arrivi
     const byAr=RID.map((o,i)=>[o,i]).sort((a,b)=>a[0].x.tb-b[0].x.tb),first=byAr[0][0];
     for(let k=0;k<byAr.length;k++){const [o,i]=byAr[k];if(C.done.has('ar'+i)||tNow<o.x.tb)continue;C.done.add('ar'+i);const tt=o.x.tb-o.x.ta;
-      if(k===0){FX.applause(5,1);FX.fanfare(true);said(RID.length>1?pick([`${nm(o)} taglia il traguardo per primo! Tempo: ${dS(tt)}!`,`Vittoria di ${nm(o)}! Braccia al cielo, chiude in ${dS(tt)}!`,`È ${nm(o)} il re di «${$('titolo').value}»: ${dS(tt)}!`]):`${nm(o)} arriva in cima: ${dS(tt)}. Bella prova!`,2,1);}
+      if(k===0){FX.applause(5,1);FX.fanfare(true);said(RID.length>1?pick([`${nm(o)} taglia il traguardo per primo! Tempo: ${dS(tt)}!`,`Vittoria di ${nm(o)}! Braccia al cielo, chiude in ${dS(tt)}!`,`È ${nm(o)} il re di «${$('titolo').value}»: ${dS(tt)}!`]):`${nm(o)} arriva in cima: ${dS(tt)}. Bella prova!`,2,1);tecSay(`Prestazione notevole: media di ${it((len0(o)/tt*3.6).toFixed(1))} all'ora`+(avgOf(o,'pw',0,o.x.ta)?`, con ${Math.round(avgOf(o,'pw',0,o.x.ta))} watt medi`:'')+'. '+pick(['Ha gestito benissimo lo sforzo.','Ha corso da campione.','Complimenti davvero.']),.9);}
       else{FX.applause(3,.6);const g=o.x.tb-first.x.tb;said(`${k===byAr.length-1&&k>1?'Chiude ':'Arriva '}${nm(o)}, a ${dS(g)}. `+(g<5?'Per un soffio!':g>120?pick(['Oggi non era giornata.','Arriva con onore.','Comunque arrivato, ed è quello che conta.']):`Il suo tempo: ${dS(tt)}.`),2,.6);}
       return;}
-    if(!C.done.has('fine')&&RID.every(o=>tNow>=o.x.tb+3)){C.done.add('fine');
-      if(RID.length>1){const ord=byAr.map(x=>x[0]);said('Classifica finale: '+ord.map((o,k)=>k?`${k+1}° ${NN(o)} a ${dS(o.x.tb-first.x.tb)}`:`primo ${NN(o)} in ${dS(o.x.tb-o.x.ta)}`).join(', ')+'. Dalla banda in bici è tutto, alla prossima uscita!',2,.3);}
-      else said('Dalla banda in bici è tutto, alla prossima uscita!',2,.2);return;}
     if(!L)return;
     // storia dei distacchi (ogni 5 s) per capire crisi e rimonte
     if(tNow-C.histT>=5){C.histT=tNow;live.forEach(o=>{if(o===L)return;const h=C.hist.get(o)||[];h.push([tNow,gapSec(L,o)]);while(h.length&&h[0][0]<tNow-90)h.shift();C.hist.set(o,h);});}
@@ -734,13 +779,14 @@ function make3D(PATH,ROADS,BLDS){
     if(tNow-C.ordT>.5){C.ordT=tNow;for(let a=0;a<C.order.length;a++)for(let b=a+1;b<C.order.length;b++){const A=C.order[a],B=C.order[b];
         if(inSeg(A)&&inSeg(B)&&B.cur-A.cur>4){C.order=live.slice();FX.applause(2,.5);
           said(a===0?pick([`Sorpasso! ${nm(B)} passa ${nm(A)} e si prende la testa della corsa!`,`Clamoroso! ${nm(B)} è davanti a tutti!`,`Cambio al comando: adesso guida ${nm(B)}!`]):
-            pick([`Sorpasso! ${nm(B)} passa ${nm(A)}!`,`Attenzione, ${nm(B)} si porta davanti a ${nm(A)}!`,`${nm(B)} supera ${nm(A)}, che non riesce a rispondere!`]),2,.9);return;}}
+            pick([`Sorpasso! ${nm(B)} passa ${nm(A)}!`,`Attenzione, ${nm(B)} si porta davanti a ${nm(A)}!`,`${nm(B)} supera ${nm(A)}, che non riesce a rispondere!`]),2,.9);
+          tecSay(pick([`Ha scelto il momento giusto: ${NN(B)} viaggia a ${kmh(vNow(B,15))} all'ora, ${NN(A)} a ${kmh(vNow(A,15))}.`,`${NN(A)} ha avuto un calo, e ${NN(B)} non se l'è fatto ripetere.`]),.7);return;}}
       if(live.some(o=>!C.order.includes(o)))C.order=live.slice();}
     // distanza all'arrivo e metà tratto
     const rem=endS(L)-L.cur,len=endS(L)-begS(L);
     for(const m of[2000,1000,500,200]){if(C.done.has('km'+m)||rem>m||len<m+300)continue;C.done.add('km'+m);
       const S=live[1],gs=S?gapSec(L,S):0,tail=S?(gs<4?` E ${nm(S)} è lì, attaccato!`:gs<20?` ${nm(S)} a ${dS(gs)}: si può ancora riaprire!`:` ${nm(S)} a ${dS(gs)}.`):'';
-      said((m===2000?`Mancano due chilometri per ${nm(L)}.`:m===1000?pick(['Ultimo chilometro!',`Ultimo chilometro per ${nm(L)}!`,'Triangolo rosso! Ultimo chilometro!']):m===500?pick(['Mancano 500 metri!','Ultimi 500 metri, adesso si soffre!']):pick(['Ultimi 200 metri, è volata!','Duecento metri, tutto quello che resta!']))+tail,2,m<=500?1:.6);return;}
+      said((m===2000?`Mancano due chilometri per ${nm(L)}.`:m===1000?pick(['Ultimo chilometro!',`Ultimo chilometro per ${nm(L)}!`,'Triangolo rosso! Ultimo chilometro!']):m===500?pick(['Mancano 500 metri!','Ultimi 500 metri, adesso si soffre!']):pick(['Ultimi 200 metri, è volata!','Duecento metri, tutto quello che resta!']))+tail,2,m<=500?1:.6);{const ah=ahead(L,Math.min(m,600));if(m>=1000&&ah!=null)tecSay(ah>.04?`Finale duro, Gigi: si sale al ${it((ah*100).toFixed(1))} per cento. Chi ha risparmiato adesso raccoglie.`:ah<-.01?'Finale che scende: qui si va a tutta, conta il rapporto lungo.':'Finale pedalabile: si può rilanciare, è il momento di svuotare le gambe.',.8);}return;}
     if(!C.done.has('meta')&&len>800&&L.cur>=begS(L)+len/2){C.done.add('meta');const ST=C.st;
       if(said(`Siamo a metà tratto. ${nm(L)} in testa`+(live[1]?`, ${nm(live[1])} a ${dS(gapSec(L,live[1]))}.`:`, a ${Math.round(L.v*3.6)} all'ora.`)+(ST&&ST.avg>.02?' Il peggio, forse, deve ancora venire.':''),1,.3))return;}
     // distacchi, crisi e rimonte
@@ -755,7 +801,7 @@ function make3D(PATH,ROADS,BLDS){
         else if(p!=null&&g<p-4)t=pick([`${nm(S)} sta rientrando! Il distacco scende a ${dS(g)}.`,`Bella reazione di ${nm(S)}: ora è a ${dS(g)}.`]);
         else t=pick([`${nm(L)} in testa, ${nm(S)} a ${dS(g)}.`,`Distacco stabile: ${dS(g)} tra ${nm(L)} e ${nm(S)}.`,`${nm(S)} tiene botta: sempre ${dS(g)} da ${nm(L)}.`,`Situazione congelata: ${nm(L)} davanti, ${nm(S)} a ${dS(g)}.`]);
         if(z)t+=` Dietro soffre ${nm(z)}.`;else if(live.length>2){const Z=live[live.length-1];t+=` In coda ${nm(Z)}, a ${dS(gapSec(L,Z))}.`;}
-        if(said(t,1,tr>15||tr<-8?.6:.2))return;}
+        if(said(t,1,tr>15||tr<-8?.6:.2)){tecSay(tr>15?`${NN(S)} è calato: andava a ${kmh(vNow(S,60))} all'ora, adesso a ${kmh(vNow(S,15))}. Quando si va oltre la soglia, il conto arriva.`:pick(tecPair(L,S,g)),.5);return;}}
       else{if(said(pick([`${nm(L)} va a ${Math.round(L.v*3.6)} all'ora.`,`Mancano ${dM(rem)} per ${nm(L)}.`,`${nm(L)} tiene un bel ritmo: ${Math.round(L.v*3.6)} all'ora, mancano ${dM(rem)}.`]),1,.2))return;}}
     // fisico: pendenza, velocità, watt, battiti, cadenza
     const sl=slope(PR,L.cur);
@@ -766,10 +812,58 @@ function make3D(PATH,ROADS,BLDS){
       if(hr&&o.hrMax&&hr>=o.hrMax-2&&tNow>o.x.ta+60&&cool('hr',90)&&said(pick([`Il cuore di ${nm(o)} batte a ${Math.round(hr)}: è al limite!`,`${Math.round(hr)} battiti per ${nm(o)}: zona rossa!`,`${nm(o)} è a tutta: cuore a ${Math.round(hr)} battiti.`]),1,.6))return;
       if(cd!=null&&cd>25&&cd<55&&slo>.04&&cool('cd',80)&&said(pick([`${nm(o)} spinge un rapporto duro: ${Math.round(cd)} pedalate al minuto.`,`${nm(o)} è piantato: ${Math.round(cd)} pedalate al minuto, gamba dura!`]),1,.3))return;
       if(cd!=null&&cd>98&&cool('cd',80)&&said(`${nm(o)} frulla a ${Math.round(cd)} pedalate al minuto!`,1,.4))return;}
+    if(tNow>=C.nextTec&&realNow()-lastSay>6&&!busyQ()){C.nextTec=tNow+70+Math.random()*40;const S=live[1],L2=pick(S?tecPair(L,S,gapSec(L,S)):tecLead(L));if(L2&&say(L2,1,0,'t'))return;}
     // battute nei momenti tranquilli
     if(tNow>=C.nextFill&&rem>600&&realNow()-lastSay>10){C.nextFill=tNow+100+Math.random()*60;const o=live[Math.floor(Math.random()*live.length)],b=battuta(o);if(b&&said(b,1,.1))return;}
   }
   $('tele').addEventListener('click',()=>{tele=!tele;$('tele').textContent=tele?'🎙️ Telecronaca':'🔇 Telecronaca';$('tele').classList.toggle('on',tele);if(!tele){if(window.speechSynthesis)speechSynthesis.cancel();$('cron').style.opacity=0;}else crReset(tNow);});
+
+  // --- premiazione dei primi tre: podio vicino all'arrivo, foto, coriandoli, applausi ---
+  let CER={on:false,done:false};
+  const numTex=n=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,128,128);g.fillStyle=['#c9a227','#9aa3ad','#b0703a'][n-1];g.fillRect(0,0,128,14);
+    g.fillStyle='#10151c';g.font='900 92px "Barlow Condensed",sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(n,64,74);const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;return t;};
+  function buildPodium(win){const se=endS(win),s0=clamp((isNaN(se)?PR.len-200:se)+28,10,PR.len-8),pos=new V3(),road=new V3();let off=-8.5;
+    for(const o of[-8.5,8.5,-11,11]){at(PR,s0,o,pos);if(!bldHit(pos.x,pos.z,3)){off=o;break;}}
+    at(PR,s0,off,pos);at(PR,s0,0,road);const dir=road.clone().sub(pos).setY(0).normalize(),ry=Math.atan2(dir.x,dir.z),base=H(pos.x,pos.z);
+    const G=new THREE.Group();G.position.set(pos.x,base,pos.z);G.rotation.y=ry;scene.add(G);const white=new THREE.MeshLambertMaterial({color:0xf4f2ee});
+    const spots=[];[[1,0,1.25],[2,-2.5,.85],[3,2.5,.55]].forEach(([n,x,h])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(2.4,h,2),[white,white,white,white,new THREE.MeshLambertMaterial({map:numTex(n)}),white]);
+      m.position.set(x,h/2,0);m.castShadow=m.receiveShadow=true;G.add(m);spots[n]=new V3(x,h,0);});
+    const c=document.createElement('canvas');c.width=1024;c.height=256;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,1024,0);gr.addColorStop(0,'#10151c');gr.addColorStop(1,'#263445');g.fillStyle=gr;g.fillRect(0,0,1024,256);
+    g.fillStyle='#ffd400';g.fillRect(0,236,1024,20);g.textAlign='center';g.font='900 92px "Barlow Condensed",sans-serif';g.fillText('LA BANDA IN BICI',512,108);g.fillStyle='#fff';g.font='700 56px "Barlow Condensed",sans-serif';g.fillText(($('titolo').value||'').slice(0,34),512,190);
+    const bt=new THREE.CanvasTexture(c);bt.encoding=THREE.sRGBEncoding;const bd=new THREE.Mesh(new THREE.PlaneGeometry(9,2.25),new THREE.MeshBasicMaterial({map:bt,side:THREE.DoubleSide}));bd.position.set(0,3.6,-1.6);G.add(bd);
+    const pm=new THREE.MeshLambertMaterial({color:0x555b63});for(const x of[-4.4,4.4]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,4.8,8),pm);p.position.set(x,2.4,-1.62);G.add(p);}
+    // coriandoli
+    const N=360,cg=new THREE.PlaneGeometry(.13,.08),cm=new THREE.MeshBasicMaterial({side:THREE.DoubleSide}),conf=new THREE.InstancedMesh(cg,cm,N);conf.frustumCulled=false;conf.visible=false;
+    const CC=['#e53935','#fdd835','#1e88e5','#43a047','#fb8c00','#ffffff','#ec407a'].map(x=>new THREE.Color(x)),cd=[];
+    for(let i=0;i<N;i++){conf.setColorAt(i,CC[i%CC.length]);cd.push({x:(Math.random()-.5)*9,y:2+Math.random()*8,z:(Math.random()-.5)*5,v:.7+Math.random()*.9,a:Math.random()*6,w:2+Math.random()*4,p:Math.random()*6});}
+    G.add(conf);return{G,spots,ry,dir,center:new V3(pos.x,base,pos.z),conf,cd};}
+  function startCer(){const ord=RID.slice().sort((a,b)=>a.x.tb-b.x.tb),top=ord.slice(0,3),win=top[0],tit=$('titolo').value;qClear();paused=true;
+    const P=buildPodium(win);RID.forEach(o=>{o.pod=null;});const ry=P.ry+Math.PI/2;
+    top.forEach((o,k)=>{const sp=P.spots[k+1].clone().applyAxisAngle(new V3(0,1,0),P.ry).add(P.center);o.pod={place:k+1,show:false,pos:sp,ry};});
+    RID.forEach(o=>{if(!o.pod){o.pod={place:0,show:false,pos:new V3(),ry:0};}});
+    const steps=[{who:'c',text:pick([`Ed eccoci alla premiazione di «${tit}»!`,`È il momento più bello: la premiazione di «${tit}»!`])}];
+    const g=o=>o.x.tb-win.x.tb;
+    if(top[2])steps.push({o:top[2],who:'c',text:`Sul terzo gradino del podio, a ${dS(g(top[2]))}: ${NN(top[2])}!`});
+    if(top[1])steps.push({o:top[1],who:'c',text:pick([`Medaglia d'argento per ${NN(top[1])}, a ${dS(g(top[1]))} dal vincitore!`,`Secondo posto per ${NN(top[1])}, staccato di ${dS(g(top[1]))}!`])});
+    steps.push({o:win,who:'c',win:true,ex:1,text:top.length>1?`E sul gradino più alto del podio... il vincitore di «${tit}»: ${NN(win)}, in ${dS(win.x.tb-win.x.ta)}!`:`Sul podio, unico protagonista di giornata: ${NN(win)}, in ${dS(win.x.tb-win.x.ta)}!`});
+    steps.push({who:'t',text:top.length>1?pick([`Complimenti a tutti, Gigi. ${NN(win)} ha fatto la differenza${top[1]&&g(top[1])>60?' con un ritmo che gli altri oggi non avevano':' sul filo dei secondi'}. Ma oggi hanno vinto tutti: siete arrivati in cima.`,`Bella corsa, Gigi. ${NN(win)} meritava questo podio, e anche chi è arrivato dopo ha dato tutto.`]):`Bella prova, Gigi. Contro il cronometro è la sfida più dura: con sé stessi.`});
+    steps.push({who:'c',text:'Dalla banda in bici è tutto. Alla prossima uscita, e mi raccomando: casco sempre!'});
+    CER={on:true,done:false,i:-1,steps,P,ended:-1};FX.fanfare();FX.applause(2,.6);cerNext();}
+  function cerNext(){const C=CER;C.i++;const p=$('pres');if(C.i>=C.steps.length){C.on=false;C.done=true;p.style.display='none';setTimeout(()=>{if(CER.done)showFine();},2500);return;}
+    const st=C.steps[C.i],k=C.i;C.stepT=realNow();C.est=st.text.length/12+.8;sayCb(st.text,st.who,()=>{if(CER.i===k)CER.ended=k;},st.ex||0);
+    if(st.o){st.o.pod.show=true;const r=st.o.r,pl=st.o.pod.place,ini=r.name.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      p.innerHTML=`<div class="ph" style="border-color:${['#c9a227','#9aa3ad','#b0703a'][pl-1]};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}">${r.face?'':ini}</div><em class="pl">${pl}°</em><b>${r.name}</b>${nick(st.o)?`<span>«${nick(st.o)}»</span>`:''}`;
+      p.classList.add('cer');p.style.display='flex';p.classList.remove('pop');void p.offsetWidth;p.classList.add('pop');FX.applause(st.win?6:2.5,st.win?1:.6);if(st.win){FX.fanfare(true);C.P.conf.visible=true;}}
+    else p.style.display='none';}
+  function cerFrame(dt){const C=CER;if(C.on){const el=realNow()-C.stepT,spoken=C.ended===C.i||el>C.est*2+2;if(spoken&&el>(C.steps[C.i].o?3.2:1.2))cerNext();}
+    if(C.P&&C.P.conf.visible){const M=new THREE.Matrix4(),q=new THREE.Quaternion(),e=new THREE.Euler(),sc=new V3(1,1,1),pp=new V3();
+      C.P.cd.forEach((d,i)=>{d.y-=d.v*dt;d.a+=d.w*dt;if(d.y<0){d.y=8+Math.random()*2;}pp.set(d.x+Math.sin(d.a*.5+d.p)*.4,d.y,d.z);e.set(d.a,d.a*.7,d.p);q.setFromEuler(e);M.compose(pp,q,sc);C.P.conf.setMatrixAt(i,M);});C.P.conf.instanceMatrix.needsUpdate=true;}}
+  const cv0=new V3(),cr0=new V3();
+  function cerCam(dt){const C=CER,P=C.P;if(!P)return dt*2;const st=C.on?C.steps[C.i]:{},rt=new V3(P.dir.z,0,-P.dir.x),t=realNow();
+    // il podio va nella metà alta dello schermo (sotto ci sono i pulsanti): si guarda un po' più in basso
+    if(st&&st.o){cv0.copy(st.o.pod.pos);cv0.y+=1;goal.copy(cv0).addScaledVector(P.dir,10).addScaledVector(rt,1.2);goal.y+=2.2;look.copy(cv0);look.y-=1.1;return dt*1.8;}
+    cv0.copy(P.center);cv0.y+=1.2;const a=Math.sin(t*.18)*.4;cr0.copy(P.dir).applyAxisAngle(new V3(0,1,0),a);goal.copy(cv0).addScaledVector(cr0,18);goal.y+=4.5;look.copy(cv0);look.y-=1.6;return dt*1.2;}
+  function endCer(){if(CER.P){scene.remove(CER.P.G);}const was=CER.on||CER.done;CER={on:false,done:false};RID.forEach(o=>{o.pod=null;});$('pres').style.display='none';$('pres').classList.remove('cer');if(was)first=true;}
   // --- camera ---
   const center=new V3(),fwd=new V3(0,0,1),goal=new V3(),look=new V3(),last=new V3(),proj3=new V3(),t2=new V3();let first=true;
   function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;baseFov=camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
@@ -793,7 +887,7 @@ function make3D(PATH,ROADS,BLDS){
   $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='Pausa';});
   $('molt').addEventListener('click',()=>{mult={1:2,2:5,5:10,10:20,20:1}[mult];$('molt').textContent='×'+mult;});
   // avanti e indietro nella corsa
-  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;crReset(tNow);}
+  function seek(v){endCer();tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;crReset(tNow);}
   let dragging=false;const tl=$('tl');
   tl.addEventListener('pointerdown',()=>dragging=true);addEventListener('pointerup',()=>dragging=false);
   tl.addEventListener('input',()=>seek(+tl.value));
@@ -815,9 +909,9 @@ function make3D(PATH,ROADS,BLDS){
     const dt=Math.min(clock.getDelta(),.05);
     if(!paused){if(!crHold()){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}}
     if(tele&&realNow()-capT>7)$('cron').style.opacity=0;
-    place(dt);
+    place(dt);if(CER.on||CER.done)cerFrame(dt);
     let o;if(view==='regia'){shotT+=dt;if(!shot||shotT>shot.dur||!shot.subj||!shot.subj.vis)newShot();o=shot.subj;}
-    if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o&&INTRO.on)o=INTRO.first;if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
+    if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o&&INTRO.on)o=INTRO.first;if(!o&&(CER.on||CER.done))o=RID[0];if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
     FX.wind(paused?0:o.v);center.copy(o.m.position);const h=at(PR,o.cur,0,tB);fwd.lerp(t2.set(Math.sin(h),0,Math.cos(h)),first?1:Math.min(1,dt*1.5)).normalize();
     const rx=-fwd.z,rz=fwd.x,cy=center.y,F=(a,b,c)=>goal.set(center.x+fwd.x*a+rx*b,cy+c,center.z+fwd.z*a+rz*b);
     if(view==='libera'){camera.position.add(t2.subVectors(center,last));controls.target.copy(center).setY(cy+1);controls.update();}
@@ -839,7 +933,7 @@ function make3D(PATH,ROADS,BLDS){
         if(T==='zoom'){const d=46-37*e;F(-d*.75,-d*.45,4+20*(1-e));}
         if(T==='gru'){F(30-38*e,-9+6*e,60-56*e);}
         if(T==='bordo'&&shot.fixed){goal.copy(shot.fixed);lerpK=1;const dist=camera.position.distanceTo(center);fov=clamp(2*Math.atan(5/Math.max(1,dist))/D,14,baseFov);}}
-      if(INTRO.on){lerpK=introCam(dt);fov=baseFov;}
+      if(INTRO.on){lerpK=introCam(dt);fov=baseFov;}else if(CER.on||CER.done){lerpK=cerCam(dt);fov=baseFov;}
       if(Math.abs(camera.fov-fov)>.1){camera.fov=fov;camera.updateProjectionMatrix();}
       if(view==='gruppo'||(view==='regia'&&shot.type==='gruppo'))lerpK=dt*3;
       camera.position.lerp(goal,first?1:Math.min(1,lerpK));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
@@ -852,13 +946,13 @@ function make3D(PATH,ROADS,BLDS){
     let w='';if(o.pw){const tr=tNow-offE(o.r),P=o.r.pts;let j=0,lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}j=lo;const pv=P[j]&&P[j].pw;if(pv!=null)w=Math.round(pv)+' W';}$('cw').textContent=w;
     // distacco in secondi: quanto tempo fa il primo è passato dove ora si trova ciascuno
     const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur),gapOf=(L,q)=>{let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));};
-    if(lv.length>1){$('live').style.display='block';$('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
+    if(lv.length>1&&!CER.on&&!CER.done){$('live').style.display='block';$('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
     const showGap=lv.length>1&&(view==='gruppo'||(view==='regia'&&shot&&shot.type==='gruppo'));
-    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
+    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=q.pod?q.pod.place+'° '+q.r.name:showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
       u.tag.style.opacity=proj3.z<1?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${(proj3.x*.5+.5)*innerWidth}px,${(-proj3.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
-  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 function showScene(){$('setup').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');$('htitle').textContent=$('titolo').value;S3.start();
 }
