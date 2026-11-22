@@ -86,6 +86,8 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 .chips span{background:rgba(255,255,255,.93);color:var(--ink);text-shadow:none;font:800 18px "Barlow Condensed";padding:2px 9px;border-radius:5px;white-space:nowrap}
 .chips span.w{background:var(--tag)}
 .chips span:empty{display:none}
+#cron{position:fixed;left:max(3vw,10px);top:96px;z-index:3;max-width:min(calc(100vw - 200px),420px);background:rgba(16,21,28,.8);color:#fff;border-radius:8px;padding:6px 10px;font:600 17px/1.25 "Barlow Condensed";display:none;transition:opacity .6s}
+#cron b{color:var(--tag);margin-right:6px}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
 #live em{font-style:normal;margin-left:auto;padding-left:8px;opacity:.85}
@@ -132,6 +134,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="tags"></div>
 <div id="hud"><h1 id="htitle"></h1><div class="chips"><span id="cv"></span><span id="cp"></span><span id="cw" class="w"></span></div></div>
 <div id="live"></div>
+<div id="cron"><b>🎙️</b><span></span></div>
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
 <div id="fine"></div>
 <div id="nav">
@@ -144,7 +147,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="row">
     <select id="chi" aria-label="Chi inquadrare"></select>
     <button id="molt" aria-label="Velocità della scena">×5</button>
-    <button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
+    <button id="tele" class="on">🎙️ Telecronaca</button><button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
     <button id="mod">Modifica</button><button id="salvatr2">Salva tratto</button><button id="salva">Salva scena</button>
   </div>
 </div>
@@ -532,7 +535,7 @@ function make3D(PATH,ROADS,BLDS){
     reset();
   }
   let tNow=0,paused=false,mult=5,view='regia',follow=-1;
-  function reset(){tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);}
+  function reset(){tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);crReset(T0);}
   const sAt=(o,t)=>{const k=t-T0,i=Math.floor(k),u=k-i,a=o.s[i],b=o.s[i+1];if(isNaN(a))return isNaN(b)?NaN:b;if(isNaN(b))return a;return a+(b-a)*u;};
   function step(dt){
     tNow+=dt;if(tNow>T1){finish();tNow=T1;paused=true;$('pausa').textContent='Riparti';}
@@ -556,6 +559,65 @@ function make3D(PATH,ROADS,BLDS){
   function finish(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
     $('fine').innerHTML=`<h2>Arrivo</h2><table>${ok.map((x,k)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${k?'+'+fmt(x.tb-l.tb):'1°'}</td></tr>`).join('')}</table><div class="btns"><button class="btn" id="dinuovo">Rivedi</button></div>`;
     $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='Pausa';};}
+
+  // --- telecronaca: frasi in italiano dagli eventi della corsa, a voce (sintesi vocale del telefono) e scritte ---
+  let tele=true,CR=null,lastSay=-99,capT=0;
+  const realNow=()=>performance.now()/1000;let lastPick='';const pick=a=>{const b=a.length>1?a.filter(x=>x!==lastPick):a;lastPick=b[Math.floor(Math.random()*b.length)];return lastPick;};
+  const dS=t=>{t=Math.max(0,Math.round(t));const m=Math.floor(t/60),x=t%60;return m?(m===1?'un minuto':m+' minuti')+(x?' e '+(x===1?'un secondo':x+' secondi'):''):(x===1?'un secondo':x+' secondi');};
+  const nm=o=>o.r.name;
+  let VOICE=null;function pickVoice(){if(!window.speechSynthesis)return;const v=speechSynthesis.getVoices();VOICE=v.find(x=>/^it/i.test(x.lang)&&/google/i.test(x.name))||v.find(x=>/^it/i.test(x.lang))||null;}
+  if(window.speechSynthesis){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+  function say(txt,pri){if(!tele)return;const now=realNow();if(pri<2&&now-lastSay<5)return;
+    const busy=window.speechSynthesis&&speechSynthesis.speaking;if(busy&&pri<2)return;
+    lastSay=now;capT=now;$('cron').style.display='block';$('cron').lastChild.textContent=txt;$('cron').style.opacity=1;
+    if(!window.speechSynthesis)return;if(busy)speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';if(VOICE)u.voice=VOICE;u.rate=mult>=10?1.2:1.08;speechSynthesis.speak(u);}
+  function gapSec(L,q){let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));}
+  function wattOf(o){if(!o.pw)return null;const tr=tNow-offE(o.r),P=o.r.pts;let lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}return P[lo]&&P[lo].pw;}
+  const endS=o=>{const k=Math.round(o.x.tb-T0);return o.s[Math.min(o.s.length-1,Math.max(0,k))];};
+  const inSeg=o=>o.vis&&tNow>=o.x.ta&&tNow<o.x.tb;
+  function crReset(t){CR={done:new Set(),order:[],ordT:0,nextGap:t+25,lastG:null,slopeCool:t+15,fastCool:t+20,wattCool:t+20,startT:Math.min(...RID.map(o=>o.x.ta))};
+    RID.forEach((o,i)=>{if(t>o.x.ta+1)CR.done.add('st'+i);if(t>o.x.tb+1)CR.done.add('ar'+i);});
+    const L=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur)[0];if(L){const rem=endS(L)-L.cur;[2000,1000,500,200].forEach(m=>{if(rem<m)CR.done.add('km'+m);});}
+    CR.order=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur);if(window.speechSynthesis)speechSynthesis.cancel();$('cron').style.opacity=0;}
+  function crUpdate(){if(!tele||!CR)return;const C=CR,km=it((segLen()/1000).toFixed(1));
+    // partenze
+    const bySt=RID.map((o,i)=>[o,i]).sort((a,b)=>a[0].x.ta-b[0].x.ta);
+    for(const [o,i] of bySt){if(C.done.has('st'+i)||tNow<o.x.ta)continue;C.done.add('st'+i);
+      if(Math.abs(o.x.ta-C.startT)<.5&&!C.done.has('via')){C.done.add('via');const all=RID.map(nm);
+        say(pick([`Via! Comincia «${$('titolo').value}», ${km} chilometri.`,`Si parte! Davanti a noi ${km} chilometri di «${$('titolo').value}».`])+(all.length>1?` In gara ${all.slice(0,-1).join(', ')} e ${all[all.length-1]}.`:` Oggi in solitaria: ${all[0]} contro il cronometro.`),2);}
+      else{const g=o.x.ta-C.startT;say(g<4?pick([`Insieme a lui c'è anche ${nm(o)}.`,`${nm(o)} è subito lì, a ruota.`]):`${nm(o)} attacca il tratto con ${dS(g)} di ritardo.`,1);}}
+    // arrivi
+    const byAr=RID.map((o,i)=>[o,i]).sort((a,b)=>a[0].x.tb-b[0].x.tb),first=byAr[0][0];
+    byAr.forEach(([o,i],k)=>{if(C.done.has('ar'+i)||tNow<o.x.tb)return;C.done.add('ar'+i);const tt=o.x.tb-o.x.ta;
+      if(k===0)say(RID.length>1?pick([`${nm(o)} taglia il traguardo per primo! Tempo: ${dS(tt)}.`,`Vittoria di ${nm(o)}! Chiude in ${dS(tt)}.`,`È ${nm(o)} il re di «${$('titolo').value}»: ${dS(tt)}!`]):`${nm(o)} arriva in cima: ${dS(tt)}. Bella prova!`,2);
+      else say(`${k===byAr.length-1&&k>1?'Chiude ':'Arriva '}${nm(o)}, a ${dS(o.x.tb-first.x.tb)}. Il suo tempo: ${dS(tt)}.`,2);});
+    const live=RID.filter(inSeg).sort((a,b)=>b.cur-a.cur);if(!live.length)return;const L=live[0];
+    // sorpassi (servono almeno 4 metri, così chi pedala affiancato non conta)
+    if(tNow-C.ordT>.5){C.ordT=tNow;for(let a=0;a<C.order.length;a++)for(let b=a+1;b<C.order.length;b++){const A=C.order[a],B=C.order[b];
+        if(inSeg(A)&&inSeg(B)&&B.cur-A.cur>4){say(pick([`Sorpasso! ${nm(B)} passa ${nm(A)}!`,`Attenzione, ${nm(B)} si porta davanti a ${nm(A)}!`,`${nm(B)} supera ${nm(A)}, che non riesce a rispondere!`]),2);C.order=live.slice();return;}}
+      const add=live.filter(o=>!C.order.includes(o));if(add.length)C.order=live.slice();}
+    // distanza all'arrivo
+    const rem=endS(L)-L.cur;for(const m of[2000,1000,500,200]){if(C.done.has('km'+m)||rem>m||segLen()<m+300)continue;C.done.add('km'+m);
+      say(m===2000?`Mancano due chilometri per ${nm(L)}.`:m===1000?pick(['Ultimo chilometro!',`Ultimo chilometro per ${nm(L)}!`]):m===500?pick(['Mancano 500 metri!','Ultimi 500 metri, adesso si soffre!']):pick(['Ultimi 200 metri, è volata!','Duecento metri, tutto quello che resta!']),2);return;}
+    // distacchi
+    if(tNow>=C.nextGap){C.nextGap=tNow+35+Math.random()*20;
+      if(live.length>1){const S=live[1],g=gapSec(L,S),p=C.lastG;C.lastG=g;let t;
+        if(g<3)t=pick([`${nm(L)} e ${nm(S)} sono ruota a ruota.`,`Ancora insieme ${nm(L)} e ${nm(S)}: nessuno molla.`,`Gruppetto compatto: ${nm(S)} è incollato a ${nm(L)}.`]);
+        else if(p!=null&&g>p+4)t=pick([`${nm(L)} allunga: ora ha ${dS(g)} su ${nm(S)}.`,`${nm(L)} fa il ritmo e il vantaggio cresce: ${dS(g)}.`,`${nm(S)} è in difficoltà, paga ${dS(g)}.`,
+          `Il cronometro dice ${dS(g)} di vantaggio per ${nm(L)}.`,`${nm(L)} non si volta mai: ${dS(g)} su ${nm(S)}.`,`${nm(S)} stringe i denti, ma il distacco sale a ${dS(g)}.`,
+          `Ritmo indiavolato di ${nm(L)}, a ${Math.round(L.v*3.6)} all'ora: ${nm(S)} ora è a ${dS(g)}.`,`${nm(S)} cerca il suo passo: è a ${dS(g)} da ${nm(L)}.`]);
+        else if(p!=null&&g<p-4)t=pick([`${nm(S)} sta rientrando! Il distacco scende a ${dS(g)}.`,`Bella reazione di ${nm(S)}: ora è a ${dS(g)}.`]);
+        else t=pick([`${nm(L)} in testa, ${nm(S)} a ${dS(g)}.`,`Distacco stabile: ${dS(g)} tra ${nm(L)} e ${nm(S)}.`,`${nm(S)} tiene botta: sempre ${dS(g)} da ${nm(L)}.`,`Situazione congelata: ${nm(L)} davanti, ${nm(S)} a ${dS(g)}.`]);
+        if(live.length>2){const Z=live[live.length-1];t+=` In coda ${nm(Z)}, a ${dS(gapSec(L,Z))}.`;}say(t,1);return;}
+      else{say(pick([`${nm(L)} va a ${Math.round(L.v*3.6)} all'ora.`,`Mancano ${rem>1000?it((rem/1000).toFixed(1))+' chilometri':Math.round(rem/10)*10+' metri'} per ${nm(L)}.`]),1);return;}}
+    // pendenza, velocità e watt
+    const sl=slope(PR,L.cur);
+    if(tNow>C.slopeCool&&sl>.065){C.slopeCool=tNow+60;say(pick([`La strada si impenna: siamo al ${Math.round(sl*100)} per cento!`,`Qui si sale al ${Math.round(sl*100)} per cento, si fa fatica.`]),1);return;}
+    if(tNow>C.fastCool&&L.v>11.5){C.fastCool=tNow+60;say(pick([`Che velocità! ${nm(L)} vola a ${Math.round(L.v*3.6)} all'ora.`,`Si va forte: ${Math.round(L.v*3.6)} chilometri orari.`]),1);return;}
+    if(tNow>C.wattCool){for(const o of live){const w=wattOf(o);if(w!=null&&w>430){C.wattCool=tNow+50;say(pick([`${nm(o)} spinge ${Math.round(w)} watt!`,`Fuori giri ${nm(o)}: ${Math.round(w)} watt sui pedali!`]),1);return;}}}
+  }
+  $('tele').addEventListener('click',()=>{tele=!tele;$('tele').textContent=tele?'🎙️ Telecronaca':'🔇 Telecronaca';$('tele').classList.toggle('on',tele);if(!tele){if(window.speechSynthesis)speechSynthesis.cancel();$('cron').style.opacity=0;}else crReset(tNow);});
   // --- camera ---
   const center=new V3(),fwd=new V3(0,0,1),goal=new V3(),look=new V3(),last=new V3(),proj3=new V3(),t2=new V3();let first=true;
   function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;baseFov=camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
@@ -579,7 +641,7 @@ function make3D(PATH,ROADS,BLDS){
   $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='Pausa';});
   $('molt').addEventListener('click',()=>{mult={1:2,2:5,5:10,10:20,20:1}[mult];$('molt').textContent='×'+mult;});
   // avanti e indietro nella corsa
-  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;}
+  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;crReset(tNow);}
   let dragging=false;const tl=$('tl');
   tl.addEventListener('pointerdown',()=>dragging=true);addEventListener('pointerup',()=>dragging=false);
   tl.addEventListener('input',()=>seek(+tl.value));
@@ -599,7 +661,8 @@ function make3D(PATH,ROADS,BLDS){
   function frame(){
     if(!running)return;
     const dt=Math.min(clock.getDelta(),.05);
-    if(!paused){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}}
+    if(!paused){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}
+    if(tele&&realNow()-capT>7)$('cron').style.opacity=0;
     place(dt);
     let o;if(view==='regia'){shotT+=dt;if(!shot||shotT>shot.dur||!shot.subj||!shot.subj.vis)newShot();o=shot.subj;}
     if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
@@ -641,13 +704,13 @@ function make3D(PATH,ROADS,BLDS){
       u.tag.style.opacity=proj3.z<1?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${(proj3.x*.5+.5)*innerWidth}px,${(-proj3.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
-  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();}},stop(){running=false;renderer.dispose();},debug:{seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();}},stop(){running=false;renderer.dispose();},debug:{get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 function showScene(){$('setup').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');$('htitle').textContent=$('titolo').value;S3.start();
 }
 // "Modifica": si torna all'impostazione; la scena verrà ricostruita con i dati nuovi
 $('mod').addEventListener('click',()=>{if(window.__SCENA&&!map){window.__SCENA=false;setTimeout(()=>{renderRiders();drawMap();drawMarks();renderSegs();},50);}if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
-  $('setup').style.display='block';['hud','nav','fonti','live','fine'].forEach(i=>$(i).style.display='none');});
+  $('setup').style.display='block';['hud','nav','fonti','live','fine','cron'].forEach(i=>$(i).style.display='none');if(window.speechSynthesis)speechSynthesis.cancel();});
 
 // ---------- 4. salvataggio della scena in un file unico ----------
 // dati del tratto: solo la finestra del tratto ± 4 minuti (niente partenza da casa)
