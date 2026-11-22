@@ -91,6 +91,10 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 .chips span:empty{display:none}
 #cron{position:fixed;left:max(3vw,10px);top:96px;z-index:3;max-width:min(calc(100vw - 200px),420px);background:rgba(16,21,28,.8);color:#fff;border-radius:8px;padding:6px 10px;font:600 17px/1.25 "Barlow Condensed";display:none;transition:opacity .6s}
 #cron b{color:var(--tag);margin-right:6px}
+#sharebox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
+#sharebox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
+#sharebox h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
+#sharebox small{font:500 13px Barlow,system-ui;opacity:.8}
 #play{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:radial-gradient(circle at 50% 40%,#263445,#10151c);color:#fff;text-align:center;padding:20px}
 #play h2{font:800 36px "Barlow Condensed";margin:0 0 14px}#play .pf{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:22px}
 #play .pf span{display:flex;flex-direction:column;align-items:center;gap:4px;font:700 18px "Barlow Condensed"}#play .pf i{width:72px;height:72px;border-radius:50%;border:4px solid;background:#555 center/cover}
@@ -154,6 +158,10 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="cron"><b>🎙️ Gigi</b><span></span></div>
 <div id="pres"></div>
 <div id="play"></div>
+<div id="sharebox"><div><h3>Manda la corsa</h3>
+  <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
+  <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
+  <button class="btn l" data-sh="x" style="min-height:40px">Annulla</button></div></div>
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
 <div id="fine"></div>
 <div id="nav">
@@ -1023,17 +1031,43 @@ function loadData(d){$('titolo').value=d.titolo;
   riders.forEach(r=>{const t0=r.pts[0].t;r.pts.forEach(p=>p.t-=t0);r.off+=t0;if(r.t0!=null)r.t0+=t0*1000;r.abs=!!r.abs&&r.t0!=null;grid(r);});
   A=d.A;B=d.B;computeSeg();}
 renderTratti();
-$('salva').addEventListener('click',async()=>{
+// ---------- scena dentro un link (funziona anche su iPhone, dove WhatsApp non fa girare i file HTML) ----------
+const SITE='https://studiobilancio2025-code.github.io/banda-in-bici/crea.html';
+const b64u=b=>{let s='';const u=new Uint8Array(b);for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
+const ub64=t=>{t=t.replace(/-/g,'+').replace(/_/g,'/');const s=atob(t),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;};
+async function zip(str){const cs=new CompressionStream('deflate-raw'),w=cs.writable.getWriter();w.write(new TextEncoder().encode(str));w.close();return new Uint8Array(await new Response(cs.readable).arrayBuffer());}
+async function unzip(u){const ds=new DecompressionStream('deflate-raw'),w=ds.writable.getWriter();w.write(u);w.close();return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());}
+const smallFace=src=>new Promise(res=>{if(!src)return res(null);const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=96;c.getContext('2d').drawImage(im,0,0,96,96);res(c.toDataURL('image/jpeg',.7));};im.onerror=()=>res(null);im.src=src;});
+// punti ogni "step" secondi, numeri interi a differenze (si comprimono benissimo)
+function encPts(P,step){const K=[];let lt=-1e9;P.forEach((p,i)=>{if(p[3]-lt>=step-.01||i===P.length-1){K.push(p);lt=p[3];}});
+  const col=(f,m)=>{let prev=0;return K.map(p=>{const v=p[f]==null?null:Math.round(p[f]*m);if(v==null)return null;const d=v-prev;prev=v;return d;});};
+  return{la:col(0,1e5),lo:col(1,1e5),el:col(2,10),t:col(3,10),hr:K.some(p=>p[4]!=null)?col(4,1):null,cad:K.some(p=>p[5]!=null)?col(5,1):null,pw:K.some(p=>p[6]!=null)?col(6,1):null};}
+function decPts(e){const n=e.t.length,acc=(a,m)=>{if(!a)return Array(n).fill(null);let v=0;return a.map(d=>{if(d==null)return null;v+=d;return v/m;});};
+  const la=acc(e.la,1e5),lo=acc(e.lo,1e5),el=acc(e.el,10),t=acc(e.t,10),hr=acc(e.hr,1),cd=acc(e.cad,1),pw=acc(e.pw,1);return t.map((_,i)=>[la[i],lo[i],el[i],t[i],hr[i],cd[i],pw[i]]);}
+async function makeLink(){const d=packData(),faces=await Promise.all(d.riders.map(r=>smallFace(r.face)));
+  for(const step of[1,2,3,4])for(const wf of[true,false]){const o={v:1,titolo:d.titolo,A:d.A,B:d.B,riders:d.riders.map((r,i)=>({...r,face:wf?faces[i]:null,pts:null,e:encPts(r.pts,step)}))};
+    const s=b64u(await zip(JSON.stringify(o)));if(s.length<60000)return SITE+'#s='+s;}return null;}
+async function readLink(h){const o=JSON.parse(await unzip(ub64(h)));o.riders.forEach(r=>{r.pts=decPts(r.e);delete r.e;});return o;}
+async function shareLink(){if(!window.CompressionStream){alert('Questo telefono è troppo vecchio per creare il link: usa «Manda il file».');return;}
+  const url=await makeLink();if(!url){alert('Troppi ciclisti per stare in un link: usa «Manda il file» (su iPhone però il file non si apre).');return;}
+  const t=$('titolo').value;try{if(navigator.share){await navigator.share({title:t,text:'🚴 '+t+' – guarda la corsa della banda:',url});return;}}catch(e){if(e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(url);alert('Link copiato: incollalo su WhatsApp.');}catch(e){prompt('Copia questo link e mandalo su WhatsApp:',url);}}
+$('salva').addEventListener('click',()=>{$('sharebox').style.display='grid';});
+$('sharebox').addEventListener('click',e=>{const b=e.target.closest('button');if(e.target.id==='sharebox'||(b&&b.dataset.sh==='x')){$('sharebox').style.display='none';return;}
+  if(!b)return;$('sharebox').style.display='none';if(b.dataset.sh==='link')shareLink();if(b.dataset.sh==='file')shareFile();});
+async function shareFile(){
   const data=packData();
   const html=SRC.replace('<body>','<body><script id="scena" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>');
   const name=($('titolo').value||'scena').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_')+'.html',file=new File([html],name,{type:'text/html'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:$('titolo').value});return;}}catch(e){if(e.name==='AbortError')return;}
   const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
-});
-// scena salvata: si costruisce subito
+}
+// scena salvata (file o link): si costruisce subito
 const pre=document.getElementById('scena');
-if(pre){window.__SCENA=true;const d=JSON.parse(pre.textContent);loadData(d);$('setup').style.display='none';
-  buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);});}
+function startSaved(d){window.__SCENA=true;loadData(d);$('setup').style.display='none';buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);});}
+if(pre)startSaved(JSON.parse(pre.textContent));
+else if(location.hash.startsWith('#s=')){if(!window.DecompressionStream)alert('Per vedere la corsa serve un telefono aggiornato (iPhone con iOS 16.4 o più recente).');
+  else{loading(true);prog('Apro la corsa…','',.03);readLink(location.hash.slice(3)).then(startSaved).catch(()=>{loading(false);alert('Il link della corsa è rovinato o incompleto: fattelo rimandare.');});}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
