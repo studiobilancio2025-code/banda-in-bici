@@ -709,6 +709,7 @@ h2 i{font-style:normal;background:var(--ink);color:#fff;border-radius:50%;width:
 .seg{display:flex;justify-content:space-between;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font:600 17px "Barlow Condensed";cursor:pointer;min-height:44px;color:var(--ink)}
 .rider .save{font:700 17px "Barlow Condensed";min-height:44px;padding:0 14px;border-radius:10px;border:2px solid var(--ink);background:#ffd400;color:var(--ink);cursor:pointer}
 .rider .save.done{background:#e8f5e9;border-color:#2e7d32;color:#2e7d32}
+.trow{display:flex;gap:6px;align-items:stretch}.trow .seg{flex:1}.trow .x{min-width:44px}
 .seg.on{border:2px solid var(--ink);background:#fff8cc}
 .seg span{color:var(--mut);white-space:nowrap;font-weight:600;flex:none}
 .bchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
@@ -769,6 +770,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <h1>Crea la scena</h1>
   <p class="sub">Carica i GPX dell'uscita, scegli il tratto sulla mappa e la scena 3D si costruisce da sola, con strade, case e foto satellitari vere.</p>
 
+  <div class="card" id="tratti" style="margin-bottom:10px;display:none"></div>
   <h2><i>1</i>I corridori</h2>
   <div class="card" id="banda" style="margin-bottom:10px"></div>
   <label class="drop" id="drop"><b>Carica i file GPX</b>uno per ciclista · il primo fa da orologio di riferimento<input id="files" type="file" accept=".gpx,application/gpx+xml,text/xml" multiple></label>
@@ -783,7 +785,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 
   <h2><i>3</i>Classifica</h2>
   <div class="card" id="classifica"><p class="meta">Comparirà dopo la scelta del tratto.</p></div>
-  <div class="btns"><button class="btn" id="vai" disabled>Crea la scena 3D</button></div>
+  <div class="btns"><button class="btn" id="vai" disabled>Crea la scena 3D</button><button class="btn l" id="salvatr" disabled>Salva il tratto</button></div>
 </div></div>
 
 <div id="loading"><div><b id="ltxt">Preparo la scena…</b><span id="lsub"></span><div class="bar"><i id="lbar"></i></div></div></div>
@@ -797,14 +799,14 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="row" id="views">
     <button data-v="regia" class="on">Regia automatica</button><button data-v="moto">Dalla moto</button><button data-v="lato">Di lato</button>
     <button data-v="dd">Drone dietro</button><button data-v="df">Drone davanti</button>
-    <button data-v="eli">Elicottero</button><button data-v="libera">Libera</button>
+    <button data-v="eli">Elicottero</button><button data-v="gruppo">Tutti dall'alto</button><button data-v="libera">Libera</button>
   </div>
   <div class="row tlrow"><button id="rew" aria-label="Indietro di 10 secondi">−10"</button><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><button id="ff" aria-label="Avanti di 10 secondi">+10"</button><span id="tlt"></span></div>
   <div class="row">
     <select id="chi" aria-label="Chi inquadrare"></select>
     <button id="molt" aria-label="Velocità della scena">×5</button>
     <button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
-    <button id="mod">Modifica</button><button id="salva">Salva scena</button>
+    <button id="mod">Modifica</button><button id="salvatr2">Salva tratto</button><button id="salva">Salva scena</button>
   </div>
 </div>
 
@@ -853,11 +855,11 @@ function syncRider(r){
   const mov=new Uint8Array(G.n);for(let s=2;s<G.n-2;s++)mov[s]=Math.hypot(G.X[s+2]-G.X[s-2],G.Z[s+2]-G.Z[s-2])>8?1:0;
   const score=(d,step,thr)=>{let c=0;for(let s=0;s<G.n;s+=step){if(!mov[s])continue;const q=s+d;if(q<0||q>=R.n)continue;const x=G.X[s],y=R.X[q];if(isNaN(x)||isNaN(y))continue;
     if(Math.hypot(x-y,G.Z[s]-R.Z[q])<thr)c+=step;}return c;};
-  let lo=-5400,hi=5400,st=10,best=[-1,0];
-  if(r.abs&&riders[0].abs){const d=Math.round((r.t0-riders[0].t0)/1000);lo=d-120;hi=d+120;st=2;}
+  const r0=riders[0].off;let lo=-5400-r0,hi=5400-r0,st=10,best=[-1,-r0];
+  if(r.abs&&riders[0].abs&&r.t0!=null&&riders[0].t0!=null){const d=Math.round((r.t0-riders[0].t0)/1000);lo=d-120;hi=d+120;st=2;}
   for(let d=lo;d<=hi;d+=st){const sc=score(d,5,25);if(sc>best[0])best=[sc,d];}
   let fine=[-1,best[1]];for(let d=best[1]-12;d<=best[1]+12;d++){const sc=score(d,1,12);if(sc>fine[0])fine=[sc,d];}
-  r.off=fine[1];r.sync={ok:fine[0]>=120,together:fine[0]};
+  r.off=fine[1]+riders[0].off;r.sync={ok:fine[0]>=120,together:fine[0]};
 }
 // ---------- la banda: ciclisti salvati sul telefono (nome, colore, volto, altezza, fisico) ----------
 const PK='banda.ciclisti';let BANDA=[];try{BANDA=JSON.parse(localStorage.getItem(PK)||'[]');}catch(e){}
@@ -930,7 +932,7 @@ function drawMap(){
   if(!A)map.fitBounds(layers[0].getBounds(),{padding:[10,10]});drawMarks();
 }
 let marks=[];
-function drawMarks(){marks.forEach(m=>m.remove());marks=[];
+function drawMarks(){marks.forEach(m=>m.remove());marks=[];if(!map)return;
   for(const [p,lab,c] of [[A,'Partenza','#1b7a34'],[B,'Arrivo','#c62828']])if(p)marks.push(L.circleMarker(p,{radius:9,color:'#fff',weight:3,fillColor:c,fillOpacity:1}).bindTooltip(lab,{permanent:true,direction:'top'}).addTo(map));
   $('hint').textContent=!A?'Tocca sulla mappa il punto di partenza del tratto.':!B?'Ora tocca il punto di arrivo.':'Tratto scelto. Puoi rifare la scelta o creare la scena.';$('rifai').disabled=!A;}
 $('rifai').addEventListener('click',()=>{A=B=null;SEG=null;segSel=-1;drawMarks();computeSeg();renderSegs();});
@@ -946,7 +948,7 @@ $('segs').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!
 const offE=r=>r.off+(r.gshift||0);
 function passage(r,x,z,from,to){let best=[1e9,-1];const g=r.g;for(let s=0;s<g.n;s++){const T=s+r.off;if(T<from||T>to||isNaN(g.X[s]))continue;const d=Math.hypot(g.X[s]-x,g.Z[s]-z);if(d<best[0])best=[d,T];}return best;}
 function computeSeg(keep){
-  const box=$('classifica');$('vai').disabled=true;
+  const box=$('classifica');$('vai').disabled=true;$('salvatr').disabled=true;
   if(!(A&&B&&riders.length)){if(!keep)box.innerHTML='<p class="meta">Comparirà dopo la scelta del tratto.</p>';SEG=null;return;}
   const [ax,az]=proj(...A),[bx,bz]=proj(...B),R=riders[0];
   const [da,ta]=passage(R,ax,az,-1e9,1e9),[db,tb]=passage(R,bx,bz,ta+20,1e9);
@@ -959,9 +961,9 @@ function computeSeg(keep){
   SEG={A,B,ta,tb,res};const ok=res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),lead=ok[0];
   box.innerHTML=`<table><tr><th>Ciclista</th><th class="n">Tempo</th><th class="n">In cima / arrivo</th></tr>${ok.map((x,k)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}${riders[x.i].ghost?' <span class="meta">(a fantasma)</span>':''}</td><td class="n">${fmt(x.dt)}</td><td class="n">${k?'+'+fmt(x.tb-lead.tb):'1°'}</td></tr>`).join('')}</table>`+
    (res.some(x=>!x.ok)?`<p class="warn">Non passano dal tratto: ${res.filter(x=>!x.ok).map(x=>riders[x.i].name).join(', ')}.</p>`:'')+`<p class="meta">Lunghezza circa ${it((segLen()/1000).toFixed(2))} km.</p>`;
-  $('vai').disabled=false;
+  $('vai').disabled=false;$('salvatr').disabled=false;
 }
-function segLen(){const g=riders[0].g;let d=0;for(let s=Math.ceil(SEG.ta)+1;s<=SEG.tb;s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
+function segLen(){const g=riders[0].g,o=riders[0].off;let d=0;for(let s=Math.max(1,Math.ceil(SEG.ta-o)+1);s<=Math.min(g.n-1,SEG.tb-o);s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
 // trascinamento dei file sulla pagina
 ['dragover','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();if(ev==='drop')addFiles([...e.dataTransfer.files]);}));
 
@@ -1024,7 +1026,7 @@ function make3D(PATH,ROADS,BLDS){
   const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputEncoding=THREE.sRGBEncoding;$('scene').appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,90,420);
-  const camera=new THREE.PerspectiveCamera(50,1,.5,2500),controls=new THREE.OrbitControls(camera,renderer.domElement);
+  const camera=new THREE.PerspectiveCamera(50,1,.5,4000),controls=new THREE.OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minDistance=3;controls.maxDistance=300;controls.autoRotateSpeed=1.2;controls.enabled=false;
   scene.add(new THREE.HemisphereLight(0xdff2ff,0x5a7a3a,.75));
   const sun=new THREE.DirectionalLight(0xfff1d6,1.1);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:160});scene.add(sun,sun.target);
@@ -1219,7 +1221,18 @@ function make3D(PATH,ROADS,BLDS){
   const center=new V3(),fwd=new V3(0,0,1),goal=new V3(),look=new V3(),last=new V3(),proj3=new V3(),t2=new V3();let first=true;
   function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h);camera.aspect=w/h;baseFov=camera.fov=w<600?62:50;camera.updateProjectionMatrix();}
   addEventListener('resize',resize);
-  function setView(v){view=v;shot=null;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
+  // elicottero che tiene dentro tutti: si alza quanto serve per vedere dal primo all'ultimo
+  const gmid=new V3(),gdir=new V3(0,0,1);let gD=80;
+  function groupCam(dt){const lv=RID.filter(q=>q.vis);if(!lv.length)return;lv.sort((a,b)=>b.cur-a.cur);
+    const P=lv.map(q=>q.m.position);gmid.set(0,0,0);P.forEach(p=>gmid.add(p));gmid.multiplyScalar(1/P.length);
+    // direzione dall'ultimo al primo (se sono insieme, quella della strada)
+    t2.subVectors(P[0],P[P.length-1]).setY(0);if(t2.length()<15){const hd=at(PR,lv[0].cur,0,tA);t2.set(Math.sin(hd),0,Math.cos(hd));}
+    gdir.lerp(t2.normalize(),first?1:Math.min(1,dt*.8)).normalize();
+    let al=0,la=0;P.forEach(p=>{const dx=p.x-gmid.x,dz=p.z-gmid.z;al=Math.max(al,Math.abs(dx*gdir.x+dz*gdir.z));la=Math.max(la,Math.abs(-dx*gdir.z+dz*gdir.x));});
+    const tv=Math.tan(camera.fov*D/2),th=tv*camera.aspect,want=clamp(Math.max((al+10)/(tv*.6),(la+8)/(th*.42))+25,45,2200);
+    gD+=(want-gD)*(first?1:Math.min(1,dt*1.5));
+    goal.set(gmid.x-gdir.x*gD*.5,gmid.y+gD*.87,gmid.z-gdir.z*gD*.5);look.set(gmid.x-gdir.x*gD*.16,gmid.y,gmid.z-gdir.z*gD*.16);}
+  function setView(v){view=v;shot=null;first=true;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
   document.querySelectorAll('#views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
   renderer.domElement.addEventListener('pointerdown',()=>{if(view!=='libera')setView('libera');controls.autoRotate=false;});
   $('chi').addEventListener('change',e=>{follow=+e.target.value;first=true;shot=null;});
@@ -1227,20 +1240,21 @@ function make3D(PATH,ROADS,BLDS){
   $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='Pausa';});
   $('molt').addEventListener('click',()=>{mult={1:2,2:5,5:10,10:20,20:1}[mult];$('molt').textContent='×'+mult;});
   // avanti e indietro nella corsa
-  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);}
+  function seek(v){tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;}
   let dragging=false;const tl=$('tl');
   tl.addEventListener('pointerdown',()=>dragging=true);addEventListener('pointerup',()=>dragging=false);
   tl.addEventListener('input',()=>seek(+tl.value));
   $('rew').addEventListener('click',()=>seek(tNow-10));$('ff').addEventListener('click',()=>seek(tNow+10));
   // regia automatica: cambi d'inquadratura, zoom e panoramiche
-  const SHOTS=['moto','lato','dd','df','eli','pano','zoom','bordo','gru','pano','bordo'];let shot=null,shotT=0,baseFov=50;
+  const SHOTS=['moto','lato','dd','df','eli','pano','zoom','bordo','gru','pano','bordo','gruppo','gruppo'];let shot=null,shotT=0,baseFov=50;
   function leader(){return RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur)[0];}
   function pickSubject(){if(follow>=0&&RID[follow].vis)return RID[follow];const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur);if(!lv.length)return null;
     // se due sono vicini ma non appaiati, c'è battaglia: si inquadra chi insegue
     for(let k=1;k<lv.length;k++){const d=lv[k-1].cur-lv[k].cur;if(d>3&&d<20&&Math.random()<.5)return lv[k];}
     return Math.random()<.5?lv[0]:lv[Math.floor(Math.random()*lv.length)];}
   function newShot(){let type;do{type=SHOTS[Math.floor(Math.random()*SHOTS.length)];}while(shot&&type===shot.type);
-    const subj=pickSubject();shot={type,subj,h0:Math.random()*6.28,dur:type==='bordo'?11:type==='eli'?6:6+Math.random()*4};shotT=0;first=true;
+    if(type==='gruppo'&&RID.filter(q=>q.vis).length<2)type='eli';
+    const subj=pickSubject();shot={type,subj,h0:Math.random()*6.28,dur:type==='bordo'?11:type==='eli'?6:type==='gruppo'?10:6+Math.random()*4};shotT=0;first=true;
     if(type==='bordo'&&subj){at(PR,Math.min(PR.len-5,subj.cur+Math.max(25,subj.v*5)),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}}
   const clock=new THREE.Clock();let running=false;
   function frame(){
@@ -1259,6 +1273,7 @@ function make3D(PATH,ROADS,BLDS){
       if(view==='dd'){F(-24,-3,13);look.set(center.x+fwd.x*6,cy+.5,center.z+fwd.z*6);}
       if(view==='df'){F(13,-1.5,5);look.set(center.x,cy+1.2,center.z);}
       if(view==='eli'){F(-45,-20,120);look.set(center.x+fwd.x*15,cy,center.z+fwd.z*15);}
+      if(view==='gruppo'||(view==='regia'&&shot.type==='gruppo'))groupCam(dt);
       let fov=baseFov,lerpK=dt*2.2;
       if(view==='regia'){const T=shot.type,k=Math.min(1,shotT/shot.dur),e=k*k*(3-2*k);look.set(center.x,cy+1,center.z);
         if(T==='moto'){F(-7,-2.6,3.2);look.set(center.x+fwd.x*3,cy+1,center.z+fwd.z*3);}
@@ -1271,7 +1286,9 @@ function make3D(PATH,ROADS,BLDS){
         if(T==='gru'){F(30-38*e,-9+6*e,60-56*e);}
         if(T==='bordo'&&shot.fixed){goal.copy(shot.fixed);lerpK=1;const dist=camera.position.distanceTo(center);fov=clamp(2*Math.atan(5/Math.max(1,dist))/D,14,baseFov);}}
       if(Math.abs(camera.fov-fov)>.1){camera.fov=fov;camera.updateProjectionMatrix();}
+      if(view==='gruppo'||(view==='regia'&&shot.type==='gruppo'))lerpK=dt*3;
       camera.position.lerp(goal,first?1:Math.min(1,lerpK));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
+    {const cd=camera.position.distanceTo(look);scene.fog.near=Math.max(90,cd*.9);scene.fog.far=Math.max(420,cd*3);}
     first=false;last.copy(center);sun.position.set(center.x-25,cy+45,center.z+15);sun.target.position.copy(center);
     if(!dragging)tl.value=tNow;$('tlt').textContent=fmt(tNow-T0)+' / '+fmt(T1-T0);
     // dati in alto e classifica dal vivo
@@ -1280,23 +1297,48 @@ function make3D(PATH,ROADS,BLDS){
     // distacco in secondi: quanto tempo fa il primo è passato dove ora si trova ciascuno
     const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur),gapOf=(L,q)=>{let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));};
     if(lv.length>1){$('live').style.display='block';$('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
-    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
+    const showGap=lv.length>1&&(view==='gruppo'||(view==='regia'&&shot&&shot.type==='gruppo'));
+    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
       u.tag.style.opacity=proj3.z<1?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);u.tag.style.transform=`translate(${(proj3.x*.5+.5)*innerWidth}px,${(-proj3.y*.5+.5)*innerHeight}px) translate(-50%,-100%)`;});
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
   return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();}},stop(){running=false;renderer.dispose();},debug:{seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 function showScene(){$('setup').style.display='none';['hud','nav','fonti'].forEach(i=>$(i).style.display=i==='nav'?'flex':'block');$('htitle').textContent=$('titolo').value;S3.start();
-  if(window.__SCENA){$('mod').style.display='none';$('salva').style.display='none';}}
+}
 // "Modifica": si torna all'impostazione; la scena verrà ricostruita con i dati nuovi
-$('mod').addEventListener('click',()=>{if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
+$('mod').addEventListener('click',()=>{if(window.__SCENA&&!map){window.__SCENA=false;setTimeout(()=>{renderRiders();drawMap();drawMarks();renderSegs();},50);}if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
   $('setup').style.display='block';['hud','nav','fonti','live','fine'].forEach(i=>$(i).style.display='none');});
 
 // ---------- 4. salvataggio della scena in un file unico ----------
-$('salva').addEventListener('click',async()=>{
+// dati del tratto: solo la finestra del tratto ± 4 minuti (niente partenza da casa)
+function packData(){
   const ok=SEG.res.filter(x=>x.ok),w0=Math.min(...ok.map(x=>x.ta))-240,w1=Math.max(...ok.map(x=>x.tb))+240;
-  const data={titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,
-    pts:r.pts.filter(p=>p.t+offE(r)>=w0&&p.t+offE(r)<=w1).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])}))};
+  return{titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
+    pts:r.pts.filter(p=>p.t+offE(r)>=w0&&p.t+offE(r)<=w1).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])})).filter(r=>r.pts.length>1)};}
+// ---------- tratti salvati sul telefono: si riaprono e si aggiungono altri ciclisti ----------
+const TK='banda.tratti';let TRATTI=[];try{TRATTI=JSON.parse(localStorage.getItem(TK)||'[]');}catch(e){}
+function renderTratti(){const b=$('tratti');b.style.display=TRATTI.length?'block':'none';if(!TRATTI.length)return;
+  b.innerHTML=`<b style="font:800 20px 'Barlow Condensed'">Tratti salvati</b> <span class="meta">· aprine uno per rivederlo o aggiungere altri ciclisti</span>
+  <div class="seglist">${TRATTI.map((t,i)=>`<div class="trow"><button class="seg" data-open="${i}">${t.titolo}<span>${t.data.riders.map(r=>r.name).join(', ')} · ${new Date(t.quando).toLocaleDateString('it-IT')}</span></button><button class="x" data-trm="${i}" aria-label="Elimina ${t.titolo}">×</button></div>`).join('')}</div>`;}
+function saveTratto(){if(!SEG){alert('Scegli prima il tratto.');return;}const data=packData(),t={titolo:data.titolo,quando:Date.now(),data};
+  const i=TRATTI.findIndex(q=>keyN(q.titolo)===keyN(t.titolo));if(i>=0)TRATTI[i]=t;else TRATTI.unshift(t);
+  try{localStorage.setItem(TK,JSON.stringify(TRATTI));}catch(e){if(i<0)TRATTI.shift();alert('Non riesco a salvare sul telefono (memoria piena?). Elimina qualche tratto salvato.');return;}
+  renderTratti();alert('Tratto «'+t.titolo+'» salvato con '+data.riders.length+' ciclisti. Lo ritrovi in cima alla pagina, in «Tratti salvati».');}
+$('salvatr').addEventListener('click',saveTratto);$('salvatr2').addEventListener('click',saveTratto);
+$('tratti').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.trm!==undefined){const t=TRATTI[+b.dataset.trm];if(!confirm('Eliminare il tratto «'+t.titolo+'»?'))return;TRATTI.splice(+b.dataset.trm,1);try{localStorage.setItem(TK,JSON.stringify(TRATTI));}catch(err){}renderTratti();}
+  if(b.dataset.open!==undefined){loadData(TRATTI[+b.dataset.open].data);built=false;segSel=-1;renderRiders();drawMap();drawMarks();renderSegs();
+    if(map&&A&&B)map.fitBounds([A,B],{padding:[40,40]});$('drop').scrollIntoView({behavior:'smooth',block:'center'});}});
+function loadData(d){$('titolo').value=d.titolo;
+  riders=d.riders.map(r=>({name:r.name,fname:r.name,color:r.color,face:r.face,alt:r.alt||'media',fis:r.fis||'normale',off:r.off,ghost:r.ghost,sync:r.sync||{ok:true,together:0},abs:r.abs,t0:r.t0??null,segs:[],
+    prof:BANDA.some(q=>keyN(q.name)===keyN(r.name))?r.name:undefined,pts:r.pts.map(p=>({lat:p[0],lon:p[1],ele:p[2],t:p[3],hr:p[4],cad:p[5],pw:p[6]}))}));
+  const p0=riders[0].pts[0];REF={lat:p0.lat,lon:p0.lon,c:Math.cos(p0.lat*D)};
+  riders.forEach(r=>{const t0=r.pts[0].t;r.pts.forEach(p=>p.t-=t0);r.off+=t0;if(r.t0!=null)r.t0+=t0*1000;r.abs=!!r.abs&&r.t0!=null;grid(r);});
+  A=d.A;B=d.B;computeSeg();}
+renderTratti();
+$('salva').addEventListener('click',async()=>{
+  const data=packData();
   const html=SRC.replace('<body>','<body><script id="scena" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>');
   const name=($('titolo').value||'scena').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_')+'.html',file=new File([html],name,{type:'text/html'});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:$('titolo').value});return;}}catch(e){if(e.name==='AbortError')return;}
@@ -1304,11 +1346,7 @@ $('salva').addEventListener('click',async()=>{
 });
 // scena salvata: si costruisce subito
 const pre=document.getElementById('scena');
-if(pre){window.__SCENA=true;const d=JSON.parse(pre.textContent);$('titolo').value=d.titolo;
-  riders=d.riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt||'media',fis:r.fis||'normale',off:r.off,ghost:r.ghost,sync:r.sync,abs:r.abs,pts:r.pts.map(p=>({lat:p[0],lon:p[1],ele:p[2],t:p[3],hr:p[4],cad:p[5],pw:p[6]}))}));
-  const p0=riders[0].pts[0];REF={lat:p0.lat,lon:p0.lon,c:Math.cos(p0.lat*D)};riders.forEach(r=>{const t0=r.pts[0].t;r.pts.forEach(p=>p.t-=t0);r.off+=t0;grid(r);});
-  A=d.A;B=d.B;$('setup').style.display='none';
-  computeSeg();
+if(pre){window.__SCENA=true;const d=JSON.parse(pre.textContent);loadData(d);$('setup').style.display='none';
   buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);});}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
