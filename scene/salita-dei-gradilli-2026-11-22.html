@@ -1240,13 +1240,15 @@ function filmSetup(){if(!riders.length)return;const box=$('fsetup');FP=trackSamp
   setTimeout(()=>{FALL=pickHighlights(FP);const kindL={seg:'segmento Strava',su:'salita',giu:'discesa',veloce:'il più veloce',sfida:'sfida'};
     box.innerHTML=`<h3 style="margin:0 0 4px;font:800 24px 'Barlow Condensed'">🎬 La sintesi</h3><p class="meta">Spunta i tratti da mettere nella sintesi (consigliati quelli già spuntati).</p>
     <div class="hl">${FALL.map((h,i)=>{const w=riders[h.ok[0].i];return`<label><input type="checkbox" data-h="${i}" ${h.on?'checked':''}><span><b>${h.nome}</b><small>km ${kmS(FP[h.i0].d)} · ${kmS(h.L)} km${h.avg>.015?' · '+pct(h.avg):''} · ${kindL[h.kind]}${h.ok.length>1?' · vince '+w.name:''}</small></span></label>`;}).join('')}</div>
+    <h4 style="margin:12px 0 2px">🏆 Classifiche alla fine</h4><p class="meta" style="margin:0 0 4px">Spunta i segmenti di cui mostrare la classifica alla fine del video (anche quelli che non sono nella sintesi).</p>
+    <div class="hl">${FALL.map((h,i)=>h.ok.length>1?`<label><input type="checkbox" data-c="${i}"><span><b>${h.nome}</b><small>${kmS(h.L)} km · ${h.ok.length} ciclisti · ${h.kind==='seg'?'segmento Strava':'tratto automatico'}</small></span></label>`:'').join('')||'<p class="meta">Servono almeno due ciclisti nello stesso tratto.</p>'}</div>
     <div class="rrow" style="margin-top:10px;gap:8px;flex-wrap:wrap"><label>Durata <select id="fdur"><option value="60">1 minuto</option><option value="120" selected>2 minuti</option><option value="180">3 minuti</option><option value="300">5 minuti</option></select></label>
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="f3d" checked> Immagini 3D della regia</label></div>
     <p class="meta">Con le immagini 3D prima della sintesi l'app prepara le scene: circa mezzo minuto per tratto.</p>
     <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button><button class="btn l" id="fexp">📤 Esporta la sintesi</button></div>`;
-    $('fexp').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}FEXP={H,dur:+$('fdur').value,use3D:$('f3d').checked};exportOpen('film');};
+    $('fexp').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}FEXP={H,dur:+$('fdur').value,use3D:$('f3d').checked,CL:[...box.querySelectorAll('[data-c]')].filter(c=>c.checked).map(c=>clPack(FALL[+c.dataset.c]))};exportOpen('film');};
     $('fgo').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}
-      startFilm(H,+$('fdur').value,$('f3d').checked);};},30);}
+      startFilm(H,+$('fdur').value,$('f3d').checked,[...box.querySelectorAll('[data-c]')].filter(c=>c.checked).map(c=>clPack(FALL[+c.dataset.c])));};},30);}
 // prepara le scene 3D dei tratti scelti (una alla volta, poi restano nascoste fino al loro momento)
 async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
   for(const h of H){k++;try{A=h.a.slice();B=h.b.slice();computeSeg(true);if(!SEG)continue;loading(true);
@@ -1254,7 +1256,7 @@ async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
       const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
   A=keep.A;B=keep.B;segSel=keep.segSel;if(A&&B)computeSeg(true);else{SEG=null;computeSeg(true);}loading(false);}
 function film3Dclear(){(FILM.H||[]).forEach(h=>{if(h.S){h.S.destroy();h.S=null;}});}
-async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
+async function startFilm(H,durS,use3D,CL){CL=CL||[];if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
   const P=FP||trackSamples(25);durS=durS||120;H=H||pickHighlights(P).filter(h=>h.on);
   film3Dclear();FILM.H=H;if(use3D&&window.THREE&&H.length){await prep3D(H);}
   // tempo per ogni momento (intro e finale ~25 s)
@@ -1292,7 +1294,9 @@ async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if
     fCard(`<small>${h.nome}</small><table>${ok.map((x,j)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.tb-ok[0].tb):'1°'}</td></tr>`).join('')}</table>`);
     if(T.tec)await fSay(T.tec,'t',0);else await fWait(2500);$('fclock').style.display='none';}
   if(!FILM.on)return;
-  FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];await fFly(L.latLngBounds(LA),2);
+  FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];
+  if(CL.length){await fFly(L.latLngBounds(LA),1.5);await fClassifiche(CL);if(!FILM.on)return;}
+  await fFly(L.latLngBounds(LA),2);
   const rk=Object.entries(wins).sort((a,b)=>b[1]-a[1]);
   fCard(`<h3>Com'è andata</h3>${rk.length&&riders.length>1?`<table>${rk.map(([i,n])=>`<tr><td><span class="dot" style="background:${riders[i].color}"></span>${riders[i].name}</td><td class="n">${n} ${n>1?'tratti vinti':'tratto vinto'}</td></tr>`).join('')}</table>`:''}<div class="fstats"><span><b>${kmS(km)}</b> km</span><span><b>${Math.round(up)}</b> m D+</span><span><b>${fmt(dur)}</b></span></div>`,'big');
   FX.fanfare(true);
@@ -1300,25 +1304,60 @@ async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if
   await fWait(1500);if(FILM.on){fCap('');$('fend').style.display='flex';}}
 // pezzo di regia 3D: la parte decisiva del tratto, accelerata per stare nel tempo
 const tabGap=ok=>`<table>${ok.map((x,j)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.tb-ok[0].tb):'1°'}</td></tr>`).join('')}</table>`;
-// regia 3D a 5×: la corsa sul tratto, l'arrivo col drone, poi dall'alto le posizioni di tutti; alla fine distacchi ed eventuale fotofinish
-async function fClip(h,ms,T){const S=h.S,ok=h.ok,m=5,lead=ok[0],last=ok[ok.length-1];
-  const endT=Math.min(last.tb+4,lead.tb+45),t0=Math.max(h.ta-4,endT-ms/1000*m);
+// regia 3D a 5×: il finale del tratto con radiocronaca fitta (distacchi, ultimi metri, sorpassi, ogni arrivo);
+// arrivo con la telecamera frontale, poi (se arrivano insieme) fotofinish laterale al rallentatore, poi dall'alto gli altri; alla fine i distacchi
+async function fClip(h,ms,T){const S=h.S,ok=h.ok,m=5,lead=ok[0],last=ok[ok.length-1],nm=x=>riders[x.i].name;
+  const endT=Math.min(last.tb+4,lead.tb+Math.max(45,ms/1000*m*.4)),t0=Math.max(h.ta-4,endT-ms/1000*m),pf2=ok.length>1&&ok[1].tb-ok[0].tb<=2;
   $('fmap').style.visibility='hidden';$('film').style.background='transparent';$('setup').style.visibility='hidden';fCard(`<small>${h.nome}</small>`);
-  FILM.curS=S;S.filmPlay(t0,m);let said=null;const st=performance.now();
-  while(FILM.on){await fWait(150);const t=S.time;if(!said&&(t>=lead.tb-2.5||performance.now()-st>ms*.75)){FX.applause(2.5,.6);said=fSay(T.fatto,'c',.8);}if(t>=endT||performance.now()-st>ms+30000)break;}
-  if(said)await said;S.hold(true);
-  fCard(`<small>Distacchi · ${h.nome}</small>${tabGap(ok)}`);
-  if(ok.length>1&&ok[1].tb-ok[0].tb<=2){await fWait(1500);fCard('<h3>📸 Fotofinish</h3><small>Rivediamo l\'arrivo al rallentatore…</small>');const pf=S.photoFinish();if(pf&&pf.length>1){const st2=performance.now();while(FILM.on&&!S.frozen&&performance.now()-st2<20000)await fWait(100);
+  // coda delle frasi: una alla volta, quelle vecchie si saltano; gli arrivi vicini si dicono in una frase sola
+  const C={q:[],busy:false};
+  const run=async()=>{if(C.busy)return;C.busy=true;while(C.q.length&&FILM.on){const x=C.q.shift();if(!x.keep&&performance.now()-x.at>6500)continue;
+      if(x.arr){const A=[x.arr];while(C.q.length&&C.q[0].arr)A.push(C.q.shift().arr);
+        x.txt=A.map((a,j)=>(j?pick2(['poi','quindi','e poi'])[0]+' ':pick2(['Arriva','Ecco','Taglia il traguardo'])[0]+' ')+a[0]+(a[1]<1.5?', attaccato al gruppetto':', a '+dS2(a[1]))).join(', ')+'.';}
+      await fSay(x.txt,x.who||'c',x.ex||.5);}C.busy=false;};
+  const say=(txt,who,ex,keep)=>{C.q.push({txt,who,ex,keep,at:performance.now()});run();};
+  const idle=async lim=>{const s0=performance.now();while(FILM.on&&(C.busy||C.q.length)&&performance.now()-s0<lim)await fWait(100);};
+  const gapS=(a,b)=>Math.max(0,(a.toGo>b.toGo?a.toGo-b.toGo:b.toGo-a.toGo)/Math.max(3,b.v||a.v||6));
+  const said=new Set(),once=(k,f)=>{if(!said.has(k)){said.add(k);f();}};let prevL=null,arrK=0,lastLead=0;
+  const watch=t=>{const st=S.status,L=st[0],Y=st[1];if(!L)return;
+    once('start',()=>say(Y?`Il finale de «${h.nome}»: davanti c'è ${L.name}`+(L.toGo-Y.toGo<-0||Y.toGo-L.toGo<8?`, ${Y.name} è a ruota!`:`, ${Y.name} insegue a ${dS2(gapS(L,Y))}.`):`Il finale de «${h.nome}»: ${L.name} da solo verso l'arrivo.`,'c',.5));
+    if(Y&&prevL&&prevL!==L.name&&L.toGo>25&&performance.now()-lastLead>3000){lastLead=performance.now();say(pick2([`Sorpasso! ${L.name} passa ${prevL}!`,`${L.name} si porta in testa!`,`Cambio al comando: ora c'è ${L.name}!`])[0],'c',.9);}
+    prevL=L.name;const close=Y&&Y.toGo-L.toGo<10;
+    if(L.toGo<1000&&L.toGo>600)once('1k',()=>say(`Ultimo chilometro! ${L.name} in testa`+(Y?(close?`, ${Y.name} incollato alla sua ruota.`:`, ${Y.name} a ${dS2(gapS(L,Y))}.`):'.'),'c',.7));
+    if(L.toGo<500&&L.toGo>250)once('500',()=>say(`Cinquecento metri all'arrivo!`+(Y?(close?` ${L.name} e ${Y.name} insieme, si va verso la volata!`:` ${L.name} ha ${dS2(gapS(L,Y))} su ${Y.name}.`):''),'c',.8));
+    if(L.toGo<220&&L.toGo>90)once('200',()=>say(Y&&close?pick2([`Duecento metri! È volata! ${L.name} contro ${Y.name}!`,`Ultimi duecento metri, spalla a spalla ${L.name} e ${Y.name}!`])[0]:`Duecento metri: ${L.name} si prende il tratto!`,'c',1));
+    if(Y&&close&&L.toGo<80&&L.toGo>5)once('50',()=>say(pick2(['Al colpo di reni!','Chi la spunta?','Testa a testa!'])[0],'c',1));
+    // arrivi
+    while(arrK<ok.length&&t>=ok[arrK].tb){const x=ok[arrK];
+      if(arrK===0){FX.applause(3,.8);say(pf2?pick2([`Arrivano insieme ${nm(ok[0])} e ${nm(ok[1])}! Serve il fotofinish!`,`Che volata! ${nm(ok[0])} o ${nm(ok[1])}? Guardiamo il fotofinish!`])[0]:pick2([`${nm(x)} taglia il traguardo! Il tratto è suo!`,`Vince ${nm(x)}! Braccia alzate sul traguardo!`])[0],'c',1,true);}
+      else if(!(pf2&&arrK===1)){C.q.push({arr:[nm(x),x.tb-ok[0].tb],at:performance.now(),keep:true});run();}
+      arrK++;}};
+  FILM.curS=S;S.filmPlay(t0,m);const st0=performance.now();
+  const play=async until=>{while(FILM.on){await fWait(150);const t=S.time;watch(t);if(t>=until||performance.now()-st0>ms+40000)break;}};
+  if(pf2){await play(ok[1].tb+.8);watch(Math.max(S.time,ok[1].tb+.8));S.hold(true);await idle(7000);
+    fCard('<h3>📸 Fotofinish</h3><small>Rivediamo l\'arrivo al rallentatore…</small>');const pf=S.photoFinish();
+    if(pf&&pf.length>1){say(pick2(['Vediamo al rallentatore…','Ecco le immagini al rallentatore.'])[0],'c',.4);const s2=performance.now();while(FILM.on&&!S.frozen&&performance.now()-s2<20000)await fWait(100);
       flash();FX.shutter();await fWait(500);
       fCard(`<h3>📸 Fotofinish</h3><table>${pf.filter((x,j)=>j<2||x.gap<10).slice(0,4).map((x,j)=>`<tr><td><span class="dot" style="background:${x.color}"></span>${x.name}</td><td class="n">${j?'+'+it(x.gap.toFixed(2))+'"':'1°'}</td></tr>`).join('')}</table>`,'big');
-      setTimeout(()=>S.photoZoom(),900);await fSay(`Fotofinish! ${pf[0].name} davanti a ${pf[1].name} per ${it(pf[1].gap.toFixed(1))} secondi.`,'c',.9);await fWait(3000);}}
-  if(T.tec)await fSay(T.tec,'t',0);else await fWait(2200);
+      setTimeout(()=>S.photoZoom(),900);await idle(6000);say(`Fotofinish! ${pf[0].name} davanti a ${pf[1].name} per ${it(pf[1].gap.toFixed(1))} secondi${pf[1].gap<.3?': una questione di centimetri!':'.'}`,'c',.9,true);
+      say(pick2([`Che arrivo, Gigi! Volata vera.`,`Non mi ricordo una volata così tirata!`,`Il colpo di reni ha fatto la differenza.`])[0],'t',0,true);await idle(12000);await fWait(1500);}
+    if(ok.length>2&&FILM.on){fCard(`<small>${h.nome}</small>`);S.photoEnd(ok[1].tb+.8,m);await play(endT);}}
+  else await play(endT);
+  watch(Math.max(S.time,endT));S.hold(true);await idle(9000);
+  fCard(`<small>Distacchi · ${h.nome}</small>${tabGap(ok)}`);
+  if(T.tec)say(T.tec,'t',0,true);await idle(12000);await fWait(T.tec?600:2200);
   S.filmStop();FILM.curS=null;$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';FX.music(true);}
+// classifiche dei segmenti scelti, alla fine del video
+function clPack(h){const best=Math.min(...h.ok.map(x=>x.dt));return{nome:h.nome,L:h.L,rows:h.ok.slice().sort((a,b)=>a.dt-b.dt).map(x=>({name:riders[x.i].name,color:riders[x.i].color,dt:x.dt,gap:x.dt-best}))};}
+async function fClassifiche(CL){for(let k=0;k<CL.length&&FILM.on;k++){const c=CL[k],r=c.rows;
+  fCard(`<small>🏆 Classifica ${k+1} di ${CL.length}${c.L?' · '+kmS(c.L)+' km':''}</small><h3>${c.nome}</h3><table>${r.map((x,j)=>`<tr><td>${j+1}. <span class="dot" style="background:${x.color}"></span>${x.name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.gap):''}</td></tr>`).join('')}</table>`,'big');
+  const ord=['primo','secondo','terzo'];
+  await fSay(`Classifica de «${c.nome}»: `+r.slice(0,3).map((x,j)=>`${ord[j]} ${x.name}${j?(x.gap<1?' con lo stesso tempo':' a '+dS2(x.gap)):' in '+dS2(x.dt)}`).join(', ')+(r.length>3?`. Chiude ${r[r.length-1].name}, a ${dS2(r[r.length-1].gap)}.`:'.'),'c',.5);await fWait(1500);}}
 function flash(){const f=$('flash');f.style.transition='none';f.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity=0;}));}
 function stopFilm(again){if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
 $('fclose').addEventListener('click',()=>stopFilm());
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;if(FILM.curS)FILM.curS.hold(FILM.paused);$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
-$('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm(true);if(SOLOF)startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D);else filmSetup();});
+$('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm(true);if(SOLOF)startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);else filmSetup();});
 $('fexit').addEventListener('click',()=>stopFilm());
 $('bsint').addEventListener('click',filmSetup);
 
@@ -1717,7 +1756,7 @@ function make3D(PATH,ROADS,BLDS){
       m.visible=o.vis;o.r.__tag=u.tag;if(!o.vis){u.tag.style.opacity=0;return;}
       const h=at(PR,o.cur,o.off,m.position);m.rotation.y=h;const lean=Math.atan(o.v*o.v*curv(PR,o.cur)/9.8);u.lean+=(lean-u.lean)*.1;m.rotation.z=-u.lean*.8;m.rotation.x=-Math.atan(slope(PR,o.cur));
       const mv=u.lastP?Math.min(2,m.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(m.position);u.wheel+=mv/.34;u.crank+=mv/1.05;pedal(m,u.crank+u.phase);u.wheels.forEach(w=>w.rotation.x=u.wheel);});
-    for(const c of cars){c.mesh.visible=c.active&&!(FD&&FD.photo);if(!c.mesh.visible)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
+    for(const c of cars){c.mesh.visible=c.active&&!FD;if(!c.mesh.visible)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
   }
   function finish(){if(filmM){paused=true;return;}if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
   function showFine(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
@@ -2010,8 +2049,13 @@ function make3D(PATH,ROADS,BLDS){
   // nel fotofinish si tolgono gli alberi tra la telecamera e la strada
   function clearView(a,b){const z=new THREE.Matrix4().makeTranslation(0,-5000,0),dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1;TMESH.forEach(T=>{let ch=false;T.list.forEach((t,i)=>{const u=clamp(((t[0]-a.x)*dx+(t[1]-a.z)*dz)/L2,0,1),ex=a.x+dx*u-t[0],ez=a.z+dz*u-t[1];if(u<.97&&ex*ex+ez*ez<36){T.crown.setMatrixAt(i,z);T.trunk.setMatrixAt(i,z);ch=true;}});if(ch){T.crown.instanceMatrix.needsUpdate=T.trunk.instanceMatrix.needsUpdate=true;}});}
   function filmDirector(){if(!FD)return false;if(FD.photo)return true;const arr=RID.slice().sort((a,b)=>a.x.tb-b.x.tb),L=arr[0];if(!L)return false;
-    const want=tNow>=L.x.tb+.3?'gruppo':(L.vis&&endS(L)-L.cur<240)?FD.fin:null;
-    if(want&&(!shot||shot.film!==want)){shot={type:want,subj:L,h0:0,dur:1e9,film:want};shotT=0;first=want!=='gruppo';}
+    const toGo=endS(L)-L.cur,want=tNow>=L.x.tb+3?'gruppo':(L.vis&&toGo<95)?'arrivo':(L.vis&&toGo<260)?'df':null;
+    if(want&&(!shot||shot.film!==want)){
+      if(want==='arrivo'){// telecamera fissa in mezzo alla strada dopo la linea: i ciclisti vengono incontro, si vede lo striscione
+        at(PR,FD.sB+16,.3,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.7;at(PR,FD.sB-15,0,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1.1;
+        shot={type:'foto',subj:L,fixed:f,look:lk,fov:30,dur:1e9,film:'arrivo',aim:true};clearView(f,lk);}
+      else shot={type:want,subj:L,h0:0,dur:1e9,film:want};
+      shotT=0;first=want!=='gruppo';}
     return !!want;}
   function finishLine(){const L=RID.slice().sort((a,b)=>a.x.tb-b.x.tb)[0],sB=endS(L),G=new THREE.Group();const h=at(PR,sB,0,tA);
     const ln=new THREE.Mesh(new THREE.BoxGeometry(9,.03,.45),new THREE.MeshBasicMaterial({color:0xffffff}));ln.position.set(0,.03,0);G.add(ln);
@@ -2032,6 +2076,7 @@ function make3D(PATH,ROADS,BLDS){
     if(!paused){if(!crHold()){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}}
     if(tele&&realNow()-capT>7)$('cron').style.opacity=0;
     if(FD&&FD.stopAt!=null&&tNow>=FD.stopAt){tNow=FD.stopAt;FD.stopAt=null;step(0);paused=true;FD.frozen=true;}
+    if(filmM&&FD&&(++FD.fc)%10===0)clearView(camera.position,look);
     place(dt);if(CER.on||CER.done)cerFrame(dt);
     let o;if(view==='regia'){shotT+=dt;if(!(filmM&&filmDirector())&&(!shot||shotT>shot.dur||!shot.subj||!shot.subj.vis))newShot();o=shot.subj;}
     if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o&&INTRO.on)o=INTRO.first;if(!o&&(CER.on||CER.done))o=RID[0];if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
@@ -2055,7 +2100,9 @@ function make3D(PATH,ROADS,BLDS){
         if(T==='pano'){const a=shot.h0+shotT*.32;goal.set(center.x+Math.cos(a)*15,cy+4.5,center.z+Math.sin(a)*15);lerpK=dt*6;}
         if(T==='zoom'){const d=46-37*e;F(-d*.75,-d*.45,4+20*(1-e));}
         if(T==='gru'){F(30-38*e,-9+6*e,60-56*e);}
-        if(T==='foto'){goal.copy(shot.fixed);look.copy(shot.look);lerpK=shot.smooth?dt*1.6:1;fov=shot.fov;}
+        if(T==='foto'){if(shot.track&&FD&&!FD.frozen&&FD.pg){let a=0,k=0;FD.pg.forEach((v,o)=>{if(o.vis){a+=o.cur;k++;}});if(k){const mid=Math.min(a/k,FD.sB);at(PR,mid,-shot.d,tA);shot.fixed.copy(tA);shot.fixed.y=H(tA.x,tA.z)+shot.hy;at(PR,mid,1,tB);shot.look.copy(tB);shot.look.y=H(tB.x,tB.z)+1;}}
+          goal.copy(shot.fixed);look.copy(shot.look);lerpK=shot.smooth?dt*1.6:1;fov=shot.fov;
+          if(shot.aim){const L=shot.subj,two=RID.filter(o=>o.vis&&o.cur<FD.sB+3&&L.cur-o.cur<25);let a=0;two.forEach(o=>a+=o.cur);const mid=two.length?Math.min(a/two.length,FD.sB):L.cur;at(PR,mid,0,tB);look.copy(tB);look.y=H(tB.x,tB.z)+1.1;const dist=camera.position.distanceTo(look);fov=clamp(2*Math.atan(7/Math.max(1,dist))/D,12,46);}}
         if(T==='bordo'&&shot.fixed){goal.copy(shot.fixed);lerpK=1;const dist=camera.position.distanceTo(center);fov=clamp(2*Math.atan(5/Math.max(1,dist))/D,14,baseFov);}}
       if(INTRO.on){lerpK=introCam(dt);fov=baseFov;}else if(CER.on||CER.done){lerpK=cerCam(dt);fov=baseFov;}
       {const nr=.5;if(Math.abs(camera.fov-fov)>.1||camera.near!==nr){camera.fov=fov;camera.near=nr;camera.updateProjectionMatrix();}}
@@ -2093,20 +2140,25 @@ function make3D(PATH,ROADS,BLDS){
   const showEls=v=>{renderer.domElement.style.display=v?'block':'none';RID.forEach(o=>{o.m.userData.tag.style.display=v?'':'none';});};
   return{imagery,fromPhotos,riders:setupRiders,
     // sintesi: un pezzo di regia automatica senza telecronaca, da t0 a velocità m
-    filmPlay(t0,m){filmM=true;tele=false;view='regia';follow=-1;shot=null;mult=m;FD={fin:Math.random()<.5?'df':'dd'};finishLine();document.body.classList.add('filmtags');showEls(true);seek(t0);paused=false;resize();if(!running){running=true;clock.getDelta();frame();}},
+    filmPlay(t0,m){filmM=true;tele=false;view='regia';follow=-1;shot=null;mult=m;FD={fin:'df',fc:0};finishLine();document.body.classList.add('filmtags');showEls(true);seek(t0);paused=false;resize();if(!running){running=true;clock.getDelta();frame();}},
     get time(){return tNow},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
     // fotofinish: fermo immagine di lato sulla linea d'arrivo nell'istante in cui passa il primo
     photoFinish(){const sB=FD.sB,arr=RID.map(o=>({o,t:crossT(o,sB)})).filter(x=>x.t!=null).sort((a,b)=>a.t-b.t);if(!arr.length)return null;
-      paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2,span=back+9,fv=30,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
+      paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2,span=back+3.5,fv=44,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
       at(PR,mid,-d,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.4+d*.07+(back<3?2.2:0);at(PR,mid,1,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1;
-      clearView(f,lk);shot={type:'foto',subj:arr[0].o,fixed:f,look:lk,fov:fv,dur:1e9,film:'foto'};first=true;
+      clearView(f,lk);{const m0=mid-10;at(PR,m0,-d,tA);const f0=tA.clone();f0.y=f.y;at(PR,m0,1,tB);clearView(f0,tB.clone());}
+      shot={type:'foto',subj:arr[0].o,fixed:f,look:lk,fov:fv,dur:1e9,film:'foto',track:true,d,hy:f.y-H(f.x,f.z)};first=true;
       // al rallentatore gli ultimi 2 secondi, poi si ferma sulla linea (con i distacchi in centesimi sui nomi)
-      FD.pg=new Map(vis.map((x,j)=>[x.o,j?' +'+it((x.t-arr[0].t).toFixed(2))+'"':' 1°']));FD.stopAt=arr[0].t+.02;FD.frozen=false;tNow=arr[0].t-1;step(0);mult=.2;paused=false;
+      FD.pg=new Map(vis.map((x,j)=>[x.o,j?' +'+it((x.t-arr[0].t).toFixed(2))+'"':' 1°']));FD.stopAt=arr[0].t+.02;FD.frozen=false;tNow=arr[0].t-1.4;step(0);mult=.2;paused=false;
       return arr.map(x=>({name:x.o.r.name,color:x.o.r.color,gap:x.t-arr[0].t}));},
     get frozen(){return !!(FD&&FD.frozen)},
+    // fine del fotofinish: si riparte (dall'alto) per vedere arrivare gli altri
+    photoEnd(t,m){if(!FD)return;FD.photo=false;FD.pg=null;FD.frozen=false;FD.stopAt=null;FD.clear=false;if(finL)finL.children.forEach(c=>c.visible=true);shot=null;seek(t);mult=m;paused=false;},
+    // situazione in corsa: chi c'è, quanto manca all'arrivo, velocità
+    get status(){return RID.filter(o=>o.vis&&o.x&&o.x.ok!==false).map(o=>({name:o.r.name,toGo:endS(o)-o.cur,v:o.v})).sort((a,b)=>a.toGo-b.toGo);},
     // dopo il fermo immagine la telecamera si avvicina ai primi due
     photoZoom(){if(!shot||shot.type!=='foto'||!FD)return;const sB=FD.sB,two=RID.filter(o=>FD.pg&&FD.pg.has(o)).sort((a,b)=>b.cur-a.cur).slice(0,2);if(!two.length)return;
-      const back=Math.max(...two.map(o=>Math.abs(sB-o.cur))),mid=(Math.max(...two.map(o=>o.cur))+Math.min(...two.map(o=>o.cur)))/2,span=back+4.5,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(shot.fov*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),7,48);
+      const back=Math.max(...two.map(o=>Math.abs(sB-o.cur))),mid=(Math.max(...two.map(o=>o.cur))+Math.min(...two.map(o=>o.cur)))/2,span=back+2.2,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(shot.fov*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),7,48);
       at(PR,mid,-d,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.3+d*.05+(back<3?1.5:0);at(PR,mid,1,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1;clearView(f,lk);shot.fixed=f;shot.look=lk;shot.smooth=true;},
     filmStop(){running=false;FD=null;document.body.classList.remove('filmtags');showEls(false);$('lines').innerHTML='';$('live').style.display='none';},
     hide(){showEls(false);},
@@ -2201,7 +2253,7 @@ function packFilm(F,hide){const far=farFrom(hide?homes():[]),H=F.H,keep=[...new 
   const rs=keep.map(i=>{const r=riders[i];return{name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
     pts:r.pts.filter(p=>inW(p.t+offE(r))&&far(p.lat,p.lon)).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])};});
   const mp=x=>({...x,i:M[x.i]}),fp=p=>[Math.round(p.d),Math.round(p.es*10)/10,Math.round(p.t*10)/10];
-  return{v:1,titolo:$('titolo').value,dur:F.dur,use3D:F.use3D,riders:rs,
+  return{v:1,titolo:$('titolo').value,dur:F.dur,use3D:F.use3D,CL:F.CL||[],riders:rs,
     FP:FP.map(p=>far(p.la,p.lo)?[+p.la.toFixed(6),+p.lo.toFixed(6),...fp(p)]:[null,null,...fp(p)]),
     H:F.H.map(h=>({nome:h.nome,a:h.a,b:h.b,kind:h.kind,i0:h.i0,i1:h.i1,L:h.L,up:h.up,avg:h.avg,ta:h.ta,tb:h.tb,on:true,ok:h.ok.map(mp),res:h.res.filter(x=>M[x.i]!=null).map(mp)}))};}
 function packDescr(hide){const far=farFrom(hide?homes():[]);return{...DESCR,P:DESCR.P.map(q=>far(q[0],q[1])?q:[null,null,q[2],q[3],q[4]])};}
@@ -2229,7 +2281,7 @@ $('expbox').addEventListener('click',async e=>{const b=e.target.closest('button'
 function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
   $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
     <button class="btn" id="playgo">▶ Guarda la sintesi</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
-  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D);};}
+  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);};}
 function startSoloFilm(d){window.__SOLO=true;window.__SCENA=true;loadData({titolo:d.titolo,A:null,B:null,riders:d.riders});FP=d.FP.map(q=>({la:q[0],lo:q[1],d:q[2],es:q[3],t:q[4]}));SOLOF=d;soloPlay();}
 function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
   // si lascia solo la descrizione (nascosti gli altri pezzi della pagina)
@@ -2311,8 +2363,17 @@ function exportOpen(kind){EXK=kind;$('exptit').textContent=kind==='film'?'Esport
   $('expsub').textContent=kind==='film'?'Un file che, aperto, fa partire la sintesi con cronaca e immagini 3D.':'Un file con il testo, la cartina e l\'altimetria del percorso.';$('expbox').style.display='grid';}
 $('expbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(e.target.id==='expbox'||(b&&b.dataset.ex==='x')){$('expbox').style.display='none';return;}if(!b)return;
   $('expbox').style.display='none';const hide=$('exphide').checked,t=$('titolo').value,base=(t&&!/segmento/i.test(t)?t:'uscita').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_');
-  try{if(EXK==='film'){if(!FEXP)return;await sendHTML(exportHTML('sintesi',packFilm(FEXP,hide)),'Sintesi_'+base+'.html',b.dataset.ex==='dl');}
-    else{if(!DESCR)return;await sendHTML(exportHTML('descrizione',packDescr(hide)),'Percorso_'+base+'.html',b.dataset.ex==='dl');}}catch(err){alert('Non riesco a creare il file: '+err.message);}});
+  const name=(EXK==='film'?'Sintesi_':'Percorso_')+base+'.html',dl=b.dataset.ex==='dl';
+  try{if(EXK==='film'&&!FEXP||EXK!=='film'&&!DESCR)return;
+    if(b.dataset.ex==='gh'){if(!$('expok').checked){alert('Prima chiedi a tutti i ciclisti se sono d\'accordo, poi spunta la casella.');$('expbox').style.display='grid';return;}
+      // sul sito partenza e arrivo sono sempre nascosti
+      const html=EXK==='film'?exportHTML('sintesi',packFilm(FEXP,true)):exportHTML('descrizione',packDescr(true));
+      const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):null,ds=when?when.toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})+' · ':'';
+      const tt=t&&!/segmento/i.test(t)?t:(EXK==='film'?'Sintesi dell\'uscita':'Il percorso');
+      const sub=EXK==='film'?ds+'Sintesi · '+riders.filter((r,i)=>FEXP.H.some(h=>h.ok.some(x=>x.i===i))).map(r=>r.name).join(', '):ds+'Descrizione del percorso · '+kmS(DESCR.km)+' km';
+      await publishGH(EXK,html,(EXK==='film'?'🎬 ':'🧭 ')+tt,sub);return;}
+    const html=EXK==='film'?exportHTML('sintesi',packFilm(FEXP,hide)):exportHTML('descrizione',packDescr(hide));
+    await sendHTML(html,name,dl);if(dl)setTimeout(()=>alert('Fatto! Il file «'+name+'» è nella cartella Download del telefono (app «File» o «Download»). Aprilo con Chrome o Safari.'),800);}catch(err){alert('Non riesco a creare il file: '+err.message);}});
 // apertura di un file esportato
 function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
   $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
@@ -2325,6 +2386,42 @@ function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
   const h=document.createElement('div');h.innerHTML=`<h1 style="font:800 32px 'Barlow Condensed';margin:6px 0 2px">🚴 ${d.titolo&&!/segmento/i.test(d.titolo)?d.titolo:'Il percorso'}</h1><p class="meta" style="margin:0 0 6px">La banda in bici · descrizione del percorso</p>`;
   box.parentElement.insertBefore(h,box);box.style.display='block';DESCR=d;drawDescr(d,box);}
 {const sf=document.getElementById('sintesi'),sd=document.getElementById('descrizione');try{if(sf)startSoloFilm(JSON.parse(sf.textContent));else if(sd)startSoloDescr(JSON.parse(sd.textContent));}catch(e){alert('Il file è rovinato: '+e.message);}}
+// ---------- pubblicazione diretta sul sito (GitHub) ----------
+// serve un "token" di GitHub con permesso di scrittura solo su questo repository: si incolla una volta e resta solo su questo telefono
+const GH={repo:'studiobilancio2025-code/banda-in-bici',key:'banda.gh',site:'https://studiobilancio2025-code.github.io/banda-in-bici/'};
+const ghTok=()=>{try{return localStorage.getItem(GH.key)||'';}catch(e){return'';}};
+async function gh(path,opt){const r=await fetch('https://api.github.com/repos/'+GH.repo+path,{...opt,headers:{Authorization:'Bearer '+ghTok(),Accept:'application/vnd.github+json',...(opt&&opt.body?{'Content-Type':'application/json'}:{})}});
+  if(r.status===404)return null;if(!r.ok){const t=await r.text();throw new Error(r.status===401?'la chiave di GitHub non è valida o è scaduta':r.status===403?'la chiave non ha il permesso di scrivere sul sito':('GitHub '+r.status+' '+t.slice(0,120)));}return r.json();}
+const b64s=str=>{const u=new TextEncoder().encode(str);let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s);};
+const unb64s=b=>{const s=atob(b.replace(/\n/g,'')),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new TextDecoder().decode(u);};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'uscita';
+async function ghSetup(){$('ghbox').style.display='grid';$('ghtok').value='';return new Promise(res=>{GH.done=res;});}
+$('ghbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.gh==='x'){$('ghbox').style.display='none';GH.done&&GH.done(false);return;}
+  if(b.dataset.gh==='ok'){const t=$('ghtok').value.trim();$('ghtok').value='';if(!t){alert('Incolla la chiave.');return;}
+    try{localStorage.setItem(GH.key,t);const r=await gh('');if(!r||!r.permissions||!r.permissions.push)throw new Error('la chiave non ha il permesso di scrivere sul sito');
+      $('ghbox').style.display='none';GH.done&&GH.done(true);}catch(err){try{localStorage.removeItem(GH.key);}catch(e2){}alert('Non funziona: '+err.message+'. Controlla la chiave e riprova.');}}});
+// pubblica il file in scene/ e aggiunge la riga in cima all'elenco delle corse
+async function publishGH(kind,html,title,sub){
+  if(!ghTok()&&!(await ghSetup()))return;
+  const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):new Date(),day=when.toISOString().slice(0,10);
+  const file=(kind==='film'?'sintesi-':'percorso-')+slug(title)+'-'+day+'.html',path='scene/'+file;
+  loading(true);prog('Pubblico sul sito…',file,.2);
+  try{const old=await gh('/contents/'+path);if(old&&!confirm('Sul sito c\'è già «'+file+'». La sostituisco?')){loading(false);return;}
+    await gh('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Pubblica '+file+' (dall\'app)',content:b64s(html),...(old?{sha:old.sha}:{})})});
+    prog('Aggiorno l\'elenco delle corse…',file,.7);
+    const ix=await gh('/contents/scene/index.html');if(ix){let s=unb64s(ix.content);const row=`<a class="corsa" href="${file}"><div><b>${esc(title)}</b><span>${esc(sub)}</span></div><i>${kind==='film'?'🎬 Guarda':'🧭 Leggi'}</i></a>`;
+      const re=new RegExp('<a class="corsa" href="'+file.replace(/\./g,'\\.')+'">.*?</a>');
+      if(re.test(s))s=s.replace(re,row);else s=s.replace(/(<!-- CORSE[^\n]*-->\n?)/,'$1'+row+'\n');
+      await gh('/contents/scene/index.html',{method:'PUT',body:JSON.stringify({message:'Elenco corse: '+file,content:b64s(s),sha:ix.sha})});}
+    loading(false);const url=GH.site+path;
+    $('ghdone').innerHTML=`<div><h3>✅ Pubblicata!</h3><p>Fra un paio di minuti si vede qui (anche su iPhone):</p><p style="word-break:break-all"><a href="${url}" target="_blank">${url}</a></p><p class="meta">È anche nell'elenco delle corse: <a href="${GH.site}scene/" target="_blank">${GH.site}scene/</a></p>
+      <button class="btn" id="ghshare">📤 Manda il link</button><button class="btn l" id="ghclose">Chiudi</button></div>`;$('ghdone').style.display='grid';
+    $('ghclose').onclick=()=>{$('ghdone').style.display='none';};
+    $('ghshare').onclick=async()=>{try{if(navigator.share){await navigator.share({title,text:'🚴 '+title+' – la banda in bici:',url});return;}}catch(e){if(e.name==='AbortError')return;}
+      try{await navigator.clipboard.writeText(url);alert('Link copiato: incollalo su WhatsApp.');}catch(e){prompt('Copia il link:',url);}};}
+  catch(err){loading(false);alert('Non sono riuscito a pubblicare: '+err.message+'.');}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
