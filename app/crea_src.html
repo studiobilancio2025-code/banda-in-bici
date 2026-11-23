@@ -599,7 +599,7 @@ async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
       const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
   A=keep.A;B=keep.B;segSel=keep.segSel;if(A&&B)computeSeg(true);else{SEG=null;computeSeg(true);}loading(false);}
 function film3Dclear(){(FILM.H||[]).forEach(h=>{if(h.S){h.S.destroy();h.S=null;}});}
-async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
+async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return;uniqColors();unlockAudio();if(ricWanted())ricInit();
   const P=FP||trackSamples(25);durS=durS||120;H=H||pickHighlights(P).filter(h=>h.on);
   film3Dclear();FILM.H=H;if(use3D&&window.THREE&&H.length){await prep3D(H);}
   // tempo per ogni momento (intro e finale ~25 s)
@@ -886,8 +886,10 @@ $('vai').addEventListener('click',()=>unlockAudio())
 $('vai').addEventListener('click',()=>buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);}));
 const prog=(t,s,p)=>{$('ltxt').textContent=t;$('lsub').textContent=s||'';$('lbar').style.width=(p*100|0)+'%';};
 const loading=v=>{$('loading').style.display=v?'grid':'none';};
+// due ciclisti con lo stesso colore (capita con la banda salvata): in scena il secondo prende un colore libero
+function uniqColors(){const used=new Set();riders.forEach(r=>{if(used.has(r.color)){const c=COLORS.find(x=>!used.has(x));if(c)r.color=c;}used.add(r.color);});}
 async function buildScene(){
-  if(built){showScene();return;}
+  if(built){showScene();return;}uniqColors();
   loading(true);prog('Preparo la strada…','',.05);await new Promise(r=>setTimeout(r,30));
   const {path,ROADS,BLDS}=await sceneData(prog);
   prog('Costruisco il terreno…','',.2);await new Promise(r=>setTimeout(r,20));
@@ -1699,7 +1701,7 @@ $('ghbox').addEventListener('click',async e=>{const b=e.target.closest('button')
 async function publishGH(kind,html,title,sub){
   if(!ghTok()&&!(await ghSetup()))return;
   const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):new Date(),day=when.toISOString().slice(0,10);
-  const file=(kind==='film'?'sintesi-':'percorso-')+slug(title)+'-'+day+'.html',path='scene/'+file;
+  const file=(kind==='film'?'sintesi-':'percorso-')+(slug(title).replace(/^(sintesi|percorso)(-(di|del|dell|della|dello|dei|degli))?(-|$)/,'')||'uscita')+'-'+day+'.html',path='scene/'+file;
   loading(true);prog('Pubblico sul sito…',file,.2);
   try{const old=await gh('/contents/'+path);if(old&&!confirm('Sul sito c\'è già «'+file+'». La sostituisco?')){loading(false);return;}
     await gh('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Pubblica '+file+' (dall\'app)',content:b64s(html),...(old?{sha:old.sha}:{})})});

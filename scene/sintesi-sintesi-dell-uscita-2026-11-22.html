@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="it"><head>
+<html lang="it">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La banda in bici – Crea la scena</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&amp;family=Barlow:wght@400;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <style>
 /* required styles */
 
@@ -754,9 +755,9 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #vocibox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
 #vocibox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;width:min(92vw,400px);max-height:92vh;overflow:auto}
 #vocibox h3{margin:0;font:800 24px "Barlow Condensed"}#vocibox label{display:flex;flex-direction:column;font-weight:600;gap:4px;margin-top:6px}#vocibox select{min-height:44px;font:inherit;border-radius:8px;border:1px solid var(--line);padding:0 8px}
-#sharebox,#expbox,#ghbox,#ghdone{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
-#expbox,#ghbox,#ghdone{z-index:600}#sharebox>div,#expbox>div,#ghbox>div,#ghdone>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
-#sharebox h3,#expbox h3,#ghbox h3,#ghdone h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn,#expbox .btn,#ghbox .btn,#ghdone .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
+#sharebox,#expbox,#ghbox,#ghdone,#fvid{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
+#expbox,#ghbox,#ghdone,#fvid{z-index:600}#sharebox>div,#expbox>div,#ghbox>div,#ghdone>div,#fvid>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
+#sharebox h3,#expbox h3,#ghbox h3,#ghdone h3,#fvid h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn,#expbox .btn,#ghbox .btn,#ghdone .btn,#fvid .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
 #expbox label{display:flex;gap:8px;align-items:flex-start;font:500 15px Barlow,system-ui}#sharebox small,#expbox small{font:500 13px Barlow,system-ui;opacity:.8}
 .dico{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #10151c;font-size:16px;box-shadow:0 2px 6px #0006}
 #dmap{height:62vh;min-height:320px;border-radius:12px;margin:8px 0}#dprof{width:100%;height:150px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none}
@@ -777,6 +778,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #fcap{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 70px);z-index:500;background:rgba(16,21,28,.85);color:#fff;border-radius:10px;padding:8px 12px;font:600 19px/1.25 "Barlow Condensed";display:none;max-width:560px;margin:0 auto}
 #fcap b{color:var(--tag)}#fcap.tec{background:rgba(13,71,161,.88)}
 #fctl{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:500;display:flex;gap:8px}#fctl button{width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:#10151ccc;color:#fff;font-size:20px}
+#frec{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 2px);z-index:502;background:#d32f2f;color:#fff;font:700 12px Barlow,system-ui;padding:2px 8px;border-radius:8px;display:none}
 #flash{position:absolute;inset:0;z-index:499;background:#fff;opacity:0;pointer-events:none}
 #fend{position:absolute;inset:auto 0 calc(env(safe-area-inset-bottom) + 76px);z-index:501;display:none;justify-content:center;gap:10px}
 .ftip{font:800 15px "Barlow Condensed";background:#10151cdd;color:#fff;border:0}.ftip:before{display:none}
@@ -819,7 +821,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="card" id="tratti" style="margin-bottom:10px;display:none"></div>
   <h2><i>1</i>I corridori</h2>
   <div class="card" id="banda" style="margin-bottom:10px"></div>
-  <label class="drop" id="drop"><b>Carica i file GPX</b>uno per ciclista · il primo fa da orologio di riferimento<input id="files" type="file" accept=".gpx,application/gpx+xml,text/xml" multiple=""></label>
+  <label class="drop" id="drop"><b>Carica i file GPX</b>uno per ciclista · il primo fa da orologio di riferimento<input id="files" type="file" accept=".gpx,application/gpx+xml,text/xml" multiple></label>
   <div class="card" id="riders" style="margin-top:10px;display:none"></div>
 
   <div class="btns" id="uscbtn" style="display:none;margin-top:14px"><button class="btn" id="bsint">🎬 Sintesi dell'uscita (2 minuti)</button><button class="btn l" id="bdescr">🧭 Descrizione del percorso</button></div>
@@ -830,11 +832,11 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div id="segs"></div>
   <p class="hint" id="hint">Carica almeno un GPX per vedere la mappa.</p>
   <div id="map"></div>
-  <div class="btns"><button class="btn l" id="rifai" disabled="">Rifai la scelta</button></div>
+  <div class="btns"><button class="btn l" id="rifai" disabled>Rifai la scelta</button></div>
 
   <h2><i>3</i>Classifica</h2>
   <div class="card" id="classifica"><p class="meta">Comparirà dopo la scelta del tratto.</p></div>
-  <div class="btns"><button class="btn" id="vai" disabled="">Crea la scena 3D</button><button class="btn l" id="salvatr" disabled="">Salva il tratto</button></div>
+  <div class="btns"><button class="btn" id="vai" disabled>Crea la scena 3D</button><button class="btn l" id="salvatr" disabled>Salva il tratto</button></div>
 </div></div>
 
 <div id="loading"><div><b id="ltxt">Preparo la scena…</b><span id="lsub"></span><div class="bar"><i id="lbar"></i></div></div></div>
@@ -846,7 +848,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="cron"><b>🎙️ Gigi</b><span></span></div>
 <div id="pres"></div>
 <div id="play"></div>
-<div id="film"><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
+<div id="film"><div id="frec">● REC · video in registrazione</div><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
   <div id="fctl"><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
   <div id="flash"></div><div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
@@ -859,7 +861,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <p class="meta"><b>Riccardo</b> la prima volta scarica circa 50 MB (meglio col Wi-Fi), poi resta sul telefono. Voci del telefono: per averne una maschile su Android <b>Impostazioni → Accessibilità → Sintesi vocale</b> (o "Output sintesi vocale") → motore <b>Google</b> → ⚙️ → <b>Installa dati vocali → Italiano</b> e scegli una voce maschile. Se il telefono ha solo voci femminili, l'app le rende più gravi.</p>
   <button class="btn" data-pv="x">Fatto</button></div></div>
 <div id="expbox"><div><h3 id="exptit">Esporta</h3><p class="meta" id="expsub" style="margin:0"></p>
-  <label><input type="checkbox" id="exphide" checked=""><span>Nascondi partenza e arrivo<br><small>toglie i primi e gli ultimi 600 m (di solito sono casa): consigliato se va pubblicata</small></span></label>
+  <label><input type="checkbox" id="exphide" checked><span>Nascondi partenza e arrivo<br><small>toglie i primi e gli ultimi 600 m (di solito sono casa): consigliato se va pubblicata</small></span></label>
   <button class="btn" data-ex="send">📤 Manda il file<small>WhatsApp o altre app (Android)</small></button><button class="btn l" data-ex="dl">⬇️ Scarica sul telefono<small>va nella cartella Download</small></button>
   <hr style="border:0;border-top:1px solid #dde2e8;width:100%;margin:2px 0">
   <label><input type="checkbox" id="expok"><span>Tutti i ciclisti presenti sono d'accordo a pubblicarla</span></label>
@@ -869,7 +871,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <ol class="meta" style="margin:0;padding-left:18px"><li>Apri <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com → nuova chiave</a> (entra con l'account del sito)</li><li>Nome: "app banda"; scadenza: 1 anno</li><li>Repository access: <b>Only select repositories</b> → <b>banda-in-bici</b></li><li>Permissions → Repository → <b>Contents: Read and write</b></li><li>Generate token, copia la chiave (inizia con github_pat_) e incollala qui</li></ol>
   <input id="ghtok" type="password" autocomplete="off" placeholder="github_pat_…" style="font:16px system-ui;padding:10px;border:1px solid #c9d0d8;border-radius:10px">
   <button class="btn" data-gh="ok">Collega</button><button class="btn l" data-gh="x">Annulla</button></div></div>
-<div id="ghdone"></div>
+<div id="ghdone"></div><div id="fvid"></div>
 <div id="sharebox"><div><h3>Manda la corsa</h3>
   <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
   <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
@@ -1244,7 +1246,10 @@ function filmSetup(){if(!riders.length)return;const box=$('fsetup');FP=trackSamp
     <div class="rrow" style="margin-top:10px;gap:8px;flex-wrap:wrap"><label>Durata <select id="fdur"><option value="60">1 minuto</option><option value="120" selected>2 minuti</option><option value="180">3 minuti</option><option value="300">5 minuti</option></select></label>
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="f3d" checked> Immagini 3D della regia</label></div>
     <p class="meta">Con le immagini 3D prima della sintesi l'app prepara le scene: circa mezzo minuto per tratto.</p>
-    <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button><button class="btn l" id="fexp">📤 Esporta la sintesi</button></div>`;
+    <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button><button class="btn l" id="fexp">📤 Esporta la sintesi</button><button class="btn l" id="fvidb">🎥 Crea il video (MP4)</button></div>
+    <p class="meta">Il video si registra mentre la sintesi va sullo schermo (dura quanto la sintesi): tieni il telefono acceso e non cambiare app. La voce nel video c'è solo con Riccardo.</p>`;
+    $('fvidb').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}
+      startFilm(H,+$('fdur').value,$('f3d').checked,[...box.querySelectorAll('[data-c]')].filter(c=>c.checked).map(c=>clPack(FALL[+c.dataset.c])),true);};
     $('fexp').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}FEXP={H,dur:+$('fdur').value,use3D:$('f3d').checked,CL:[...box.querySelectorAll('[data-c]')].filter(c=>c.checked).map(c=>clPack(FALL[+c.dataset.c]))};exportOpen('film');};
     $('fgo').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}
       startFilm(H,+$('fdur').value,$('f3d').checked,[...box.querySelectorAll('[data-c]')].filter(c=>c.checked).map(c=>clPack(FALL[+c.dataset.c])));};},30);}
@@ -1255,16 +1260,16 @@ async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
       const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
   A=keep.A;B=keep.B;segSel=keep.segSel;if(A&&B)computeSeg(true);else{SEG=null;computeSeg(true);}loading(false);}
 function film3Dclear(){(FILM.H||[]).forEach(h=>{if(h.S){h.S.destroy();h.S=null;}});}
-async function startFilm(H,durS,use3D,CL){CL=CL||[];if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
+async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return;uniqColors();unlockAudio();if(ricWanted())ricInit();
   const P=FP||trackSamples(25);durS=durS||120;H=H||pickHighlights(P).filter(h=>h.on);
   film3Dclear();FILM.H=H;if(use3D&&window.THREE&&H.length){await prep3D(H);}
   // tempo per ogni momento (intro e finale ~25 s)
   const per=Math.max(12,(durS-25)/Math.max(1,H.length));FILM.per=per;
   $('film').style.display='block';FILM.on=true;FILM.paused=false;$('fpause').textContent='⏸';
-  if(!FILM.map){FILM.map=L.map('fmap',{zoomControl:false,attributionControl:true});
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(FILM.map);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(FILM.map);}
-  setTimeout(()=>FILM.map.invalidateSize(),50);FILM.lay.forEach(l=>l.remove());FILM.lay=[];FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];
+  if(!FILM.map){FILM.map=L.map('fmap',{zoomControl:false,attributionControl:true,preferCanvas:true});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(FILM.map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true}).addTo(FILM.map);}
+  setTimeout(()=>FILM.map.invalidateSize(),50);FILM.rec=false;if(rec){try{FILM.rec=recStart();if(navigator.wakeLock)navigator.wakeLock.request('screen').then(w=>FILM.wl=w).catch(()=>{});}catch(e){alert('Non riesco a registrare il video: '+e.message);}}FILM.lay.forEach(l=>l.remove());FILM.lay=[];FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];
   const ll=P.map(p=>p.la==null?null:[p.la,p.lo]),LS=(a,b)=>ll.slice(a,b+1).filter(Boolean),LA=LS(0,ll.length-1);FILM.map.fitBounds(L.latLngBounds(LA),{padding:[30,30]});
   // se la voce Riccardo si sta scaricando, si aspetta un po'
   if(ricWanted()&&RIC.st==='loading'){fCard(`<h3>La sintesi sta per cominciare</h3><p>Arriva il cronista… <span id="fpct"></span></p>`);const t=performance.now();while(RIC.st==='loading'&&performance.now()-t<25000&&FILM.on){$('fpct').textContent=RIC.pct+'%';await fWait(300);}}
@@ -1300,7 +1305,7 @@ async function startFilm(H,durS,use3D,CL){CL=CL||[];if(!riders.length)return;unl
   fCard(`<h3>Com'è andata</h3>${rk.length&&riders.length>1?`<table>${rk.map(([i,n])=>`<tr><td><span class="dot" style="background:${riders[i].color}"></span>${riders[i].name}</td><td class="n">${n} ${n>1?'tratti vinti':'tratto vinto'}</td></tr>`).join('')}</table>`:''}<div class="fstats"><span><b>${kmS(km)}</b> km</span><span><b>${Math.round(up)}</b> m D+</span><span><b>${fmt(dur)}</b></span></div>`,'big');
   FX.fanfare(true);
   await fSay(rk.length&&riders.length>1?`In sintesi: ${riders[rk[0][0]].name} si porta a casa ${rk[0][1]>1?rk[0][1]+' tratti':'un tratto'}`+(rk[1]?`, ${riders[rk[1][0]].name} ${rk[1][1]>1?rk[1][1]:'uno'}`:'')+`. Dalla banda in bici è tutto, alla prossima uscita!`:`Bella uscita! Dalla banda in bici è tutto, alla prossima!`,'c',.4);
-  await fWait(1500);if(FILM.on){fCap('');$('fend').style.display='flex';}}
+  await fWait(1500);if(FILM.on){fCap('');if(FILM.rec){FILM.rec=false;await fWait(800);recStop(true);try{FILM.wl&&FILM.wl.release();}catch(e){}}$('fend').style.display='flex';}}
 // pezzo di regia 3D: la parte decisiva del tratto, accelerata per stare nel tempo
 const tabGap=ok=>`<table>${ok.map((x,j)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.tb-ok[0].tb):'1°'}</td></tr>`).join('')}</table>`;
 // regia 3D a 5×: il finale del tratto con radiocronaca fitta (distacchi, ultimi metri, sorpassi, ogni arrivo);
@@ -1352,8 +1357,53 @@ async function fClassifiche(CL){for(let k=0;k<CL.length&&FILM.on;k++){const c=CL
   fCard(`<small>🏆 Classifica ${k+1} di ${CL.length}${c.L?' · '+kmS(c.L)+' km':''}</small><h3>${c.nome}</h3><table>${r.map((x,j)=>`<tr><td>${j+1}. <span class="dot" style="background:${x.color}"></span>${x.name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.gap):''}</td></tr>`).join('')}</table>`,'big');
   const ord=['primo','secondo','terzo'];
   await fSay(`Classifica de «${c.nome}»: `+r.slice(0,3).map((x,j)=>`${ord[j]} ${x.name}${j?(x.gap<1?' con lo stesso tempo':' a '+dS2(x.gap)):' in '+dS2(x.dt)}`).join(', ')+(r.length>3?`. Chiude ${r[r.length-1].name}, a ${dS2(r[r.length-1].gap)}.`:'.'),'c',.5);await fWait(1500);}}
+// ---------- video della sintesi (MP4): si ridisegna lo schermo del film in una tela e la si registra con l'audio ----------
+const REC={on:false,cv:null,g:null,l3:null,mr:null,chunks:[],s:1,cache:new Map(),type:''};
+function recType(){if(!window.MediaRecorder)return'';for(const t of['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4;codecs=avc1,mp4a.40.2','video/mp4;codecs=avc1,opus','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'])if(MediaRecorder.isTypeSupported(t))return t;return'';}
+REC.grab=c=>{if(!REC.on)return;const l=REC.l3;if(l.width!==REC.cv.width||l.height!==REC.cv.height){l.width=REC.cv.width;l.height=REC.cv.height;}l.getContext('2d').drawImage(c,0,0,l.width,l.height);REC.has3D=performance.now();};
+const vis=e=>{if(!e)return false;const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden'||+cs.opacity<.02)return false;const r=e.getBoundingClientRect();return r.width>1&&r.height>1;};
+function rrect(g,x,y,w,h,r){r=Math.min(r,w/2,h/2);g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+// disegna un pezzo di pagina (sfondi, bordi, testi parola per parola) in una tela tenuta da parte finché non cambia
+function boxLayer(el){const R=el.getBoundingClientRect(),s=REC.s,key=el.innerHTML+'|'+Math.round(R.width)+'x'+Math.round(R.height)+'|'+el.className;let c=REC.cache.get(el);if(c&&c.key===key)return c;
+  c=c||{cv:document.createElement('canvas')};c.key=key;c.cv.width=Math.ceil(R.width*s)+4;c.cv.height=Math.ceil(R.height*s)+4;const g=c.cv.getContext('2d');g.scale(s,s);g.translate(-R.left,-R.top);
+  const walk=e=>{const cs=getComputedStyle(e);if(cs.display==='none'||cs.visibility==='hidden')return;const r=e.getBoundingClientRect();const bg=cs.backgroundColor,bw=parseFloat(cs.borderTopWidth)||0,rad=parseFloat(cs.borderTopLeftRadius)||0;
+    if(cs.boxShadow&&cs.boxShadow!=='none'&&e.matches('.tag b')){g.fillStyle=cs.borderTopColor;rrect(g,r.left,r.top+2,r.width,r.height,rad);g.fill();}
+    if(bg&&!/rgba\(.*,\s*0\)|transparent/.test(bg)){g.fillStyle=bg;rrect(g,r.left,r.top,r.width,r.height,rad);g.fill();}
+    if(bw>0&&cs.borderTopStyle!=='none'){g.strokeStyle=cs.borderTopColor;g.lineWidth=bw;rrect(g,r.left+bw/2,r.top+bw/2,r.width-bw,r.height-bw,rad);g.stroke();}
+    for(const n of e.childNodes){if(n.nodeType===1)walk(n);else if(n.nodeType===3&&n.textContent.trim()){g.font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;g.fillStyle=cs.color;g.textBaseline='middle';
+        const t=n.textContent,re=/\S+/g;let m;while((m=re.exec(t))){const rg=document.createRange();rg.setStart(n,m.index);rg.setEnd(n,m.index+m[0].length);const q=rg.getClientRects()[0];if(q&&q.width>0)g.fillText(m[0],q.left,q.top+q.height/2);}}}};
+  walk(el);REC.cache.set(el,c);return c;}
+function drawBox(el,alpha){if(!vis(el))return;const R=el.getBoundingClientRect(),c=boxLayer(el),g=REC.g,s=REC.s;g.globalAlpha=(alpha??1)*(+getComputedStyle(el).opacity);g.drawImage(c.cv,R.left*s,R.top*s);g.globalAlpha=1;}
+function recFrame(){if(!REC.on)return;const g=REC.g,s=REC.s,W=REC.cv.width,H=REC.cv.height;g.fillStyle='#10151c';g.fillRect(0,0,W,H);
+  // cartina del film (tasselli, tracce, segni)
+  const fm=$('fmap');if(vis(fm)){fm.querySelectorAll('img.leaflet-tile-loaded').forEach(im=>{const r=im.getBoundingClientRect();try{g.drawImage(im,r.left*s,r.top*s,r.width*s,r.height*s);}catch(e){}});
+    fm.querySelectorAll('canvas').forEach(c=>{const r=c.getBoundingClientRect();try{g.drawImage(c,r.left*s,r.top*s,r.width*s,r.height*s);}catch(e){}});
+    fm.querySelectorAll('.leaflet-marker-icon,.leaflet-tooltip').forEach(e=>drawBox(e));}
+  // scena 3D
+  if(FILM.curS&&REC.has3D&&performance.now()-REC.has3D<1500)g.drawImage(REC.l3,0,0);
+  if(FILM.curS){const ln=$('lines');ln.querySelectorAll('line').forEach(l=>{g.strokeStyle=l.getAttribute('stroke');g.lineWidth=+l.getAttribute('stroke-width')*s;g.lineCap='round';g.beginPath();g.moveTo(+l.getAttribute('x1')*s,+l.getAttribute('y1')*s);g.lineTo(+l.getAttribute('x2')*s,+l.getAttribute('y2')*s);g.stroke();});
+    ln.querySelectorAll('circle').forEach(c=>{g.fillStyle=c.getAttribute('fill');g.beginPath();g.arc(+c.getAttribute('cx')*s,+c.getAttribute('cy')*s,4.5*s,0,7);g.fill();});
+    [...document.querySelectorAll('#tags .tag')].sort((a,b)=>(+a.style.zIndex||0)-(+b.style.zIndex||0)).forEach(t=>{const b=t.querySelector('b');if(b&&+getComputedStyle(t).opacity>.05)drawBox(b,+getComputedStyle(t).opacity);});
+    drawBox($('live'));}
+  ['fclock','fcard','fcap'].forEach(i=>drawBox($(i)));
+  const fl=$('flash'),fo=+getComputedStyle(fl).opacity;if(fo>.01){g.fillStyle=`rgba(255,255,255,${fo})`;g.fillRect(0,0,W,H);}
+  g.font=`600 ${Math.round(10*s)}px Barlow,system-ui`;g.fillStyle='rgba(255,255,255,.75)';g.textBaseline='bottom';g.fillText('La banda in bici · © OpenStreetMap · Esri, Maxar, Earthstar Geographics',6*s,H-4*s);
+  requestAnimationFrame(recFrame);}
+function recStart(){REC.type=recType();if(!REC.type){alert('Questo telefono non sa registrare video dal browser: aggiorna Chrome o Safari.');return false;}
+  const w=innerWidth,h=innerHeight;REC.s=Math.min(2,720/Math.min(w,h));REC.cv=REC.cv||document.createElement('canvas');REC.cv.width=Math.round(w*REC.s/2)*2;REC.cv.height=Math.round(h*REC.s/2)*2;REC.g=REC.cv.getContext('2d');REC.l3=REC.l3||document.createElement('canvas');REC.cache=new Map();REC.has3D=0;
+  const st=REC.cv.captureStream(30);FX.init();if(FX.ctx){if(!FX.recDest){FX.recDest=FX.ctx.createMediaStreamDestination();FX.out.connect(FX.recDest);}FX.recDest.stream.getAudioTracks().forEach(t=>st.addTrack(t));}
+  REC.chunks=[];REC.mr=new MediaRecorder(st,{mimeType:REC.type,videoBitsPerSecond:5e6,audioBitsPerSecond:128e3});REC.mr.ondataavailable=e=>{if(e.data&&e.data.size)REC.chunks.push(e.data);};
+  REC.mr.start(1000);REC.on=true;requestAnimationFrame(recFrame);$('frec').style.display='block';return true;}
+function recStop(save){if(!REC.on)return;REC.on=false;$('frec').style.display='none';const mr=REC.mr;
+  mr.onstop=async()=>{if(!save)return;const mp4=/mp4/.test(REC.type),blob=new Blob(REC.chunks,{type:mp4?'video/mp4':'video/webm'}),t=$('titolo').value,base=(t&&!/segmento/i.test(t)?t:'uscita').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_'),name='Sintesi_'+base+(mp4?'.mp4':'.webm');
+    const file=new File([blob],name,{type:blob.type});$('fvid').innerHTML=`<div><h3>🎥 Il video è pronto</h3><p>«${name}» · ${(blob.size/1048576).toFixed(1)} MB${mp4?'':'<br><small>Questo telefono sa fare solo il formato WebM (non MP4): WhatsApp potrebbe non aprirlo.</small>'}</p>
+      <button class="btn" id="vshare">📤 Manda il video</button><button class="btn l" id="vdl">⬇️ Scarica sul telefono</button><button class="btn l" id="vclose">Chiudi</button></div>`;$('fvid').style.display='grid';
+    $('vclose').onclick=()=>{$('fvid').style.display='none';};
+    $('vshare').onclick=async()=>{try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return;}}catch(e){if(e.name==='AbortError')return;}$('vdl').click();};
+    $('vdl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);setTimeout(()=>alert('Il video «'+name+'» è nella cartella Download del telefono (app «File» o «Galleria»).'),800);};};
+  try{mr.stop();}catch(e){}}
 function flash(){const f=$('flash');f.style.transition='none';f.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity=0;}));}
-function stopFilm(again){if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
+function stopFilm(again){if(REC.on){recStop(false);FILM.rec=false;}if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
 $('fclose').addEventListener('click',()=>stopFilm());
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;if(FILM.curS)FILM.curS.hold(FILM.paused);$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
 $('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm(true);if(SOLOF)startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);else filmSetup();});
@@ -1497,8 +1547,10 @@ $('vai').addEventListener('click',()=>unlockAudio())
 $('vai').addEventListener('click',()=>buildScene().catch(err=>{loading(false);alert('Errore: '+err.message);}));
 const prog=(t,s,p)=>{$('ltxt').textContent=t;$('lsub').textContent=s||'';$('lbar').style.width=(p*100|0)+'%';};
 const loading=v=>{$('loading').style.display=v?'grid':'none';};
+// due ciclisti con lo stesso colore (capita con la banda salvata): in scena il secondo prende un colore libero
+function uniqColors(){const used=new Set();riders.forEach(r=>{if(used.has(r.color)){const c=COLORS.find(x=>!used.has(x));if(c)r.color=c;}used.add(r.color);});}
 async function buildScene(){
-  if(built){showScene();return;}
+  if(built){showScene();return;}uniqColors();
   loading(true);prog('Preparo la strada…','',.05);await new Promise(r=>setTimeout(r,30));
   const {path,ROADS,BLDS}=await sceneData(prog);
   prog('Costruisco il terreno…','',.2);await new Promise(r=>setTimeout(r,20));
@@ -2134,7 +2186,7 @@ function make3D(PATH,ROADS,BLDS){
           el.classList.add('side');el.style.opacity=1;el.style.zIndex=1e6;el.style.transform=`translate(${bx}px,${a.by}px)`;
           svg+=`<line x1="${ax}" y1="${ay}" x2="${a.sx}" y2="${a.sy}" stroke="#10151c" stroke-width="5" stroke-linecap="round"/><line x1="${ax}" y1="${ay}" x2="${a.sx}" y2="${a.sy}" stroke="${c}" stroke-width="2.5" marker-end="url(#ah)"/><circle cx="${a.sx}" cy="${a.sy}" r="4.5" fill="${c}" stroke="#10151c" stroke-width="2"/>`;});}}
     if(svg!==lastSvg){$('lines').innerHTML='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#10151c"/></marker></defs>'+svg;lastSvg=svg;}
-    renderer.render(scene,camera);requestAnimationFrame(frame);
+    renderer.render(scene,camera);if(filmM&&REC.on)REC.grab(renderer.domElement);requestAnimationFrame(frame);
   }
   const showEls=v=>{renderer.domElement.style.display=v?'block':'none';RID.forEach(o=>{o.m.userData.tag.style.display=v?'':'none';});};
   return{imagery,fromPhotos,riders:setupRiders,
@@ -2279,8 +2331,10 @@ $('expbox').addEventListener('click',async e=>{const b=e.target.closest('button'
 // apertura di un file esportato
 function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
   $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
-    <button class="btn" id="playgo">▶ Guarda la sintesi</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
-  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);};}
+    <button class="btn" id="playgo">▶ Guarda la sintesi</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p>
+    <button class="btn l" id="playvid" style="margin-top:14px;font-size:18px;min-height:44px">🎥 Salva come video (MP4)</button></div>`;
+  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);};
+  $('playvid').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL,true);};}
 function startSoloFilm(d){window.__SOLO=true;window.__SCENA=true;loadData({titolo:d.titolo,A:null,B:null,riders:d.riders});FP=d.FP.map(q=>({la:q[0],lo:q[1],d:q[2],es:q[3],t:q[4]}));SOLOF=d;soloPlay();}
 function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
   // si lascia solo la descrizione (nascosti gli altri pezzi della pagina)
@@ -2308,7 +2362,7 @@ $('ghbox').addEventListener('click',async e=>{const b=e.target.closest('button')
 async function publishGH(kind,html,title,sub){
   if(!ghTok()&&!(await ghSetup()))return;
   const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):new Date(),day=when.toISOString().slice(0,10);
-  const file=(kind==='film'?'sintesi-':'percorso-')+slug(title)+'-'+day+'.html',path='scene/'+file;
+  const file=(kind==='film'?'sintesi-':'percorso-')+(slug(title).replace(/^(sintesi|percorso)(-(di|del|dell|della|dello|dei|degli))?(-|$)/,'')||'uscita')+'-'+day+'.html',path='scene/'+file;
   loading(true);prog('Pubblico sul sito…',file,.2);
   try{const old=await gh('/contents/'+path);if(old&&!confirm('Sul sito c\'è già «'+file+'». La sostituisco?')){loading(false);return;}
     await gh('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Pubblica '+file+' (dall\'app)',content:b64s(html),...(old?{sha:old.sha}:{})})});
@@ -2326,4 +2380,6 @@ async function publishGH(kind,html,title,sub){
   catch(err){loading(false);alert('Non sono riuscito a pubblicare: '+err.message+'.');}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
-</script></body></html>
+</script>
+</body>
+</html>
