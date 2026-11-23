@@ -163,7 +163,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="play"></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
   <label>🎙️ Gigi, il cronista<select id="vc"></select></label><button class="btn l" data-pv="c">▶ Prova Gigi</button>
-  <label>🎧 Tonino, il tecnico napoletano<select id="vt"></select></label><button class="btn l" data-pv="t">▶ Prova Tonino</button>
+  <label>🎧 Tonino, il commento tecnico<select id="vt"></select></label><button class="btn l" data-pv="t">▶ Prova Tonino</button>
   <p class="meta" id="vn"></p>
   <p class="meta">Le voci sono quelle del telefono. Per avere una voce maschile su Android: <b>Impostazioni → Accessibilità → Sintesi vocale</b> (o "Output sintesi vocale") → motore <b>Google</b> → ⚙️ → <b>Installa dati vocali → Italiano</b> e scegli una voce maschile. Se il telefono ha solo voci femminili, l'app le rende più gravi.</p>
   <button class="btn" data-pv="x">Fatto</button></div></div>
@@ -360,23 +360,13 @@ function segLen(){const g=riders[0].g,o=riders[0].off;let d=0;for(let s=Math.max
 const MALE=/diego|luca|cosimo|giorgio|benigno|calimero|gianni|giuseppe|roberto|paolo|marco|riccardo|male|maschil|uomo|\bman\b|it-it-x-itc|it-it-x-itd|itc-|itd-/i,FEM=/elsa|isabella|alice|federica|paola|carla|chiara|giulia|silvia|alessandra|female|femmin|donna|it-it-x-itb|it-it-x-ita|itb-|ita-/i;
 const isMale=x=>!!x&&MALE.test(x.name+' '+(x.voiceURI||''))&&!FEM.test(x.name),isFem=x=>!!x&&FEM.test(x.name+' '+(x.voiceURI||''));
 function voicePref(){try{return JSON.parse(localStorage.getItem('banda.voci')||'{}');}catch(e){return{};}}
-// il tecnico Tonino parla con l'accento napoletano: parole e modi di dire (la voce resta quella del telefono)
-function napo(t){const rnd=a=>a[Math.floor(Math.random()*a.length)];
-  const W=[[/\bun po'/gi,"nu poco"],[/\bquesto\b/gi,'chistu'],[/\bquesta\b/gi,'chesta'],[/\bqui\b/gi,'ccà'],[/\badesso\b/gi,"mo'"],[/\bmolto\b/gi,'assaje'],[/\bmolta\b/gi,'assaje'],
-    [/\bla strada\b/gi,"'a strada"],[/\bla salita\b/gi,"'a salita"],[/\bil cuore\b/gi,"'o core"],[/\ble gambe\b/gi,"'e gambe"],[/\bil ritmo\b/gi,"'o ritmo"],[/\bil vento\b/gi,"'o viento"],
-    [/\bragazzi\b/gi,'guagliù'],[/\bniente\b/gi,'niente'],[/\bnon\b/gi,'nun'],[/\bsempre\b/gi,'sempe'],[/\bdavvero\b/gi,'overo'],[/\bbello\b/gi,'bello assaje'],[/\bsono\b/gi,'so\''],[/\bAttenzione\b/g,'Statte accuorto'],[/\bchi ne ha di più/gi,"chi ne tene 'e cchiù"],[/\bSi vedrà/g,'Mo\' vedimmo'],[/\bsi vedrà/g,'mo\' vedimmo'],[/\bsenza strafare\b/gi,'senza esagerà'],[/\bdel suo\b/gi,"d'o suojo"],[/\bdi media\b/gi,"'e media"],[/\bcomplimenti\b/gi,'cumplimente'],[/\bpiano\b/gi,'chiano'],[/\bforte\b/gi,'forte forte']];
-  W.forEach(([a,b])=>{t=t.replace(a,m=>m[0]===m[0].toUpperCase()?b.charAt(0).toUpperCase()+b.slice(1):b);});
-  t=t.replace(/^Guarda la VAM, Gigi/,'Gigi, guarda ccà \'a VAM');
-  t=t.charAt(0).toUpperCase()+t.slice(1);if(t[0]==="'")t=t[0]+t.charAt(1).toUpperCase()+t.slice(2);
-  if(!/^(Uè|Gigi|Maronna|Jamme|Guarda)/.test(t)&&!/Gigi/.test(t)&&Math.random()<.6)t=rnd(['Uè Gigi, ','Maronna mia, ','Guarda ccà, ','Jamme, ','Sient\' a me, '])+(/^(In|Il|La|Lo|Le|Gli|Un|Una|Uno|Si|Ccà|A|Al|Alla|Cadenza|Finale|Partenza|Tratto|Strada|Rapporto|Potenza|Prestazione|Bella|Bello|Primi|Andando|Occhio|Davanti|Se|Ha|Ritmo|Statte|Numeri|Guarda|Adesso|Mo')\b/.test(t)?t.charAt(0).toLowerCase()+t.slice(1):/^'[A-Z]/.test(t)?"'"+t.charAt(1).toLowerCase()+t.slice(2):t);
-  if(Math.random()<.35)t=t.replace(/[.!]?$/,rnd([', overo!',', eh!','. Statte accuorto!',', te l\'aggio ditto!']));return t;}
 function fillVoci(){const v=speechSynthesis.getVoices(),it=v.filter(x=>/^it/i.test(x.lang)),p=voicePref();
   const opt=sel=>'<option value="">Automatica (maschile se c\'è)</option>'+it.map(x=>`<option ${x.name===sel?'selected':''} value="${x.name.replace(/"/g,'')}">${x.name}${isMale(x)?' ♂':isFem(x)?' ♀':''}</option>`).join('');
   $('vc').innerHTML=opt(p.c);$('vt').innerHTML=opt(p.t);$('vn').textContent=it.length?`Il telefono ha ${it.length} voc${it.length>1?'i':'e'} italian${it.length>1?'e':'a'}${it.some(isMale)?'':' e nessuna è riconoscibile come maschile'}.`:'Il telefono non ha voci italiane.';}
 function saveVoci(){localStorage.setItem('banda.voci',JSON.stringify({c:$('vc').value,t:$('vt').value}));dispatchEvent(new Event('voci'));}
 function provaVoce(who){if(!window.speechSynthesis)return;speechSynthesis.cancel();const v=speechSynthesis.getVoices(),name=$(who==='t'?'vt':'vc').value;
   const auto=v.filter(x=>/^it/i.test(x.lang)).sort((a,b)=>(isMale(b)-isMale(a)))[0],x=v.find(q=>q.name===name)||auto;
-  const u=new SpeechSynthesisUtterance(who==='t'?napo('Ciao Gigi, oggi la salita è dura: chi parte forte poi lo paga.'):'Buongiorno, amici della banda in bici! Si parte!');u.lang='it-IT';if(x)u.voice=x;const m=isMale(x);u.pitch=who==='t'?(m?.95:.72):(m?1:.84);u.rate=1;speechSynthesis.speak(u);}
+  const u=new SpeechSynthesisUtterance(who==='t'?'Ciao Gigi, oggi la salita è dura: chi parte forte poi lo paga.':'Buongiorno, amici della banda in bici! Si parte!');u.lang='it-IT';if(x)u.voice=x;const m=isMale(x);u.pitch=who==='t'?(m?.95:.72):(m?1:.84);u.rate=1;speechSynthesis.speak(u);}
 
 // ---------- effetti sonori e musica, tutti sintetizzati (niente file da scaricare) ----------
 const FX={ctx:null,on:true,mus:true,
@@ -419,7 +409,7 @@ $('vocibox').addEventListener('change',saveVoci);
 $('vocibox').addEventListener('click',e=>{const b=e.target.closest('button');if(e.target.id==='vocibox'||(b&&b.dataset.pv==='x')){$('vocibox').style.display='none';return;}if(b&&b.dataset.pv)provaVoce(b.dataset.pv);});
 $('sfx').addEventListener('click',()=>{FX.init();FX.on=!FX.on;$('sfx').textContent=FX.on?'🔊 Effetti':'🔈 Effetti';$('sfx').classList.toggle('on',FX.on);});
 $('mus').addEventListener('click',()=>{FX.init();FX.mus=!FX.mus;$('mus').textContent=FX.mus?'🎵 Musica':'🎵 Musica no';$('mus').classList.toggle('on',FX.mus);FX.duck(!!FX.ducked);});
-window.__FX=FX;window.__napo=napo;
+window.__FX=FX;
 addEventListener('pointerdown',()=>{if(FX.ctx&&FX.ctx.state==='suspended'&&!window.__pausa)FX.ctx.resume();},{passive:true});
 
 // ---------- 3. scena 3D ----------
@@ -713,7 +703,7 @@ function make3D(PATH,ROADS,BLDS){
   function showCap(it){capT=realNow();const c=$('cron');c.style.display='block';c.firstChild.textContent=WHO[it.who];c.lastChild.textContent=it.txt;c.style.opacity=1;c.classList.toggle('hot',it.ex>.6);c.classList.toggle('tec',it.who==='t');}
   function pump(){if(QB)return;if(window.speechSynthesis&&speechSynthesis.speaking){setTimeout(pump,250);return;}const now=realNow();
     for(let i=Q.length-1;i>=0;i--)if(Q[i].exp<now){const x=Q.splice(i,1)[0];if(x.cb)x.cb();}
-    if(!Q.length)return;let bi=0;Q.forEach((q,i)=>{if(q.pri>Q[bi].pri)bi=i;});const it=Q.splice(bi,1)[0];if(it.who==='t'&&!it.nap){it.txt=napo(it.txt);it.nap=1;}QB=it;showCap(it);
+    if(!Q.length)return;let bi=0;Q.forEach((q,i)=>{if(q.pri>Q[bi].pri)bi=i;});const it=Q.splice(bi,1)[0];QB=it;showCap(it);
     let fin=false;const done=()=>{if(fin)return;fin=true;clearTimeout(it.to);QB=null;FX.duck(false);if(it.cb)it.cb();setTimeout(pump,it.who==='t'?450:300);};
     const est=it.txt.length/12.5+.7;
     if(!window.speechSynthesis||!tele){it.to=setTimeout(done,est*1000);return;}
@@ -789,7 +779,7 @@ function make3D(PATH,ROADS,BLDS){
   function startIntro(){const P=RID.slice().sort((a,b)=>a.x.ta-b.x.ta),steps=[{text:introText()}];
     P.forEach((o,k)=>steps.push({o,text:(P.length>1?(k===0?'Ai nastri di partenza: ':k===P.length-1?'E infine ':'')+NN(o):`In gara ${NN(o)}`)+(nick(o)?`, detto ${nick(o)}`:'')+(P.length>1?'.':', da solo contro il cronometro.')}));
     steps.splice(1,0,{who:'c',text:pick(['Con me, come sempre, per il commento tecnico, Tonino.','Al mio fianco per il commento tecnico c\'è Tonino.'])},
-      {who:'t',nap:1,text:CR.st&&CR.st.avg>.03?pick(["Uè Gigi, buongiorno a tutti! Chesta salita nun perdona: chi parte a cannone, po' 'o paga 'ncoppa.","Bella giornata, Gigi mio! Ccà ce vonno 'e gambe: 'a salita nun fa sconti a nisciuno."]):pick(["Uè Gigi, salute a tutti! Tratto veloce: ccà conta sta' a rota e nun piglià 'o viento 'nfaccia.","Buongiorno, guagliù! Percorso scorrevole, ma attenzione a ripartì doppo 'e curve."])});
+      {who:'t',text:CR.st&&CR.st.avg>.03?pick(['Ciao Gigi, buongiorno a tutti. Tratto impegnativo: chi parte troppo forte poi lo paga nel finale.','Buongiorno a tutti. Qui bisogna dosare le forze, la salita non fa sconti.']):pick(['Ciao Gigi, buongiorno a tutti. Tratto veloce: conterà molto stare a ruota e non prendere il vento in faccia.','Buongiorno a tutti. Percorso scorrevole: occhio ai rilanci dopo le curve.'])});
     Object.assign(INTRO,{on:true,i:-1,steps,ended:-1,first:P[0],t0:realNow(),dd:Math.max(9,steps.filter(x=>!x.o).reduce((a,x)=>a+x.text.length/12.5+1,0))});FX.fanfare();nextStep();}
   function nextStep(){const I=INTRO;I.i++;if(I.i>=I.steps.length){I.on=false;$('pres').style.display='none';if(SAT)SAT.visible=false;first=true;return;}
     const st=I.steps[I.i];I.stepT=realNow();I.est=st.text.length/12+.8;lastSay=realNow();const k=I.i;sayCb(st.text,st.who||'c',()=>{if(INTRO.i===k)INTRO.ended=k;});
@@ -907,7 +897,7 @@ function make3D(PATH,ROADS,BLDS){
     if(top[2])steps.push({o:top[2],who:'c',text:`Sul terzo gradino del podio, a ${dS(g(top[2]))}: ${NN(top[2])}!`});
     if(top[1])steps.push({o:top[1],who:'c',text:pick([`Medaglia d'argento per ${NN(top[1])}, a ${dS(g(top[1]))} dal vincitore!`,`Secondo posto per ${NN(top[1])}, staccato di ${dS(g(top[1]))}!`])});
     steps.push({o:win,who:'c',win:true,ex:1,text:top.length>1?`E sul gradino più alto del podio... il vincitore di «${tit}»: ${NN(win)}, in ${dS(win.x.tb-win.x.ta)}!`:`Sul podio, unico protagonista di giornata: ${NN(win)}, in ${dS(win.x.tb-win.x.ta)}!`});
-    steps.push({who:'t',nap:1,text:top.length>1?pick([`Complimenti a tutti quanti, Gigi mio. Overo. ${NN(win)} ha fatto la differenza${top[1]&&g(top[1])>60?' con un ritmo che gli altri oggi non avevano':' sul filo dei secondi'}. Ma oggi hanno vinto tutti: siete arrivati in cima.`,`Bella corsa, Gigi. ${NN(win)} meritava questo podio, e anche chi è arrivato dopo ha dato tutto.`]):`Bella prova, Gigi. Contro il cronometro è la sfida più dura: con sé stessi.`});
+    steps.push({who:'t',text:top.length>1?pick([`Complimenti a tutti, Gigi. ${NN(win)} ha fatto la differenza${top[1]&&g(top[1])>60?' con un ritmo che gli altri oggi non avevano':' sul filo dei secondi'}. Ma oggi hanno vinto tutti: siete arrivati in cima.`,`Bella corsa, Gigi. ${NN(win)} meritava questo podio, e anche chi è arrivato dopo ha dato tutto.`]):`Bella prova, Gigi. Contro il cronometro è la sfida più dura: con sé stessi.`});
     steps.push({who:'c',text:'Dalla banda in bici è tutto. Alla prossima uscita, e mi raccomando: casco sempre!'});
     CER={on:true,done:false,i:-1,steps,P,ended:-1};FX.fanfare();FX.applause(2,.6);cerNext();}
   function cerNext(){const C=CER;C.i++;const p=$('pres');if(C.i>=C.steps.length){C.on=false;C.done=true;p.style.display='none';setTimeout(()=>{if(CER.done)showFine();},2500);return;}
