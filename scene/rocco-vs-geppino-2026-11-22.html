@@ -877,7 +877,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
   <button class="btn l" data-sh="dl">⬇️ Scarica sul telefono<small>il file va nella cartella Download</small></button>
   <button class="btn l" data-sh="x" style="min-height:40px">Annulla</button></div></div>
-<div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics</div>
+<div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics · quote: Mapzen Terrain Tiles (AWS)</div>
 <div id="fine"></div>
 <div id="nav">
   <div class="row" id="views">
@@ -1260,7 +1260,7 @@ function filmSetup(){if(!riders.length)return;const box=$('fsetup');FP=trackSamp
 async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
   for(const h of H){k++;try{A=h.a.slice();B=h.b.slice();computeSeg(true);if(!SEG)continue;loading(true);
       const pr=(t,s,p)=>prog(`Preparo le immagini 3D (${k} di ${H.length})`,`${h.nome} · ${t}`,(k-1+p)/H.length);
-      const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
+      const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr,d.DEM);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
   A=keep.A;B=keep.B;segSel=keep.segSel;if(A&&B)computeSeg(true);else{SEG=null;computeSeg(true);}loading(false);}
 function film3Dclear(){(FILM.H||[]).forEach(h=>{if(h.S){h.S.destroy();h.S=null;}});}
 async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return;uniqColors();unlockAudio();if(ricWanted())ricInit();
@@ -1557,9 +1557,9 @@ function uniqColors(){const used=new Set();riders.forEach(r=>{if(used.has(r.colo
 async function buildScene(){
   if(built){showScene();return;}uniqColors();
   loading(true);prog('Preparo la strada…','',.05);await new Promise(r=>setTimeout(r,30));
-  const {path,ROADS,BLDS}=await sceneData(prog);
+  const {path,ROADS,BLDS,DEM}=await sceneData(prog);
   prog('Costruisco il terreno…','',.2);await new Promise(r=>setTimeout(r,20));
-  S3=await make3Dfull(path,ROADS,BLDS,(t,s,p)=>prog(t,s,p));
+  S3=await make3Dfull(path,ROADS,BLDS,(t,s,p)=>prog(t,s,p),DEM);
   built=true;loading(false);showScene();
 }
 // strada (traccia agganciata alle strade OSM), strade e case del tratto SEG
@@ -1581,15 +1581,35 @@ async function sceneData(prog){
   const ROADS=[],BLDS=[];
   for(const w of osm.ways){const pts=w.nodes.map(id=>osm.nodes.get(id)).filter(Boolean).map(n=>proj(n.lat,n.lon));if(pts.length<2)continue;
     if(w.tags.highway&&!/^(footway|pedestrian|path|steps|cycleway|bridleway|construction|proposed|corridor|elevator)$/.test(w.tags.highway))ROADS.push([w.tags.highway,pts]);
-    else if(w.tags.building&&pts.length>=4)BLDS.push(pts.slice(0,-1));}
+    else if(w.tags.building&&pts.length>=4){const b=pts.slice(0,-1);b.tags=w.tags;BLDS.push(b);}}
   // aggancio del percorso alla strada vera più vicina
   const segd=(p,a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],L=dx*dx+dz*dz||1,u=clamp(((p[0]-a[0])*dx+(p[1]-a[1])*dz)/L,0,1),q=[a[0]+u*dx,a[1]+u*dz];return[Math.hypot(p[0]-q[0],p[1]-q[1]),q];};
   const cand=ROADS.filter(r=>!/^(track|service)$/.test(r[0]));
   path=path.map(p=>{let best=[14,null];for(const [,pts] of cand){for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.min(a[0],b[0])-15>p[0]||Math.max(a[0],b[0])+15<p[0]||Math.min(a[1],b[1])-15>p[1]||Math.max(a[1],b[1])+15<p[1])continue;const [d,q]=segd(p,a,b);if(d<best[0])best=[d,q];}}return best[1]?[best[1][0],best[1][1],p[2]]:p;});
   const px=sm(path,0,1),pz=sm(path,1,1);path=path.map((p,i)=>[px[i],pz[i],p[2]]);
-  return{path,ROADS,BLDS};
+  // quote vere del terreno attorno (colline, montagne); se non arrivano il terreno segue solo la strada, come prima
+  let DEM=null;try{prog('Scarico le quote del terreno…','',.17);DEM=await loadDEM(path,e0);}catch(e){DEM=null;}
+  return{path,ROADS,BLDS,DEM};
 }
-async function make3Dfull(path,ROADS,BLDS,pr){const S=make3D(path,ROADS,BLDS);
+// quote del terreno: tasselli "Terrarium" (AWS Open Data, Mapzen; SRTM e altre fonti, ~30 m) zoom 13, quota = R*256+G+B/256-32768.
+// Si allineano alla quota del GPS (mediana della differenza lungo il percorso). h(x,z) = quota relativa come path[2], NaN fuori.
+async function loadDEM(path,e0){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;path.forEach(p=>{x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);z0=Math.min(z0,p[1]);z1=Math.max(z1,p[1]);});
+  const M=2600,[la0,lo1]=unproj(x0-M,z0-M),[la1,lo0]=unproj(x1+M,z1+M);let Z=13,tx0,tx1,ty0,ty1;
+  const tp=(lat,lon,Z)=>{const n=2**Z*256,s=Math.sin(lat*D);return[(lon+180)/360*n,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n];};
+  for(;Z>=10;Z--){const [Xa,Ya]=tp(la1,lo0,Z),[Xb,Yb]=tp(la0,lo1,Z);tx0=Math.floor(Xa/256);tx1=Math.floor(Xb/256);ty0=Math.floor(Ya/256);ty1=Math.floor(Yb/256);if((tx1-tx0+1)*(ty1-ty0+1)<=16)break;}
+  const T=new Map();
+  await Promise.all([...Array(tx1-tx0+1).keys()].flatMap(i=>[...Array(ty1-ty0+1).keys()].map(j=>new Promise(res=>{const X=tx0+i,Y=ty0+j,im=new Image();im.crossOrigin='anonymous';
+    im.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,0);const d=g.getImageData(0,0,256,256).data,a=new Float32Array(65536);
+      for(let k=0;k<65536;k++)a[k]=d[k*4]*256+d[k*4+1]+d[k*4+2]/256-32768;T.set(X+'_'+Y,a);}catch(e){}res();};im.onerror=()=>res();
+    im.src=`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${Z}/${X}/${Y}.png`;}))));
+  if(!T.size)return null;
+  const px=(X,Y)=>{const a=T.get(Math.floor(X/256)+'_'+Math.floor(Y/256));return a?a[(Y&255)*256+(X&255)]:NaN;};
+  const raw=(x,z)=>{const [lat,lon]=unproj(x,z),[X,Y]=tp(lat,lon,Z),fx=X-.5,fy=Y-.5,ix=Math.floor(fx),iy=Math.floor(fy),u=fx-ix,v=fy-iy;
+    return(px(ix,iy)*(1-u)+px(ix+1,iy)*u)*(1-v)+(px(ix,iy+1)*(1-u)+px(ix+1,iy+1)*u)*v;};
+  const dif=[];for(let i=0;i<path.length;i+=4){const r=raw(path[i][0],path[i][1]);if(!isNaN(r))dif.push(r-e0-path[i][2]);}
+  if(dif.length<path.length/8)return null;dif.sort((a,b)=>a-b);const bias=dif[dif.length>>1];
+  return{h:(x,z)=>raw(x,z)-e0-bias,Z};}
+async function make3Dfull(path,ROADS,BLDS,pr,DEM){const S=make3D(path,ROADS,BLDS,DEM);
   await S.imagery((d,n)=>pr('Scarico le foto satellitari…',`${d} di ${n}`,.25+.55*d/n));
   pr('Alberi e tetti dalle foto…','',.85);await new Promise(r=>setTimeout(r,20));
   S.fromPhotos();
@@ -1609,11 +1629,11 @@ async function fetchOSM(la0,lo0,la1,lo1,depth=0){
 }
 
 let S3=null;
-function make3D(PATH,ROADS,BLDS){
+function make3D(PATH,ROADS,BLDS,DEM){
   const V3=THREE.Vector3;
   const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputEncoding=THREE.sRGBEncoding;$('scene').appendChild(renderer.domElement);
-  const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,90,420);
+  const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,DEM?220:90,DEM?2200:420);
   const TMESH=[];const camera=new THREE.PerspectiveCamera(50,1,.5,4000),controls=new THREE.OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minDistance=3;controls.maxDistance=300;controls.autoRotateSpeed=1.2;controls.enabled=false;
   scene.add(new THREE.HemisphereLight(0xdff2ff,0x5a7a3a,.75));
@@ -1628,14 +1648,18 @@ function make3D(PATH,ROADS,BLDS){
   const curv=(p,s)=>wrap(at(p,s+1.5,0,tA)-at(p,s-1.5,0,tA))/3,slope=(p,s)=>{at(p,s+2,0,tA);at(p,s-2,0,tB);return(tA.y-tB.y)/4;};
   const PR=buildPath(PATH),PO=buildPath(Array.from({length:PR.N+1},(_,i)=>[PR.px[PR.N-i],PR.pz[PR.N-i],PR.py[PR.N-i]]).filter((_,i)=>i%10===0));
   // --- terreno: quota interpolata dalla strada (griglia di ricerca da 100 m) ---
-  const SAMP=[];for(let i=0;i<=PR.N;i+=12)SAMP.push([PR.px[i],PR.pz[i],PR.py[i]]);
+  const SAMP=[];for(let i=0;i<=PR.N;i+=12){const r=DEM?DEM.h(PR.px[i],PR.pz[i]):NaN;SAMP.push([PR.px[i],PR.pz[i],PR.py[i],isNaN(r)?0:PR.py[i]-r]);}
   const SG=new Map(),sk=(i,j)=>i*100003+j;SAMP.forEach(s=>{const k=sk(Math.floor(s[0]/100),Math.floor(s[1]/100));(SG.get(k)||SG.set(k,[]).get(k)).push(s);});
-  function ground(x,z){const ci=Math.floor(x/100),cj=Math.floor(z/100);let sw=0,sy=0,dm=1e18;
-    for(let r=2;r<=8&&sw===0;r+=3)for(let i=ci-r;i<=ci+r;i++)for(let j=cj-r;j<=cj+r;j++){const c=SG.get(sk(i,j));if(!c)continue;for(const s of c){const d2=(s[0]-x)**2+(s[1]-z)**2;if(d2<dm)dm=d2;const w=1/((d2+40)*(d2+40));sw+=w;sy+=w*s[2];}}
-    if(!sw){return[SAMP.reduce((a,s)=>a+s[2],0)/SAMP.length,999];}dm=Math.sqrt(dm);return[sy/sw+(Math.sin(x*.011)+Math.cos(z*.009))*3*clamp((dm-25)/80,0,1)-(dm<7?.35:0),dm];}
+  // con le quote vere: vicino alla strada il terreno segue la strada, poi passa alla forma vera (la differenza strada-quote sfuma entro ~400 m)
+  function ground(x,z){const ci=Math.floor(x/100),cj=Math.floor(z/100);let sw=0,sy=0,sr=0,dm=1e18;
+    for(let r=2;r<=8&&sw===0;r+=3)for(let i=ci-r;i<=ci+r;i++)for(let j=cj-r;j<=cj+r;j++){const c=SG.get(sk(i,j));if(!c)continue;for(const s of c){const d2=(s[0]-x)**2+(s[1]-z)**2;if(d2<dm)dm=d2;const w=1/((d2+40)*(d2+40));sw+=w;sy+=w*s[2];sr+=w*s[3];}}
+    const dh=DEM?DEM.h(x,z):NaN;
+    if(!sw){return[isNaN(dh)?SAMP.reduce((a,s)=>a+s[2],0)/SAMP.length:dh,999];}dm=Math.sqrt(dm);
+    if(isNaN(dh))return[sy/sw+(Math.sin(x*.011)+Math.cos(z*.009))*3*clamp((dm-25)/80,0,1)-(dm<7?.35:0),dm];
+    const road=sy/sw,far=dh+sr/sw*clamp(1-(dm-30)/370,0,1),w=clamp((dm-9)/45,0,1);return[road+(far-road)*w*w*(3-2*w)-(dm<7?.35:0),dm];}
   const H=(x,z)=>ground(x,z)[0];
   let bx0=1e9,bx1=-1e9,bz0=1e9,bz1=-1e9;SAMP.forEach(s=>{bx0=Math.min(bx0,s[0]);bx1=Math.max(bx1,s[0]);bz0=Math.min(bz0,s[1]);bz1=Math.max(bz1,s[1]);});bx0-=450;bx1+=450;bz0-=450;bz1+=450;
-  {const nx=Math.round((bx1-bx0)/12),nz=Math.round((bz1-bz0)/12),g=new THREE.PlaneGeometry(bx1-bx0,bz1-bz0,nx,nz);g.rotateX(-Math.PI/2);
+  if(!DEM){const nx=Math.round((bx1-bx0)/12),nz=Math.round((bz1-bz0)/12),g=new THREE.PlaneGeometry(bx1-bx0,bz1-bz0,nx,nz);g.rotateX(-Math.PI/2);
    const p=g.attributes.position,cx=(bx0+bx1)/2,cz=(bz0+bz1)/2;for(let i=0;i<p.count;i++)p.setY(i,H(p.getX(i)+cx,p.getZ(i)+cz)-.6);g.computeVertexNormals();
    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x5a923a}));m.position.set(cx,0,cz);m.receiveShadow=true;scene.add(m);}
   // --- strada col la linea gialla e marciapiedi ---
@@ -1677,18 +1701,27 @@ function make3D(PATH,ROADS,BLDS){
     const c=document.createElement('canvas');c.width=c.height=256;const cg=c.getContext('2d',{willReadFrequently:true});cg.drawImage(im,0,0);
     try{TILES.set(k,cg.getImageData(0,0,256,256).data);}catch(e){}}
   // vista dal satellite per la presentazione: foto a bassa risoluzione su un'area grande, piatta sopra la scena (si dissolve scendendo)
-  let SAT=null,SATY=0;
+  let SAT=null,SATY=0,OV=null;
   async function overview(){let x0=1e9,x1=-1e9,z0=1e9,z1=-1e9,ymax=-1e9;for(let i=0;i<=PR.N;i+=4){x0=Math.min(x0,PR.px[i]);x1=Math.max(x1,PR.px[i]);z0=Math.min(z0,PR.pz[i]);z1=Math.max(z1,PR.pz[i]);ymax=Math.max(ymax,PR.py[i]);}
-    const S=Math.max(x1-x0,z1-z0)+1200,cx=(x0+x1)/2,cz=(z0+z1)/2,lat=REF.lat;let Z=clamp(Math.floor(Math.log2(40075016*Math.cos(lat*D)/(S/5))),10,16),tx0,tx1,ty0,ty1;
+    const S=Math.max(x1-x0,z1-z0)+(DEM?4400:1200),cx=(x0+x1)/2,cz=(z0+z1)/2,lat=REF.lat;let Z=clamp(Math.floor(Math.log2(40075016*Math.cos(lat*D)/(S/5))),10,16),tx0,tx1,ty0,ty1;
     for(;Z>=10;Z--){const [Xa,Ya]=toPx(cx-S/2,cz+S/2,Z),[Xb,Yb]=toPx(cx+S/2,cz-S/2,Z);tx0=Math.floor(Math.min(Xa,Xb)/256);tx1=Math.floor(Math.max(Xa,Xb)/256);ty0=Math.floor(Math.min(Ya,Yb)/256);ty1=Math.floor(Math.max(Ya,Yb)/256);if((tx1-tx0+1)*(ty1-ty0+1)<=42)break;}
     if(Z<10)return;const cv=document.createElement('canvas');cv.width=(tx1-tx0+1)*256;cv.height=(ty1-ty0+1)*256;const g=cv.getContext('2d');let got=0;
     await Promise.all([...Array(tx1-tx0+1).keys()].flatMap(i=>[...Array(ty1-ty0+1).keys()].map(async j=>{const im=await loadImg(Z+'/'+(tx0+i)+'/'+(ty0+j));if(im){g.drawImage(im,i*256,j*256);got++;}})));
     if(!got)return;const [ax,az]=toW(tx0*256,ty0*256,Z),[bx,bz]=toW((tx1+1)*256,(ty1+1)*256,Z);SATY=ymax+25;
     const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute([ax,SATY,az, bx,SATY,az, ax,SATY,bz, bx,SATY,bz],3));geo.setAttribute('uv',new THREE.Float32BufferAttribute([0,1,1,1,0,0,1,0],2));geo.setIndex([0,2,1,1,2,3]);
-    const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAn;
-    SAT=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:1,depthWrite:false,fog:false,side:THREE.DoubleSide}));SAT.renderOrder=5;SAT.visible=false;scene.add(SAT);}
+    const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAn;OV={ax,az,bx,bz,t};
+    SAT=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:1,depthWrite:false,depthTest:!DEM,fog:false,side:THREE.DoubleSide}));SAT.renderOrder=5;SAT.visible=false;scene.add(SAT);}
   async function imagery(cb){try{await overview();}catch(e){}const list=[...need(17,380),...need(18,120)];let done=0;
-    for(let i=0;i<list.length;i+=8){const part=list.slice(i,i+8),ims=await Promise.all(part.map(loadImg));part.forEach((k,j)=>{if(ims[j])patch(k,ims[j]);});done+=part.length;cb(done,list.length);}}
+    for(let i=0;i<list.length;i+=8){const part=list.slice(i,i+8),ims=await Promise.all(part.map(loadImg));part.forEach((k,j)=>{if(ims[j])patch(k,ims[j]);});done+=part.length;cb(done,list.length);}
+    farGround();}
+  // terreno lontano con le quote vere, coperto dalla foto satellitare ampia; dove ci sono già le foto dettagliate sta 6 m sotto (non si vede)
+  function farGround(){if(!DEM)return;let ax,az,bx,bz,map=null;if(OV){({ax,az,bx,bz}=OV);map=OV.t;}else{ax=bx0-1800;bx=bx1+1800;az=bz0-1800;bz=bz1+1800;}
+    const W=Math.abs(bx-ax),Dz=Math.abs(bz-az),n=Math.min(150,Math.ceil(Math.max(W,Dz)/45)),g=new THREE.PlaneGeometry(W,Dz,n,n);g.rotateX(-Math.PI/2);
+    const cx=(ax+bx)/2,cz=(az+bz)/2,p=g.attributes.position,uv=g.attributes.uv,cell=Math.max(W,Dz)/n+2;
+    const cov=(x,z)=>{const [X,Y]=toPx(x,z,17);return TILES.has('17/'+Math.floor(X/256)+'/'+Math.floor(Y/256));};
+    for(let i=0;i<p.count;i++){const x=p.getX(i)+cx,z=p.getZ(i)+cz,low=cov(x,z)&&cov(x+cell,z)&&cov(x-cell,z)&&cov(x,z+cell)&&cov(x,z-cell);
+      p.setY(i,H(x,z)-(low?6:.25));uv.setXY(i,(x-ax)/(bx-ax),(z-bz)/(az-bz));}
+    g.computeVertexNormals();const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial(map?{map}:{color:0x6f8f4a}));m.position.set(cx,0,cz);m.receiveShadow=true;scene.add(m);}
   // colore della foto in un punto (zoom 18 se c'è, se no 17)
   function photo(x,z,r=3){for(const Z of[18,17]){const [X,Y]=toPx(x,z,Z),k=Z+'/'+Math.floor(X/256)+'/'+Math.floor(Y/256),d=TILES.get(k);if(!d)continue;
       const u=Math.floor(X%256),v=Math.floor(Y%256);let R=0,G=0,Bc=0,n=0,g2=0;for(let a=-r;a<=r;a++)for(let b=-r;b<=r;b++){const uu=clamp(u+a,0,255),vv=clamp(v+b,0,255),o=(vv*256+uu)*4;R+=d[o];G+=d[o+1];Bc+=d[o+2];g2+=d[o+1]*d[o+1];n++;}
@@ -1696,20 +1729,62 @@ function make3D(PATH,ROADS,BLDS){
 
   // --- edifici col colore del tetto e alberi dove la foto è verde ---
   function fromPhotos(){
-    const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,64,64);g.fillStyle='#d9d4c8';g.fillRect(14,10,36,40);g.fillStyle='#34404c';g.fillRect(18,13,28,34);g.fillStyle='#4d5d6c';g.fillRect(18,13,13,34);g.fillStyle='#e8e3d8';g.fillRect(0,58,64,6);
-    const wt=new THREE.CanvasTexture(c);wt.wrapS=wt.wrapT=THREE.RepeatWrapping;wt.encoding=THREE.sRGBEncoding;
-    const wp=[],wu=[],wc=[],rp=[],rc=[],col=new THREE.Color(),beige=new THREE.Color(0xeee6d6),rc0=new THREE.Color();
-    BLDS.forEach((p,k)=>{if(!p.some(q=>roadNear(q)))return;let Ar=0,cx=0,cz=0;for(let i=0,j=p.length-1;i<p.length;j=i++)Ar+=(p[j][0]*p[i][1]-p[i][0]*p[j][1])/2;Ar=Math.abs(Ar);p.forEach(q=>{cx+=q[0];cz+=q[1];});cx/=p.length;cz/=p.length;
-      const cs=[];const b=BB[k];for(let t=0;t<24;t++){const x=b[0]+Math.random()*(b[1]-b[0]),z=b[2]+Math.random()*(b[3]-b[2]);if(!inPoly(p,x,z))continue;const ph=photo(x,z,1);if(ph)cs.push(ph);}
-      if(cs.length){const med=key=>cs.map(o=>o[key]).sort((u,v)=>u-v)[cs.length>>1];rc0.setRGB(med('r')/255,med('g')/255,med('b')/255);rc0.convertSRGBToLinear();}else rc0.set(0xc9c3b8);
-      const hsh=(k*2654435761)>>>0,fl=Ar<35?1:2+hsh%2,h=fl*3.1,base=Math.min(...p.map(q=>H(q[0],q[1])))-.2,bot=base-3;col.copy(rc0).lerp(beige,.55);
-      let acc=0;for(let i=0;i<p.length;i++){const a=p[i],bq=p[(i+1)%p.length],L=Math.hypot(bq[0]-a[0],bq[1]-a[1]),u0=acc/3.2,u1=(acc+L)/3.2;acc+=L;const v0=-3/3.1;
-        for(const v of[[a[0],bot,a[1],u0,v0],[bq[0],bot,bq[1],u1,v0],[bq[0],base+h,bq[1],u1,fl],[a[0],bot,a[1],u0,v0],[bq[0],base+h,bq[1],u1,fl],[a[0],base+h,a[1],u0,fl]]){wp.push(v[0],v[1],v[2]);wu.push(v[3],v[4]);wc.push(col.r,col.g,col.b);}}
-      try{const tri=THREE.ShapeUtils.triangulateShape(p.map(q=>new THREE.Vector2(q[0],q[1])),[]);col.copy(rc0).multiplyScalar(1.08);for(const t of tri)for(const ix of t){rp.push(p[ix][0],base+h+.02,p[ix][1]);rc.push(col.r,col.g,col.b);}}catch(e){}});
-    const gw=new THREE.BufferGeometry();gw.setAttribute('position',new THREE.Float32BufferAttribute(wp,3));gw.setAttribute('uv',new THREE.Float32BufferAttribute(wu,2));gw.setAttribute('color',new THREE.Float32BufferAttribute(wc,3));gw.computeVertexNormals();
-    const mw=new THREE.Mesh(gw,new THREE.MeshLambertMaterial({map:wt,vertexColors:true,side:THREE.DoubleSide}));mw.castShadow=mw.receiveShadow=true;scene.add(mw);
-    const gr=new THREE.BufferGeometry();gr.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));gr.setAttribute('color',new THREE.Float32BufferAttribute(rc,3));gr.computeVertexNormals();
-    const mr=new THREE.Mesh(gr,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}));mr.castShadow=mr.receiveShadow=true;scene.add(mr);
+    // palazzi: piani da OpenStreetMap (building:levels / height) o stimati dalla pianta; facciate con finestre e persiane,
+    // piano terra con saracinesche e portoni, balconi con ringhiera verso la strada, terrazzo col parapetto
+    // oppure tetto di tegole (se nella foto il tetto è rosso e la pianta è semplice)
+    const PAL=[['#e8d3a9','#3d6b45'],['#f2e6cf','#6b4a2e'],['#e9b9a0','#3d6b45'],['#f4f1ea','#56708c'],['#e7c77a','#5a3d28'],['#d9a27c','#3d6b45'],['#d4cfc6','#5b5b5b'],['#efe0c0','#7a3b2e']];
+    const facade=(wall,sh,gnd)=>{const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.fillStyle=wall;g.fillRect(0,0,256,128);
+      for(let i=0;i<900;i++){g.fillStyle=`rgba(${Math.random()<.5?'0,0,0':'255,255,255'},${(Math.random()*.06).toFixed(3)})`;g.fillRect(Math.random()*256,Math.random()*128,3,3);}
+      if(!gnd){for(const x0 of[46,174]){g.fillStyle='rgba(255,255,255,.5)';g.fillRect(x0-4,20,64,90);g.fillStyle='#2b3440';g.fillRect(x0,24,56,82);g.fillStyle='#4a5563';g.fillRect(x0+27,24,3,82);g.fillRect(x0,60,56,3);
+          for(const sx of[x0-26,x0+56]){g.fillStyle=sh;g.fillRect(sx,22,26,86);g.fillStyle='rgba(0,0,0,.25)';for(let y=26;y<106;y+=6)g.fillRect(sx+2,y,22,2);}
+          g.fillStyle='rgba(255,255,255,.65)';g.fillRect(x0-8,108,72,5);}
+        g.fillStyle='rgba(0,0,0,.08)';g.fillRect(0,124,256,4);}
+      else{g.fillStyle='#8d8679';g.fillRect(0,100,256,28);
+        g.fillStyle='rgba(255,255,255,.6)';g.fillRect(14,14,108,6);g.fillStyle='#9aa0a6';g.fillRect(18,20,100,108);g.fillStyle='rgba(0,0,0,.18)';for(let y=22;y<128;y+=5)g.fillRect(18,y,100,1.5);
+        g.fillStyle='rgba(255,255,255,.6)';g.fillRect(150,22,76,6);g.fillStyle='#5b3a22';g.fillRect(156,28,64,100);g.fillStyle='rgba(0,0,0,.28)';g.fillRect(187,28,2,100);g.fillRect(162,38,20,40);g.fillRect(194,38,20,40);}
+      const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;t.anisotropy=maxAn;return t;};
+    const rcv=document.createElement('canvas');rcv.width=64;rcv.height=32;{const g=rcv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,64,4);g.fillRect(0,28,64,4);for(let x=1;x<64;x+=6)g.fillRect(x,0,2,32);}
+    const railT=new THREE.CanvasTexture(rcv);railT.wrapS=THREE.RepeatWrapping;
+    const BK=new Map(),bk=i=>BK.get(i)||BK.set(i,{up:[[],[]],gr:[[],[]],pl:[]}).get(i);
+    const rp=[],rc=[],tp=[],tcl=[],sp=[],lp=[],lu=[],col=new THREE.Color(),rc0=new THREE.Color();
+    const quad=(P,U,ax,az,bx,bz,y0,y1,u0,u1,v0,v1)=>{P.push(ax,y0,az,bx,y0,bz,bx,y1,bz,ax,y0,az,bx,y1,bz,ax,y1,az);if(U)U.push(u0,v0,u1,v0,u1,v1,u0,v0,u1,v1,u0,v1);};
+    const tri=(P,C,a,b,c)=>{P.push(...a,...b,...c);if(C)for(let i=0;i<3;i++)C.push(col.r,col.g,col.b);};
+    const box=(P,o,d,n,w,dep,y0,y1)=>{const c=(s,t,y)=>[o[0]+d[0]*s+n[0]*t,y,o[1]+d[1]*s+n[1]*t],v=[c(0,0,y0),c(w,0,y0),c(w,dep,y0),c(0,dep,y0),c(0,0,y1),c(w,0,y1),c(w,dep,y1),c(0,dep,y1)];
+      for(const [a,b,e,f] of[[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]]){tri(P,null,v[a],v[b],v[e]);tri(P,null,v[a],v[e],v[f]);}};
+    const convex=p=>{let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length],c=p[(i+2)%p.length],cr=(b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]);if(Math.abs(cr)<1e-6)continue;const sg=Math.sign(cr);if(s&&sg!==s)return false;s=sg;}return true;};
+    BLDS.forEach((p,k)=>{if(p.length<3||!p.some(q=>roadNear(q)))return;let Ar=0,cx=0,cz=0;for(let i=0,j=p.length-1;i<p.length;j=i++)Ar+=(p[j][0]*p[i][1]-p[i][0]*p[j][1])/2;Ar=Math.abs(Ar);p.forEach(q=>{cx+=q[0];cz+=q[1];});cx/=p.length;cz/=p.length;
+      const cs=[];const bb=BB[k];for(let t=0;t<24;t++){const x=bb[0]+Math.random()*(bb[1]-bb[0]),z=bb[2]+Math.random()*(bb[3]-bb[2]);if(!inPoly(p,x,z))continue;const ph=photo(x,z,1);if(ph)cs.push(ph);}
+      let red=false;if(cs.length){const med=key=>cs.map(o=>o[key]).sort((u,v)=>u-v)[cs.length>>1],R=med('r'),G=med('g'),Bl=med('b');red=R>G+18&&R>Bl+28;rc0.setRGB(R/255,G/255,Bl/255);rc0.convertSRGBToLinear();}else rc0.set(0xc9c3b8);
+      const tg=p.tags||{},ty=tg.building||'yes',hsh=(k*2654435761)>>>0,small=/^(garage|garages|shed|hut|carport|roof|kiosk|greenhouse|cabin|service|transformer_tower|container)$/.test(ty);
+      let fl=parseInt(tg['building:levels']);if(!(fl>0)){const hm=parseFloat(tg.height);fl=hm>0?Math.round(hm/3.1):0;}
+      if(!(fl>0))fl=small||Ar<35?1:Ar<90?1+hsh%2:Ar<250?2+hsh%2:Ar<600?3+hsh%2:3+hsh%3;fl=clamp(fl,1,small?1:15);
+      const h=small?2.6:fl*3.1,base=Math.min(...p.map(q=>H(q[0],q[1])))-.2,bot=base-3,B=bk(small?-1:hsh%PAL.length);
+      // muri
+      let acc=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length],L=Math.hypot(b[0]-a[0],b[1]-a[1]),u0=acc/6.4,u1=(acc+L)/6.4;acc+=L;
+        if(small){quad(B.pl,null,a[0],a[1],b[0],b[1],bot,base+h);continue;}
+        quad(B.gr[0],B.gr[1],a[0],a[1],b[0],b[1],bot,base+3.1,u0,u1,-3/3.1,1);if(fl>1)quad(B.up[0],B.up[1],a[0],a[1],b[0],b[1],base+3.1,base+h,u0,u1,0,fl-1);
+        // balconi con ringhiera sui lati lunghi che guardano una strada
+        if(fl>=2&&L>=6&&hsh%10<7){const d=[(b[0]-a[0])/L,(b[1]-a[1])/L];let n=[-d[1],d[0]];const mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;if(inPoly(p,mx+n[0]*.4,mz+n[1]*.4))n=[-n[0],-n[1]];
+          if(roadHit(mx+n[0]*9,mz+n[1]*9,5)){const o=[a[0]+d[0]*.7,a[1]+d[1]*.7],w=L-1.4,dp=1.1,ru=w/.6,c=(s,t)=>[o[0]+d[0]*s+n[0]*t,o[1]+d[1]*s+n[1]*t];
+            for(let f=1;f<fl;f++){const y=base+f*3.1;box(sp,o,d,n,w,dp,y-.16,y);const [fa,fb]=[c(0,dp),c(w,dp)],[sa,sb]=[c(0,0),c(w,0)];
+              quad(lp,lu,fa[0],fa[1],fb[0],fb[1],y,y+1,0,ru,0,1);quad(lp,lu,sa[0],sa[1],fa[0],fa[1],y,y+1,0,dp/.6,0,1);quad(lp,lu,sb[0],sb[1],fb[0],fb[1],y,y+1,0,dp/.6,0,1);}}}}
+      // tetto
+      const top=base+h,P3=q=>[q[0],top,q[1]];
+      if(red&&!small&&p.length<=8&&Ar<700&&convex(p)){col.copy(rc0);
+        if(p.length===4){let [p0,p1,p2,p3]=p;if(Math.hypot(p1[0]-p0[0],p1[1]-p0[1])<Math.hypot(p2[0]-p1[0],p2[1]-p1[1]))[p0,p1,p2,p3]=[p1,p2,p3,p0];
+          const sw=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),rh=Math.min(3,.32*sw),R1=[(p1[0]+p2[0])/2,top+rh,(p1[1]+p2[1])/2],R0=[(p3[0]+p0[0])/2,top+rh,(p3[1]+p0[1])/2];
+          tri(tp,tcl,P3(p0),P3(p1),R1);tri(tp,tcl,P3(p0),R1,R0);tri(tp,tcl,P3(p2),P3(p3),R0);tri(tp,tcl,P3(p2),R0,R1);tri(B.pl,null,P3(p1),P3(p2),R1);tri(B.pl,null,P3(p3),P3(p0),R0);}
+        else{const ap=[cx,top+Math.min(3.5,.28*Math.sqrt(Ar)),cz];for(let i=0;i<p.length;i++)tri(tp,tcl,P3(p[i]),P3(p[(i+1)%p.length]),ap);}}
+      else{if(!small)for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];quad(B.pl,null,a[0],a[1],b[0],b[1],top,top+.9);}
+        try{const tr=THREE.ShapeUtils.triangulateShape(p.map(q=>new THREE.Vector2(q[0],q[1])),[]);col.copy(rc0).multiplyScalar(1.08);for(const t of tr)for(const ix of t){rp.push(p[ix][0],top+.02,p[ix][1]);rc.push(col.r,col.g,col.b);}}catch(e){}}});
+    const mesh=(pos,mat,uv,cl)=>{if(!pos.length)return;const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));if(uv)g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));if(cl)g.setAttribute('color',new THREE.Float32BufferAttribute(cl,3));
+      g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.castShadow=m.receiveShadow=true;scene.add(m);};
+    BK.forEach((b,i)=>{const pc=i<0?['#b9b4aa','#555']:PAL[i];mesh(b.pl,new THREE.MeshLambertMaterial({color:new THREE.Color(pc[0]).convertSRGBToLinear(),side:THREE.DoubleSide}));
+      if(i<0)return;mesh(b.gr[0],new THREE.MeshLambertMaterial({map:facade(pc[0],pc[1],true),side:THREE.DoubleSide}),b.gr[1]);mesh(b.up[0],new THREE.MeshLambertMaterial({map:facade(pc[0],pc[1],false),side:THREE.DoubleSide}),b.up[1]);});
+    mesh(rp,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide}),null,rc);
+    mesh(tp,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true,side:THREE.DoubleSide}),null,tcl);
+    mesh(sp,lam(0xf0ede6));
+    mesh(lp,new THREE.MeshLambertMaterial({map:railT,color:0x3a3a3a,alphaTest:.5,transparent:false,side:THREE.DoubleSide}),lu);
     // alberi
     const TREES=[];for(let i=0;i<=PR.N;i+=10){const x0=PR.px[i],z0=PR.pz[i];for(let a=-110;a<=110;a+=5){const x=x0-PR.tz[i]*a+(Math.random()-.5)*3,z=z0+PR.tx[i]*a+(Math.random()-.5)*3;
       if(Math.abs(a)<7)continue;const ph=photo(x,z,3);if(!ph||ph.Z!==18)continue;const exg=2*ph.g-ph.r-ph.b;if(exg<14||ph.g>190||ph.sd<6)continue;if(roadHit(x,z,1)||bldHit(x,z,1))continue;TREES.push([x,z,ph,Math.min(1.6,.7+exg/60)]);}}
@@ -2165,7 +2240,7 @@ function make3D(PATH,ROADS,BLDS){
       if(view==='gruppo'||(view==='regia'&&shot.type==='gruppo'))lerpK=dt*3;
       camera.position.lerp(goal,first?1:Math.min(1,lerpK));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
     if(SAT){const op=INTRO.on?clamp((camera.position.y-SATY-90)/260,0,1):0;SAT.visible=op>.01;SAT.material.opacity=op;}
-    {const cd=camera.position.distanceTo(look);scene.fog.near=Math.max(90,cd*.9);scene.fog.far=Math.max(420,cd*3);}
+    {const cd=camera.position.distanceTo(look);scene.fog.near=Math.max(DEM?220:90,cd*.9);scene.fog.far=Math.max(DEM?2200:420,cd*3);}
     first=false;last.copy(center);sun.position.set(center.x-25,cy+45,center.z+15);sun.target.position.copy(center);
     if(!dragging)tl.value=tNow;$('tlt').textContent=fmt(tNow-T0)+' / '+fmt(T1-T0);
     // dati in alto e classifica dal vivo
@@ -2219,7 +2294,7 @@ function make3D(PATH,ROADS,BLDS){
     filmStop(){running=false;FD=null;document.body.classList.remove('filmtags');showEls(false);$('lines').innerHTML='';$('live').style.display='none';},
     hide(){showEls(false);},
     destroy(){running=false;filmM=false;qClear();try{renderer.dispose();renderer.forceContextLoss();}catch(e){}renderer.domElement.remove();RID.forEach(o=>o.m.userData.tag.remove());removeEventListener('resize',resize);},
-    start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();qClear();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+    start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();qClear();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{H,get cam(){return camera},get ctl(){return controls},get PR(){return PR},get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 // voce e suoni partono solo dopo un tocco: nelle scene salvate (aperte da WhatsApp) si chiede un tocco prima di cominciare
 function unlockAudio(){window.__unlocked=true;FX.init();try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}}
