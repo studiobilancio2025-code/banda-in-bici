@@ -56,6 +56,7 @@ Geppino chiede "scarica da Strava l'uscita di oggi": con il connettore Strava si
 - Strava: non usare l'API per mostrare a Geppino i dati di altri (regole Strava dal 2024). I file li esportano gli amici o li scarica Geppino con l'app.
 - three.js **0.147.0** da jsdelivr: `examples/js/` (OrbitControls) non esiste dalla 0.148. In 0.147 `InstancedMesh` non calcola il proprio boundingSphere: impostarlo a mano sulla geometria clonata (vedi alberi), altrimenti sparisce.
 - Pedali in avanti: piede a `(x, .3−cos a·.17, −sin a·.17)`, pedivella `rotation.x = a + π/2`.
+- Altezza dei ciclisti: l'asfalto è 12 cm sopra la linea del percorso (`strip(RD,…,.12,…)`), quindi la bici si alza di 0,14 m (`m.position.y+=.14` dopo `at(PR,o.cur,…)`), altrimenti le ruote sembrano infossate (segnalato da Geppino il 23/11).
 - Strisce (strip) con offset crescenti, altrimenti le facce guardano in basso.
 - Fonti da citare sempre: "© OpenStreetMap · Esri, Maxar, Earthstar Geographics".
 - Overpass API non si raggiunge dalla sandbox di Claude (dal telefono sì: la usa la Descrizione del percorso); altimetria Esri dà valori sbagliati: il terreno segue la quota della traccia.

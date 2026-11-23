@@ -1149,7 +1149,7 @@ function make3D(PATH,ROADS,BLDS){
   function place(dt){
     RID.forEach(o=>{const m=o.m,u=m.userData;if(o.pod){o.vis=o.pod.show;m.visible=o.vis;if(!o.vis){u.tag.style.opacity=0;return;}m.position.copy(o.pod.pos);m.rotation.set(0,o.pod.ry,0);return;}
       m.visible=o.vis;o.r.__tag=u.tag;if(!o.vis){u.tag.style.opacity=0;return;}
-      const h=at(PR,o.cur,o.off,m.position);m.rotation.y=h;const lean=Math.atan(o.v*o.v*curv(PR,o.cur)/9.8);u.lean+=(lean-u.lean)*.1;m.rotation.z=-u.lean*.8;m.rotation.x=-Math.atan(slope(PR,o.cur));
+      const h=at(PR,o.cur,o.off,m.position);m.position.y+=.14;m.rotation.y=h;const lean=Math.atan(o.v*o.v*curv(PR,o.cur)/9.8);u.lean+=(lean-u.lean)*.1;m.rotation.z=-u.lean*.8;m.rotation.x=-Math.atan(slope(PR,o.cur));
       const mv=u.lastP?Math.min(2,m.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(m.position);u.wheel+=mv/.34;u.crank+=mv/1.05;pedal(m,u.crank+u.phase);u.wheels.forEach(w=>w.rotation.x=u.wheel);});
     for(const c of cars){c.mesh.visible=c.active&&!FD;if(!c.mesh.visible)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
   }
