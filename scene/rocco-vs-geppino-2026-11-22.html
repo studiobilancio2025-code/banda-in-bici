@@ -737,7 +737,9 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #loading .bar i{display:block;height:100%;width:0;background:var(--tag);transition:width .2s}
 /* scena */
 #scene{position:fixed;inset:0;background:#8ec9ee}
-#scene canvas{display:block;width:100%;height:100%;touch-action:none}
+#scene canvas{display:block;width:100%;height:100%;touch-action:none;position:relative}
+#svimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#svnote{position:fixed;left:50%;transform:translateX(-50%);z-index:4;background:rgba(16,21,28,.82);color:#fff;border-radius:16px;padding:5px 12px;font:13px/1.3 Barlow,system-ui,sans-serif;display:none;max-width:92vw;text-align:center}
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:2}
 #lines{position:fixed;inset:0;pointer-events:none;z-index:2;display:block}
 .tag.side i{display:none}
@@ -844,7 +846,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 </div></div>
 
 <div id="loading"><div><b id="ltxt">Preparo la scena…</b><span id="lsub"></span><div class="bar"><i id="lbar"></i></div></div></div>
-<div id="scene"></div>
+<div id="scene"><img id="svimg" alt="Foto vera della strada"></div><div id="svnote"></div>
 <svg id="lines" width="100%" height="100%"></svg>
 <div id="tags"></div>
 <div id="hud"><h1 id="htitle"></h1><div class="chips"><span id="cv"></span><span id="cp"></span><span id="cw" class="w"></span></div></div>
@@ -888,7 +890,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="row" id="views">
     <button data-v="regia" class="on">Regia automatica</button><button data-v="moto">Dalla moto</button><button data-v="lato">Di lato</button>
     <button data-v="dd">Drone dietro</button><button data-v="df">Drone davanti</button>
-    <button data-v="eli">Elicottero</button><button data-v="gruppo">Tutti dall'alto</button><button data-v="libera">Libera</button>
+    <button data-v="eli">Elicottero</button><button data-v="gruppo">Tutti dall'alto</button><button data-v="libera">Libera</button><button data-v="sv">📷 Street View</button>
   </div>
   <div class="row tlrow"><button id="rew" aria-label="Indietro di 10 secondi">−10"</button><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><button id="ff" aria-label="Avanti di 10 secondi">+10"</button><span id="tlt"></span></div>
   <div class="row">
@@ -1637,7 +1639,7 @@ async function fetchOSM(la0,lo0,la1,lo1,depth=0){
 let S3=null;
 function make3D(PATH,ROADS,BLDS,DEM){
   const V3=THREE.Vector3;
-  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputEncoding=THREE.sRGBEncoding;$('scene').appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,DEM?220:90,DEM?2200:420);
   const TMESH=[];const camera=new THREE.PerspectiveCamera(50,1,.5,4000),controls=new THREE.OrbitControls(camera,renderer.domElement);
@@ -2161,7 +2163,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
     const tv=Math.tan(camera.fov*D/2),th=tv*camera.aspect,want=clamp(Math.max((al+10)/(tv*.36),(la+8)/(th*.3))+25,45,2600);
     gD+=(want-gD)*(first?1:Math.min(1,dt*1.5));
     goal.set(gmid.x-gdir.x*gD*.5,gmid.y+gD*.87,gmid.z-gdir.z*gD*.5);look.set(gmid.x-gdir.x*gD*.16,gmid.y,gmid.z-gdir.z*gD*.16);}
-  function setView(v){view=v;shot=null;first=true;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
+  function setView(v){if(view==='sv'&&v!=='sv')svOff(true);view=v;shot=null;if(v==='sv')svStart();first=true;camera.fov=baseFov;camera.updateProjectionMatrix();document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));controls.enabled=v==='libera';controls.autoRotate=v==='libera';if(v==='libera')controls.target.copy(center).setY(center.y+1);}
   document.querySelectorAll('#views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
   renderer.domElement.addEventListener('pointerdown',()=>{if(view!=='libera')setView('libera');controls.autoRotate=false;});
   $('chi').addEventListener('change',e=>{follow=+e.target.value;first=true;shot=null;});
@@ -2206,6 +2208,34 @@ function make3D(PATH,ROADS,BLDS,DEM){
     if(type==='gruppo'&&RID.filter(q=>q.vis).length<2)type='eli';
     const subj=pickSubject();shot={type,subj,h0:Math.random()*6.28,dur:type==='bordo'?11:type==='eli'?6:type==='gruppo'?10:6+Math.random()*4};shotT=0;first=true;
     if(type==='bordo'&&subj){at(PR,Math.min(PR.len-5,subj.cur+Math.max(25,subj.v*5)),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}}
+  // --- Street View: la foto vera (Mapillary) come sfondo e i ciclisti 3D dentro, con la telecamera dove era chi ha scattato ---
+  const SV={list:null,want:null,ph:null,on:false};
+  const svCatch=(()=>{strip(RD,-5.5,5.5,.13,new THREE.ShadowMaterial({opacity:.32}));const m=scene.children[scene.children.length-1];m.visible=false;return m;})();
+  const enu=(e,n,u)=>new V3(-e,u,n);
+  function svAxes(f){const r=f.rot;if(Array.isArray(r)&&r.length===3){const th=Math.hypot(...r);if(th>1e-6){const k=r.map(v=>v/th),c=Math.cos(th),sn=Math.sin(th),C=1-c,[x,y,z]=k;
+        const M=[[c+x*x*C,x*y*C-z*sn,x*z*C+y*sn],[y*x*C+z*sn,c+y*y*C,y*z*C-x*sn],[z*x*C-y*sn,z*y*C+x*sn,c+z*z*C]];
+        return{fw:enu(M[2][0],M[2][1],M[2][2]).normalize(),up:enu(-M[1][0],-M[1][1],-M[1][2]).normalize()};}}
+    if(f.ca==null)return null;const a=f.ca*D;return{fw:enu(Math.sin(a),Math.cos(a),0),up:new V3(0,1,0)};}
+  function svSet(list){SV.list=[];SV.want=SV.ph=null;for(const f of list){if(!f.url2||/fisheye|spherical|equirect/.test(f.type))continue;const [x,z]=proj(f.lat,f.lon);
+      let bi=-1,bd=1e9;for(let i=0;i<=PR.N;i+=4){const d=(PR.px[i]-x)**2+(PR.pz[i]-z)**2;if(d<bd){bd=d;bi=i;}}if(bd>14*14)continue;
+      const ax=svAxes(f);if(!ax)continue;const hl=Math.hypot(ax.fw.x,ax.fw.z);if(hl<.6)continue;const c=(ax.fw.x*PR.tx[bi]+ax.fw.z*PR.tz[bi])/hl,dir=c>.8?1:c<-.8?-1:0;if(!dir)continue;
+      SV.list.push({...f,x,z,gy:PR.py[bi]+.12,s:bi*PR.step,dir,...ax,age:f.t?(Date.now()-f.t)/3.15e10:5});}return SV.list.length;}
+  function svLoad(p){const im=new Image();im.onload=()=>{if(SV.want!==p)return;p.iw=im.naturalWidth;p.ih=im.naturalHeight;SV.ph=p;$('svimg').src=im.src;};im.src=p.url2;}
+  function svOn(){if(SV.on)return;SV.on=true;scene.children.forEach(c=>{if(c.isLight||c===svCatch||RID.some(q=>q.m===c))return;c.userData.svv=c.visible;c.visible=false;});
+    svCatch.visible=true;SV.bg=scene.background;scene.background=null;renderer.setClearColor(0x000000,0);$('svimg').style.display='block';}
+  function svOff(leave){if(SV.on){SV.on=false;scene.children.forEach(c=>{if(c.userData.svv!==undefined){c.visible=c.userData.svv;delete c.userData.svv;}});svCatch.visible=false;scene.background=SV.bg;camera.up.set(0,1,0);$('svimg').style.display='none';}
+    if(leave){$('svnote').style.display='none';SV.want=SV.ph=null;}}
+  function svNote(t){const n=$('svnote');if(n.dataset.t!==t){n.dataset.t=t;n.innerHTML=t;}n.style.display=t?'block':'none';n.style.bottom=($('nav').offsetHeight+18)+'px';}
+  function svFrame(o){if(view!=='sv'){if(SV.on)svOff(true);return;}
+    if(!SV.list||INTRO.on||CER.on||CER.done||!o){svOff();return;}
+    const s=o.cur,ok=p=>p.dir<0?(s>p.s-110&&s<p.s-4):(s>p.s+6&&s<p.s+110);
+    if(!SV.want||!ok(SV.want)){let best=null,bv=-1e9;for(const p of SV.list){if(!ok(p))continue;const rem=p.dir<0?p.s-4-s:p.s+110-s,v=Math.min(rem,60)+(p.dir<0?25:0)-p.age*3;if(v>bv){bv=v;best=p;}}
+      if(best!==SV.want){SV.want=best;if(best)svLoad(best);}}
+    const p=SV.ph&&ok(SV.ph)?SV.ph:null;
+    if(!p){svOff();svNote(SV.want?'📷 Carico la foto…':'📷 Qui non ci sono foto della strada: vista dal drone');return;}
+    svOn();const W=innerWidth,Hh=innerHeight,sc=Math.max(W/p.iw,Hh/p.ih),fn=(Array.isArray(p.cp)&&p.cp[0]>.3&&p.cp[0]<3)?p.cp[0]:.85,fpx=fn*Math.max(p.iw,p.ih)*sc;
+    camera.position.set(p.x,p.gy+1.7,p.z);camera.up.copy(p.up);camera.lookAt(t2.copy(camera.position).add(p.fw));camera.fov=2*Math.atan(Hh/2/fpx)/D;camera.near=.3;camera.updateProjectionMatrix();
+    scene.fog.near=1e5;scene.fog.far=2e5;svNote(mlyCredit(p));}
   const clock=new THREE.Clock();let running=false;
   function frame(){
     if(!running)return;
@@ -2224,7 +2254,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
       if(view==='moto'){F(-7,-2.6,3.2);look.set(center.x+fwd.x*3,cy+1,center.z+fwd.z*3);}
       if(view==='lato'){F(1,-6.5,2.2);look.set(center.x,cy+1,center.z);}
       if(view==='dd'){F(-24,-3,13);look.set(center.x+fwd.x*6,cy+.5,center.z+fwd.z*6);}
-      if(view==='df'){F(13,-1.5,5);look.set(center.x,cy+1.2,center.z);}
+      if(view==='df'||view==='sv'){F(13,-1.5,5);look.set(center.x,cy+1.2,center.z);}
       if(view==='eli'){F(-45,-20,120);look.set(center.x+fwd.x*15,cy,center.z+fwd.z*15);}
       if(view==='gruppo'||(view==='regia'&&shot.type==='gruppo'))groupCam(dt);
       let fov=baseFov,lerpK=dt*2.2;
@@ -2247,6 +2277,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
       camera.position.lerp(goal,first?1:Math.min(1,lerpK));const gy=H(camera.position.x,camera.position.z)+1.2;if(camera.position.y<gy)camera.position.y=gy;camera.lookAt(look);}
     if(SAT){const op=INTRO.on?clamp((camera.position.y-SATY-90)/260,0,1):0;SAT.visible=op>.01;SAT.material.opacity=op;}
     {const cd=camera.position.distanceTo(look);scene.fog.near=Math.max(DEM?220:90,cd*.9);scene.fog.far=Math.max(DEM?2200:420,cd*3);}
+    svFrame(o);
     first=false;last.copy(center);sun.position.set(center.x-25,cy+45,center.z+15);sun.target.position.copy(center);
     if(!dragging)tl.value=tNow;$('tlt').textContent=fmt(tNow-T0)+' / '+fmt(T1-T0);
     // dati in alto e classifica dal vivo
@@ -2278,7 +2309,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
   return{imagery,fromPhotos,riders:setupRiders,
     // sintesi: un pezzo di regia automatica senza telecronaca, da t0 a velocità m
     filmPlay(t0,m){filmM=true;tele=false;view='regia';follow=-1;shot=null;mult=m;FD={fin:'df',fc:0};finishLine();document.body.classList.add('filmtags');showEls(true);seek(t0);paused=false;resize();if(!running){running=true;clock.getDelta();frame();}},
-    get time(){return tNow},get centerLL(){return unproj(center.x,center.z)},get pathLL(){const o=[];for(let i=0;i<=PR.N;i+=60)o.push(unproj(PR.px[i],PR.pz[i]));return o;},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
+    get time(){return tNow},svSet,get centerLL(){return unproj(center.x,center.z)},get pathLL(){const o=[];for(let i=0;i<=PR.N;i+=60)o.push(unproj(PR.px[i],PR.pz[i]));return o;},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
     // fotofinish: fermo immagine di lato sulla linea d'arrivo nell'istante in cui passa il primo
     photoFinish(){const sB=FD.sB,arr=RID.map(o=>({o,t:crossT(o,sB)})).filter(x=>x.t!=null).sort((a,b)=>a.t-b.t);if(!arr.length)return null;
       paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2,span=back+3.5,fv=44,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
@@ -2441,15 +2472,15 @@ const unb64s=b=>{const s=atob(b.replace(/\n/g,'')),u=new Uint8Array(s.length);fo
 // sotto perché lo usino anche gli amici nelle pagine pubblicate; altrimenti ognuno lo incolla una volta (localStorage banda.mly).
 const MLY_TOKEN='';
 const MLY={tok(){try{return localStorage.getItem('banda.mly')||MLY_TOKEN;}catch(e){return MLY_TOKEN;}},cache:new Map()};
-function mlyBox(la0,lo0,la1,lo1){const k=[la0,lo0,la1,lo1].map(v=>v.toFixed(4)).join(',');if(MLY.cache.has(k))return MLY.cache.get(k);
-  const u=`https://graph.mapillary.com/images?access_token=${encodeURIComponent(MLY.tok())}&fields=id,thumb_1024_url,computed_geometry,geometry,captured_at,creator&bbox=${lo0.toFixed(6)},${la0.toFixed(6)},${lo1.toFixed(6)},${la1.toFixed(6)}&limit=200`;
+function mlyBox(la0,lo0,la1,lo1,sv){const k=[la0,lo0,la1,lo1].map(v=>v.toFixed(4)).join(',')+(sv?'sv':'');if(MLY.cache.has(k))return MLY.cache.get(k);
+  const u=`https://graph.mapillary.com/images?access_token=${encodeURIComponent(MLY.tok())}&fields=id,thumb_1024_url,computed_geometry,geometry,captured_at,creator${sv?',thumb_2048_url,computed_rotation,computed_compass_angle,compass_angle,camera_type,camera_parameters':''}&bbox=${lo0.toFixed(6)},${la0.toFixed(6)},${lo1.toFixed(6)},${la1.toFixed(6)}&limit=200`;
   const pr=fetch(u).then(r=>{if(r.status===401||r.status===403)throw new Error('token');if(!r.ok)throw new Error('http '+r.status);return r.json();})
-    .then(j=>(j.data||[]).map(d=>{const g=(d.computed_geometry||d.geometry||{}).coordinates;return g&&d.thumb_1024_url?{id:d.id,lat:g[1],lon:g[0],url:d.thumb_1024_url,t:d.captured_at||0,who:(d.creator&&d.creator.username)||''}:null;}).filter(Boolean));
+    .then(j=>(j.data||[]).map(d=>{const g=(d.computed_geometry||d.geometry||{}).coordinates;return g&&d.thumb_1024_url?{id:d.id,lat:g[1],lon:g[0],url:d.thumb_1024_url,t:d.captured_at||0,who:(d.creator&&d.creator.username)||'',url2:d.thumb_2048_url,rot:d.computed_rotation,ca:d.computed_compass_angle??d.compass_angle,type:d.camera_type||'',cp:d.camera_parameters}:null;}).filter(Boolean));
   MLY.cache.set(k,pr);pr.catch(()=>MLY.cache.delete(k));return pr;}
 // tutte le foto lungo dei punti [lat,lon]: riquadri di ~340 m ogni 220 m, al massimo 30 richieste
-async function mlyAlong(pts){const out=new Map(),bx=[];let last=null;
+async function mlyAlong(pts,sv){const out=new Map(),bx=[];let last=null;
   for(const p of pts){if(last&&distM(last,p)<220)continue;last=p;const a=170/110540,b=170/(111320*Math.cos(p[0]*D));bx.push([p[0]-a,p[1]-b,p[0]+a,p[1]+b]);}
-  for(let i=0;i<Math.min(bx.length,30);i+=5){const r=await Promise.all(bx.slice(i,i+5).map(b=>mlyBox(...b)));r.flat().forEach(f=>out.set(f.id,f));}
+  for(let i=0;i<Math.min(bx.length,30);i+=5){const r=await Promise.all(bx.slice(i,i+5).map(b=>mlyBox(...b,sv)));r.flat().forEach(f=>out.set(f.id,f));}
   return[...out.values()];}
 // la foto più vicina (le più recenti un po' preferite)
 function mlyPick(list,la,lo,max){let best=null,bs=1e9;const now=Date.now();for(const f of list){const d=distM([la,lo],[f.lat,f.lon]);if(d>max)continue;const sc=d+(f.t?(now-f.t)/3.15e10*4:20);if(sc<bs){bs=sc;best=f;}}return best;}
@@ -2472,6 +2503,13 @@ function mlyTick(){if(!MP.on||!S3||!MP.list)return;const [la,lo]=S3.centerLL;
   if(!f){mlyMsg('Qui non ci sono foto…');return;}
   $('mly').innerHTML=`<button class="x" aria-label="Chiudi le foto">×</button><img src="${f.url}" alt="Foto vera della strada"><p>${mlyCredit(f)}</p>`;}
 $('foto').addEventListener('click',mlyToggle);
+// vista "📷 Street View": scarica (una volta per scena) le foto con posizione e orientamento della macchina fotografica
+async function svStart(){const S=S3;if(!S)return;if(S.__sv)return;
+  const note=t=>{const n=$('svnote');n.innerHTML=t;n.dataset.t=t;n.style.display='block';n.style.bottom=($('nav').offsetHeight+18)+'px';};
+  if(!MLY.tok()){const t=(prompt('Per vedere la strada vera serve la chiave gratuita di Mapillary («Client Token», comincia con MLY|). Incollala qui:')||'').trim();if(!/^MLY\|/.test(t)){note(t?'La chiave deve cominciare con MLY|':'📷 Senza la chiave di Mapillary non posso mostrare le foto');return;}try{localStorage.setItem('banda.mly',t);}catch(e){}}
+  S.__sv='load';note('📷 Cerco le foto della strada…');
+  try{const l=await mlyAlong(S.pathLL,true);const n=S.svSet(l);S.__sv='ok';if(!n)note('📷 Su Mapillary non ci sono foto adatte di questa strada: vista dal drone');}
+  catch(e){S.__sv=null;if(e.message==='token'){try{localStorage.removeItem('banda.mly');}catch(_){}note('📷 La chiave di Mapillary non funziona: riscegli la vista per incollarne un\'altra');}else note('📷 Mapillary non risponde: riprova più tardi');}}
 $('mly').addEventListener('click',e=>{if(e.target.closest('.x')){mlyClose();return;}if(e.target.tagName==='IMG')$('mly').classList.toggle('big');});
 // nella sintesi: una foto per ogni momento chiave (verso i due terzi del tratto), cercata subito all'inizio
 function mlyFilm(H,P){if(!MLY.tok())return;H.forEach(h=>{const pts=[];for(let i=h.i0;i<=h.i1;i++)if(P[i]&&P[i].la!=null)pts.push([P[i].la,P[i].lo]);if(!pts.length){h.ph=null;return;}
