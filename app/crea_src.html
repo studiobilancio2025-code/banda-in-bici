@@ -162,10 +162,13 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="pres"></div>
 <div id="play"></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
-  <label>🎙️ Gigi, il cronista<select id="vc"></select></label><button class="btn l" data-pv="c">▶ Prova Gigi</button>
-  <label>🎧 Tonino, il commento tecnico<select id="vt"></select></label><button class="btn l" data-pv="t">▶ Prova Tonino</button>
+  <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="ric" id="engric"> Riccardo — voce naturale, gratis (consigliata)</label>
+  <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="tel" id="engtel"> Voci del telefono</label>
+  <p class="meta" id="ricst"></p>
+  <div id="telv"><label>🎙️ Gigi, il cronista<select id="vc"></select></label></div><button class="btn l" data-pv="c">▶ Prova Gigi</button><div>
+  <label>🎧 Tonino, il commento tecnico<select id="vt"></select></label></div><button class="btn l" data-pv="t">▶ Prova Tonino</button>
   <p class="meta" id="vn"></p>
-  <p class="meta">Le voci sono quelle del telefono. Per avere una voce maschile su Android: <b>Impostazioni → Accessibilità → Sintesi vocale</b> (o "Output sintesi vocale") → motore <b>Google</b> → ⚙️ → <b>Installa dati vocali → Italiano</b> e scegli una voce maschile. Se il telefono ha solo voci femminili, l'app le rende più gravi.</p>
+  <p class="meta"><b>Riccardo</b> la prima volta scarica circa 50 MB (meglio col Wi-Fi), poi resta sul telefono. Voci del telefono: per averne una maschile su Android <b>Impostazioni → Accessibilità → Sintesi vocale</b> (o "Output sintesi vocale") → motore <b>Google</b> → ⚙️ → <b>Installa dati vocali → Italiano</b> e scegli una voce maschile. Se il telefono ha solo voci femminili, l'app le rende più gravi.</p>
   <button class="btn" data-pv="x">Fatto</button></div></div>
 <div id="sharebox"><div><h3>Manda la corsa</h3>
   <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
@@ -360,13 +363,47 @@ function segLen(){const g=riders[0].g,o=riders[0].off;let d=0;for(let s=Math.max
 const MALE=/diego|luca|cosimo|giorgio|benigno|calimero|gianni|giuseppe|roberto|paolo|marco|riccardo|male|maschil|uomo|\bman\b|it-it-x-itc|it-it-x-itd|itc-|itd-/i,FEM=/elsa|isabella|alice|federica|paola|carla|chiara|giulia|silvia|alessandra|female|femmin|donna|it-it-x-itb|it-it-x-ita|itb-|ita-/i;
 const isMale=x=>!!x&&MALE.test(x.name+' '+(x.voiceURI||''))&&!FEM.test(x.name),isFem=x=>!!x&&FEM.test(x.name+' '+(x.voiceURI||''));
 function voicePref(){try{return JSON.parse(localStorage.getItem('banda.voci')||'{}');}catch(e){return{};}}
-function fillVoci(){const v=speechSynthesis.getVoices(),it=v.filter(x=>/^it/i.test(x.lang)),p=voicePref();
+function fillVoci(){const pe=voicePref();$('engric').checked=pe.engine!=='tel';$('engtel').checked=pe.engine==='tel';$('telv').style.display=pe.engine==='tel'?'':'none';ricStatus();
+  if(!window.speechSynthesis){$('vn').textContent='';return;}const v=speechSynthesis.getVoices(),it=v.filter(x=>/^it/i.test(x.lang)),p=voicePref();
   const opt=sel=>'<option value="">Automatica (maschile se c\'è)</option>'+it.map(x=>`<option ${x.name===sel?'selected':''} value="${x.name.replace(/"/g,'')}">${x.name}${isMale(x)?' ♂':isFem(x)?' ♀':''}</option>`).join('');
   $('vc').innerHTML=opt(p.c);$('vt').innerHTML=opt(p.t);$('vn').textContent=it.length?`Il telefono ha ${it.length} voc${it.length>1?'i':'e'} italian${it.length>1?'e':'a'}${it.some(isMale)?'':' e nessuna è riconoscibile come maschile'}.`:'Il telefono non ha voci italiane.';}
-function saveVoci(){localStorage.setItem('banda.voci',JSON.stringify({c:$('vc').value,t:$('vt').value}));dispatchEvent(new Event('voci'));}
-function provaVoce(who){if(!window.speechSynthesis)return;speechSynthesis.cancel();const v=speechSynthesis.getVoices(),name=$(who==='t'?'vt':'vc').value;
+function saveVoci(){const engine=$('engtel').checked?'tel':'ric';localStorage.setItem('banda.voci',JSON.stringify({engine,c:$('vc').value,t:$('vt').value}));$('telv').style.display=engine==='tel'?'':'none';if(engine==='ric')ricInit();ricStatus();dispatchEvent(new Event('voci'));}
+function provaVoce(who){const txt=who==='t'?'Ciao Gigi. Oggi la salita è dura: chi parte forte poi lo paga nel finale.':'Buongiorno, amici della banda in bici! Si parte!';
+  if(ricWanted()){FX.init();if(RIC.st!=='ready'){ricInit();alert(RIC.st==='fail'?'La voce Riccardo non funziona su questo telefono.':'Sto ancora scaricando la voce Riccardo ('+RIC.pct+'%): riprova tra poco.');return;}
+    const pr=ricParams(who,0);ricSynth(txt,pr.len).then(buf=>{const src=FX.ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr.rate;src.connect(FX.out);src.start();});return;}
+  if(!window.speechSynthesis)return;speechSynthesis.cancel();const v=speechSynthesis.getVoices(),name=$(who==='t'?'vt':'vc').value;
   const auto=v.filter(x=>/^it/i.test(x.lang)).sort((a,b)=>(isMale(b)-isMale(a)))[0],x=v.find(q=>q.name===name)||auto;
   const u=new SpeechSynthesisUtterance(who==='t'?'Ciao Gigi, oggi la salita è dura: chi parte forte poi lo paga.':'Buongiorno, amici della banda in bici! Si parte!');u.lang='it-IT';if(x)u.voice=x;const m=isMale(x);u.pitch=who==='t'?(m?.95:.72):(m?1:.84);u.rate=1;speechSynthesis.speak(u);}
+
+// ---------- voce "Riccardo": voce neurale gratuita (Piper) che gira nel telefono ----------
+// modello nel sito (voci/riccardo.onnx, 20 MB), fonemi con espeak (piper-wasm, 18 MB), onnxruntime-web: tutto scaricato una volta sola
+const RIC={st:'off',pct:0,sess:null,M:null,OUT:[],
+  BASE:'https://studiobilancio2025-code.github.io/banda-in-bici/voci/',ORT:'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/',
+  PH:'https://cdn.jsdelivr.net/npm/@diffusionstudio/vits-web@1.0.3/dist/piper-DeOu3H9E.js',PW:'https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize',
+  MAP:{"_":0,"^":1,"$":2," ":3,"!":4,"'":5,"(":6,")":7,",":8,"-":9,".":10,":":11,";":12,"?":13,"a":14,"b":15,"c":16,"d":17,"e":18,"f":19,"h":20,"i":21,"j":22,"k":23,"l":24,"m":25,"n":26,"o":27,"p":28,"q":29,"r":30,"s":31,"t":32,"u":33,"v":34,"w":35,"x":36,"y":37,"z":38,"æ":39,"ç":40,"ð":41,"ø":42,"ħ":43,"ŋ":44,"œ":45,"ǀ":46,"ǁ":47,"ǂ":48,"ǃ":49,"ɐ":50,"ɑ":51,"ɒ":52,"ɓ":53,"ɔ":54,"ɕ":55,"ɖ":56,"ɗ":57,"ɘ":58,"ə":59,"ɚ":60,"ɛ":61,"ɜ":62,"ɞ":63,"ɟ":64,"ɠ":65,"ɡ":66,"ɢ":67,"ɣ":68,"ɤ":69,"ɥ":70,"ɦ":71,"ɧ":72,"ɨ":73,"ɪ":74,"ɫ":75,"ɬ":76,"ɭ":77,"ɮ":78,"ɯ":79,"ɰ":80,"ɱ":81,"ɲ":82,"ɳ":83,"ɴ":84,"ɵ":85,"ɶ":86,"ɸ":87,"ɹ":88,"ɺ":89,"ɻ":90,"ɽ":91,"ɾ":92,"ʀ":93,"ʁ":94,"ʂ":95,"ʃ":96,"ʄ":97,"ʈ":98,"ʉ":99,"ʊ":100,"ʋ":101,"ʌ":102,"ʍ":103,"ʎ":104,"ʏ":105,"ʐ":106,"ʑ":107,"ʒ":108,"ʔ":109,"ʕ":110,"ʘ":111,"ʙ":112,"ʛ":113,"ʜ":114,"ʝ":115,"ʟ":116,"ʡ":117,"ʢ":118,"ʲ":119,"ˈ":120,"ˌ":121,"ː":122,"ˑ":123,"˞":124,"β":125,"θ":126,"χ":127,"ᵻ":128,"ⱱ":129}};
+const ricWanted=()=>voicePref().engine!=='tel';
+function ricStatus(){const e=$('ricst');if(!e)return;e.textContent=RIC.st==='ready'?'✓ Voce Riccardo pronta':RIC.st==='loading'?`Scarico la voce Riccardo… ${RIC.pct}%`:RIC.st==='fail'?'La voce Riccardo non funziona su questo telefono: uso le voci del telefono.':'';}
+async function ricFetch(url){let c=null;try{c=await caches.open('banda-voci');const hit=await c.match(url);if(hit)return hit.arrayBuffer();}catch(e){}
+  const r=await fetch(url);if(!r.ok)throw new Error('download');const tot=+r.headers.get('content-length')||0,rd=r.body.getReader(),parts=[];let got=0;
+  for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;if(tot){RIC.pct=Math.round(got/tot*100);ricStatus();}}
+  const b=new Uint8Array(got);let o=0;parts.forEach(p=>{b.set(p,o);o+=p.length;});try{if(c)await c.put(url,new Response(b));}catch(e){}return b.buffer;}
+function ricInit(){if(RIC.p)return RIC.p;RIC.st='loading';ricStatus();
+  RIC.p=(async()=>{if(!window.WebAssembly)throw new Error('wasm');
+    if(!window.ort)await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=RIC.ORT+'ort.wasm.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
+    ort.env.wasm.wasmPaths=RIC.ORT;ort.env.wasm.numThreads=1;
+    const mod=await import(RIC.PH);RIC.M=await mod.createPiperPhonemize({print:l=>{try{RIC.OUT.push(JSON.parse(l));}catch(e){}},printErr:()=>{},locateFile:f=>f.endsWith('.wasm')?RIC.PW+'.wasm':f.endsWith('.data')?RIC.PW+'.data':f});
+    RIC.sess=await ort.InferenceSession.create(await ricFetch(RIC.BASE+'riccardo.onnx'),{executionProviders:['wasm']});
+    RIC.st='ready';ricStatus();})().catch(e=>{RIC.st='fail';ricStatus();});return RIC.p;}
+// testo -> suono (AudioBuffer a 16 kHz). len<1 = più veloce
+let ricBusy=Promise.resolve();
+function ricSynth(text,len){const job=ricBusy.then(async()=>{RIC.OUT=[];RIC.M.callMain(['-l','it','--input',JSON.stringify([{text}]),'--espeak_data','/espeak-ng-data']);
+  const P=RIC.MAP,ids=[P['^'],P['_']];RIC.OUT.forEach(o=>{for(const c of o.phonemes||[]){if(P[c]!=null)ids.push(P[c],P['_']);}});ids.push(P['$']);
+  const r=await RIC.sess.run({input:new ort.Tensor('int64',BigInt64Array.from(ids.map(BigInt)),[1,ids.length]),input_lengths:new ort.Tensor('int64',BigInt64Array.from([BigInt(ids.length)]),[1]),scales:new ort.Tensor('float32',Float32Array.from([.667,len||1,.8]),[3])});
+  const d=r.output.data,buf=FX.ctx.createBuffer(1,d.length+3200,16000);buf.getChannelData(0).set(d);return buf;});ricBusy=job.catch(()=>{});return job;}
+const ricOn=()=>ricWanted()&&RIC.st==='ready'&&FX.ctx;
+// Gigi un po' più svelto, Tonino più grave (suono rallentato) e più calmo
+const ricParams=(who,ex)=>who==='t'?{len:.86,rate:.9}:{len:.92-(ex||0)*.07,rate:1+(ex||0)*.03};
+if(ricWanted())setTimeout(ricInit,1500);
 
 // ---------- effetti sonori e musica, tutti sintetizzati (niente file da scaricare) ----------
 const FX={ctx:null,on:true,mus:true,
@@ -404,12 +441,12 @@ const FX={ctx:null,on:true,mus:true,
       ch.forEach(hz=>{const o=c.createOscillator(),g=c.createGain();o.type='sawtooth';o.frequency.value=hz;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;g.gain.setValueAtTime(.0001,next);g.gain.linearRampToValueAtTime(.06,next+.4);g.gain.setValueAtTime(.06,next+beat*3.5);g.gain.linearRampToValueAtTime(.0001,next+beat*4);o.connect(lp);lp.connect(g);g.connect(this.musG);o.start(next);o.stop(next+beat*4+.05);});
       next+=beat*4;bar++;}};sched();this.timer=setInterval(sched,400);},
   pause(p){if(this.ctx){if(p)this.ctx.suspend();else this.ctx.resume();}}};
-$('voci').addEventListener('click',()=>{if(!window.speechSynthesis){alert('Questo telefono non ha la sintesi vocale.');return;}fillVoci();$('vocibox').style.display='grid';});
+$('voci').addEventListener('click',()=>{FX.init();fillVoci();$('vocibox').style.display='grid';});
 $('vocibox').addEventListener('change',saveVoci);
 $('vocibox').addEventListener('click',e=>{const b=e.target.closest('button');if(e.target.id==='vocibox'||(b&&b.dataset.pv==='x')){$('vocibox').style.display='none';return;}if(b&&b.dataset.pv)provaVoce(b.dataset.pv);});
 $('sfx').addEventListener('click',()=>{FX.init();FX.on=!FX.on;$('sfx').textContent=FX.on?'🔊 Effetti':'🔈 Effetti';$('sfx').classList.toggle('on',FX.on);});
 $('mus').addEventListener('click',()=>{FX.init();FX.mus=!FX.mus;$('mus').textContent=FX.mus?'🎵 Musica':'🎵 Musica no';$('mus').classList.toggle('on',FX.mus);FX.duck(!!FX.ducked);});
-window.__FX=FX;
+window.__FX=FX;window.__RIC=RIC;
 addEventListener('pointerdown',()=>{if(FX.ctx&&FX.ctx.state==='suspended'&&!window.__pausa)FX.ctx.resume();},{passive:true});
 
 // ---------- 3. scena 3D ----------
@@ -706,6 +743,8 @@ function make3D(PATH,ROADS,BLDS){
     if(!Q.length)return;let bi=0;Q.forEach((q,i)=>{if(q.pri>Q[bi].pri)bi=i;});const it=Q.splice(bi,1)[0];QB=it;showCap(it);
     let fin=false;const done=()=>{if(fin)return;fin=true;clearTimeout(it.to);QB=null;FX.duck(false);if(it.cb)it.cb();setTimeout(pump,it.who==='t'?450:300);};
     const est=it.txt.length/12.5+.7;
+    if(tele&&ricOn()){const pr=ricParams(it.who,it.ex);(it.p||ricSynth(it.txt,pr.len)).then(buf=>{if(fin)return;FX.init();const src=FX.ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr.rate;
+        src.connect(FX.out);src.onended=done;it.src=src;FX.duck(true);src.start();it.to=setTimeout(()=>{if(!fin){try{src.stop();}catch(e){}done();}},(buf.duration/pr.rate+4)*1000);}).catch(()=>{if(!fin)it.to=setTimeout(done,est*1000);});return;}
     if(!window.speechSynthesis||!tele){it.to=setTimeout(done,est*1000);return;}
     const u=new SpeechSynthesisUtterance(it.txt);u.lang='it-IT';const v=it.who==='t'?VOICE2:VOICE;if(v)u.voice=v;const same=VOICE2===VOICE;
     u.rate=(it.who==='t'?.98:1.02)+it.ex*.07+(mult>=10?.06:0);const m=v&&isMale(v);u.pitch=it.who==='t'?(m?(same?.88:.96):.72):(m?1:.84)+it.ex*.06;
@@ -717,7 +756,10 @@ function make3D(PATH,ROADS,BLDS){
   // il tecnico risponde subito dopo il cronista (a volte sì, a volte no, per non essere ripetitivo)
   function tecSay(txt,p){if(!tele||!txt||Math.random()>(p??.55))return;Q.push({txt:txt.charAt(0).toUpperCase()+txt.slice(1),pri:1.5,ex:0,who:'t',exp:realNow()+15});pump();}
   function sayCb(txt,who,cb,ex){Q.push({txt,pri:3,ex:ex||0,who,exp:1e12,cb});pump();}
-  function qClear(){Q.length=0;if(QB){clearTimeout(QB.to);QB=null;}if(window.speechSynthesis)speechSynthesis.cancel();}
+  function qClear(){Q.length=0;if(QB){clearTimeout(QB.to);try{QB.src&&QB.src.stop();}catch(e){}QB=null;}if(window.speechSynthesis)speechSynthesis.cancel();}
+  // con Riccardo la frase si prepara appena entra in coda, così parte subito quando tocca a lei
+  const preSynth=it=>{if(tele&&ricOn()&&!it.p){const pr=ricParams(it.who,it.ex);it.p=ricSynth(it.txt,pr.len);it.p.catch(()=>{});}};
+  const QP=Q.push.bind(Q);Q.push=(...a)=>{a.forEach(preSynth);return QP(...a);};
   function gapSec(L,q){let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));}
   function ptOf(o){const tr=tNow-offE(o.r),P=o.r.pts;let lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}return P[lo];}
   const wattOf=o=>{const p=ptOf(o);return p&&p.pw;},hrOf=o=>{const p=ptOf(o);return p&&p.hr;},cadOf=o=>{const p=ptOf(o);return p&&p.cad;};
@@ -735,6 +777,7 @@ function make3D(PATH,ROADS,BLDS){
   function avgOf(o,key,sec,from){const P=o.r.pts,t1=tNow-offE(o.r),t0=from!=null?from-offE(o.r):t1-sec;let a=0,n=0;for(const p of P){if(p.t<t0||p.t>t1||p[key]==null)continue;a+=p[key];n++;}return n>5?a/n:null;}
   const ahead=(o,d)=>{const b=Math.min(endS(o),o.cur+d);return b-o.cur>50?(yAt(b)-yAt(o.cur))/(b-o.cur):null;};
   const len0=o=>{const a=begS(o),b=endS(o);return isNaN(a)||isNaN(b)?segLen():b-a;};
+  const del=x=>/^(1|8|11|18)([,.]|$)/.test(String(x))?"dell'"+x:'del '+x;
   const kmh=v=>Math.round(v*3.6);
   function vNow(o,sec){const a=sOf(o,tNow-sec);return isNaN(a)?o.v:(o.cur-a)/sec;}
   // frasi del tecnico per tipo (k): ogni tipo torna solo dopo 4 minuti di corsa e mai con la stessa frase
@@ -774,7 +817,7 @@ function make3D(PATH,ROADS,BLDS){
   // presentazione: discesa dal satellite fino alla partenza, poi i corridori uno per uno con la foto
   const INTRO={on:false};
   function introText(){const ST=CR.st,tit=$('titolo').value;let t=pick(['Buongiorno, amici della banda in bici!','Eccoci qua, cari amici della banda!','Benvenuti, amici sportivi!'])+` Oggi si corre «${tit}»`;
-    if(ST){t+=`: ${dM(ST.len)}`;if(ST.avg>.015)t+=` con una pendenza media del ${it((ST.avg*100).toFixed(1))} per cento, ${Math.round(ST.up)} metri di dislivello e punte del ${Math.round(ST.max*100)} per cento`;else if(ST.up>8)t+=`, ${Math.round(ST.up)} metri di dislivello`;else t+=`, tutti da spingere`;}
+    if(ST){t+=`: ${dM(ST.len)}`;if(ST.avg>.015)t+=` con una pendenza media ${del(it((ST.avg*100).toFixed(1)))} per cento, ${Math.round(ST.up)} metri di dislivello e punte ${del(Math.round(ST.max*100))} per cento`;else if(ST.up>8)t+=`, ${Math.round(ST.up)} metri di dislivello`;else t+=`, tutti da spingere`;}
     return t+'.';}
   function startIntro(){const P=RID.slice().sort((a,b)=>a.x.ta-b.x.ta),steps=[{text:introText()}];
     P.forEach((o,k)=>steps.push({o,text:(P.length>1?(k===0?'Ai nastri di partenza: ':k===P.length-1?'E infine ':'')+NN(o):`In gara ${NN(o)}`)+(nick(o)?`, detto ${nick(o)}`:'')+(P.length>1?'.':', da solo contro il cronometro.')}));
@@ -800,7 +843,8 @@ function make3D(PATH,ROADS,BLDS){
     const hd=at(PR,o.cur,0,im1);idir.set(Math.sin(hd),0,Math.cos(hd));const p=o.m.position,a2=el*.35;
     goal.set(p.x+idir.x*(6-a2)+idir.z*2.2,p.y+1.9,p.z+idir.z*(6-a2)-idir.x*2.2);look.set(p.x,p.y+1.2,p.z);return first?1:dt*2.5;}
   function crHold(){if(!tele||!CR)return false;
-    if(CR.intro){CR.intro=false;startIntro();return true;}
+    if(CR.intro){if(ricWanted()&&RIC.st==='loading'){CR.wait=CR.wait||realNow();if(realNow()-CR.wait<25){const c=$('cron');c.style.display='block';c.style.opacity=1;c.firstChild.textContent='🎙️';c.lastChild.textContent=`Arriva il cronista… (scarico la voce ${RIC.pct}%)`;return true;}}
+      CR.intro=false;startIntro();return true;}
     if(INTRO.on){introTick();return true;}
     if(CR.hold){if(realNow()<CR.hold&&(speaking()||realNow()<lastSay+1.2))return true;CR.hold=0;}return false;}
   function crUpdate(){if(!CR)return;const C=CR;
@@ -852,7 +896,7 @@ function make3D(PATH,ROADS,BLDS){
         else if(p!=null&&g<p-4)t=pick([`${nm(S)} sta rientrando! Il distacco scende a ${dS(g)}.`,`Bella reazione di ${nm(S)}: ora è a ${dS(g)}.`]);
         else t=pick([`${nm(L)} in testa, ${nm(S)} a ${dS(g)}.`,`Distacco stabile: ${dS(g)} tra ${nm(L)} e ${nm(S)}.`,`${nm(S)} tiene botta: sempre ${dS(g)} da ${nm(L)}.`,`Situazione congelata: ${nm(L)} davanti, ${nm(S)} a ${dS(g)}.`]);
         if(z)t+=` Dietro soffre ${nm(z)}.`;else if(live.length>2){const Z=live[live.length-1];t+=` In coda ${nm(Z)}, a ${dS(gapSec(L,Z))}.`;}
-        if(said(t,1,tr>15||tr<-8?.6:.2)){tecSay(tr>15?`${NN(S)} è calato: andava a ${kmh(vNow(S,60))} all'ora, adesso a ${kmh(vNow(S,15))}. Quando si va oltre la soglia, il conto arriva.`:tecPick(tecPair(L,S,g)),.5);return;}}
+        if(said(t,1,tr>15||tr<-8?.6:.2)){tecSay(tr>15&&kmh(vNow(S,60))-kmh(vNow(S,15))>=2?`${NN(S)} è calato: andava a ${kmh(vNow(S,60))} all'ora, adesso a ${kmh(vNow(S,15))}. Quando si va oltre la soglia, il conto arriva.`:tr>15?`Quando si va oltre la soglia, il conto arriva sempre. ${NN(S)} adesso deve gestirsi.`:tecPick(tecPair(L,S,g)),.5);return;}}
       else{if(said(pick([`${nm(L)} va a ${Math.round(L.v*3.6)} all'ora.`,`Mancano ${dM(rem)} per ${nm(L)}.`,`${nm(L)} tiene un bel ritmo: ${Math.round(L.v*3.6)} all'ora, mancano ${dM(rem)}.`]),1,.2))return;}}
     // fisico: pendenza, velocità, watt, battiti, cadenza
     const sl=slope(PR,L.cur);
@@ -1016,7 +1060,7 @@ function make3D(PATH,ROADS,BLDS){
     if(svg!==lastSvg){$('lines').innerHTML='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#10151c"/></marker></defs>'+svg;lastSvg=svg;}
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
-  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();qClear();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 // voce e suoni partono solo dopo un tocco: nelle scene salvate (aperte da WhatsApp) si chiede un tocco prima di cominciare
 function unlockAudio(){window.__unlocked=true;FX.init();try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}}
