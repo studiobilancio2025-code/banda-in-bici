@@ -94,15 +94,16 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #vocibox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
 #vocibox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;width:min(92vw,400px);max-height:92vh;overflow:auto}
 #vocibox h3{margin:0;font:800 24px "Barlow Condensed"}#vocibox label{display:flex;flex-direction:column;font-weight:600;gap:4px;margin-top:6px}#vocibox select{min-height:44px;font:inherit;border-radius:8px;border:1px solid var(--line);padding:0 8px}
-#sharebox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
-#sharebox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
-#sharebox h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
-#sharebox small{font:500 13px Barlow,system-ui;opacity:.8}
+#sharebox,#expbox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
+#expbox{z-index:600}#sharebox>div,#expbox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
+#sharebox h3,#expbox h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn,#expbox .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
+#expbox label{display:flex;gap:8px;align-items:flex-start;font:500 15px Barlow,system-ui}#sharebox small,#expbox small{font:500 13px Barlow,system-ui;opacity:.8}
 .dico{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #10151c;font-size:16px;box-shadow:0 2px 6px #0006}
 #dmap{height:62vh;min-height:320px;border-radius:12px;margin:8px 0}#dprof{width:100%;height:150px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none}
 .dleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin:4px 0}.dleg i{display:inline-block;width:18px;height:8px;border-radius:3px;margin-right:4px;vertical-align:middle}
 .dtip{font:700 14px/1.15 'Barlow Condensed';background:#10151cdd;color:#fff;border:0;border-radius:8px}.dtip:before{display:none}.dtip small{font-weight:500;color:#ffd400}
 #descr li[data-a]{cursor:pointer}#descr li[data-a]:active{background:#fff3c4}
+.solo{max-width:760px;margin:0 auto;padding:12px}
 .filmtags .tag b{font-size:21px;padding:5px 10px 4px}
 .filmtags .tag.side b{font-size:16px;padding:3px 8px 2px}
 .hl{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;margin-top:6px}.hl label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px}.hl input{width:22px;height:22px;flex:none;margin-top:2px}.hl b{display:block;font:800 18px 'Barlow Condensed'}.hl small{color:var(--mut)}
@@ -116,6 +117,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #fcap{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 70px);z-index:500;background:rgba(16,21,28,.85);color:#fff;border-radius:10px;padding:8px 12px;font:600 19px/1.25 "Barlow Condensed";display:none;max-width:560px;margin:0 auto}
 #fcap b{color:var(--tag)}#fcap.tec{background:rgba(13,71,161,.88)}
 #fctl{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:500;display:flex;gap:8px}#fctl button{width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:#10151ccc;color:#fff;font-size:20px}
+#flash{position:absolute;inset:0;z-index:499;background:#fff;opacity:0;pointer-events:none}
 #fend{position:absolute;inset:auto 0 calc(env(safe-area-inset-bottom) + 76px);z-index:501;display:none;justify-content:center;gap:10px}
 .ftip{font:800 15px "Barlow Condensed";background:#10151cdd;color:#fff;border:0}.ftip:before{display:none}
 #play{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:radial-gradient(circle at 50% 40%,#263445,#10151c);color:#fff;text-align:center;padding:20px}
@@ -186,7 +188,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="play"></div>
 <div id="film"><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
   <div id="fctl"><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
-  <div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
+  <div id="flash"></div><div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="ric" id="engric"> Riccardo — voce naturale, gratis (consigliata)</label>
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="tel" id="engtel"> Voci del telefono</label>
@@ -196,6 +198,10 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <p class="meta" id="vn"></p>
   <p class="meta"><b>Riccardo</b> la prima volta scarica circa 50 MB (meglio col Wi-Fi), poi resta sul telefono. Voci del telefono: per averne una maschile su Android <b>Impostazioni → Accessibilità → Sintesi vocale</b> (o "Output sintesi vocale") → motore <b>Google</b> → ⚙️ → <b>Installa dati vocali → Italiano</b> e scegli una voce maschile. Se il telefono ha solo voci femminili, l'app le rende più gravi.</p>
   <button class="btn" data-pv="x">Fatto</button></div></div>
+<div id="expbox"><div><h3 id="exptit">Esporta</h3><p class="meta" id="expsub" style="margin:0"></p>
+  <label><input type="checkbox" id="exphide" checked><span>Nascondi partenza e arrivo<br><small>toglie i primi e gli ultimi 600 m (di solito sono casa): consigliato se va pubblicata</small></span></label>
+  <button class="btn" data-ex="send">📤 Manda il file<small>WhatsApp o altre app (Android)</small></button><button class="btn l" data-ex="dl">⬇️ Scarica sul telefono</button><button class="btn l" data-ex="x">Annulla</button>
+  <p class="meta" style="margin:0">Per pubblicarla sul sito della banda mandami il file: la metto nella pagina delle corse (solo con l'ok di tutti i ciclisti).</p></div></div>
 <div id="sharebox"><div><h3>Manda la corsa</h3>
   <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
   <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
@@ -444,6 +450,7 @@ const FX={ctx:null,on:true,mus:true,
   ok(){return this.ctx&&this.on&&this.ctx.state==='running';},
   burst(t,dur,f,q,vol){const c=this.ctx,src=c.createBufferSource();src.buffer=this.noise;const fl=c.createBiquadFilter();fl.type='bandpass';fl.frequency.value=f;fl.Q.value=q;const g=c.createGain();
     g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.004);g.gain.exponentialRampToValueAtTime(.001,t+dur);src.connect(fl);fl.connect(g);g.connect(this.out);src.start(t,Math.random()*1.5,dur+.05);},
+  shutter(){if(!this.ok())return;const t=this.t();this.burst(t,.05,3500,2,.5);this.burst(t+.09,.07,2200,2,.4);},
   applause(sec,amt){if(!this.ok())return;const t0=this.t(),N=Math.round(sec*45*amt);
     for(let i=0;i<N;i++){const t=t0+Math.random()*sec,fade=1-(t-t0)/sec*.7;this.burst(t,.03+Math.random()*.03,900+Math.random()*1800,1.2,.22*fade*amt);}
     this.burst(t0,sec*.9,700,.4,.05*amt);},
@@ -567,7 +574,8 @@ function filmSetup(){if(!riders.length)return;const box=$('fsetup');FP=trackSamp
     <div class="rrow" style="margin-top:10px;gap:8px;flex-wrap:wrap"><label>Durata <select id="fdur"><option value="60">1 minuto</option><option value="120" selected>2 minuti</option><option value="180">3 minuti</option><option value="300">5 minuti</option></select></label>
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="f3d" checked> Immagini 3D della regia</label></div>
     <p class="meta">Con le immagini 3D prima della sintesi l'app prepara le scene: circa mezzo minuto per tratto.</p>
-    <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button></div>`;
+    <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button><button class="btn l" id="fexp">📤 Esporta la sintesi</button></div>`;
+    $('fexp').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}FEXP={H,dur:+$('fdur').value,use3D:$('f3d').checked};exportOpen('film');};
     $('fgo').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}
       startFilm(H,+$('fdur').value,$('f3d').checked);};},30);}
 // prepara le scene 3D dei tratti scelti (una alla volta, poi restano nascoste fino al loro momento)
@@ -587,7 +595,7 @@ async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(FILM.map);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(FILM.map);}
   setTimeout(()=>FILM.map.invalidateSize(),50);FILM.lay.forEach(l=>l.remove());FILM.lay=[];FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];
-  const ll=P.map(p=>[p.la,p.lo]);FILM.map.fitBounds(L.latLngBounds(ll),{padding:[30,30]});
+  const ll=P.map(p=>p.la==null?null:[p.la,p.lo]),LS=(a,b)=>ll.slice(a,b+1).filter(Boolean),LA=LS(0,ll.length-1);FILM.map.fitBounds(L.latLngBounds(LA),{padding:[30,30]});
   // se la voce Riccardo si sta scaricando, si aspetta un po'
   if(ricWanted()&&RIC.st==='loading'){fCard(`<h3>La sintesi sta per cominciare</h3><p>Arriva il cronista… <span id="fpct"></span></p>`);const t=performance.now();while(RIC.st==='loading'&&performance.now()-t<25000&&FILM.on){$('fpct').textContent=RIC.pct+'%';await fWait(300);}}
   FX.music(true);FX.fanfare();
@@ -595,17 +603,17 @@ async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if
   const when=R0.abs&&R0.t0?new Date(R0.t0):null,tit=$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'l\'uscita';
   fCard(`<h3>La sintesi dell'uscita</h3><div class="fstats"><span><b>${kmS(km)}</b> km</span><span><b>${Math.round(up)}</b> m D+</span><span><b>${fmt(dur)}</b></span><span><b>${H.length}</b> momenti chiave</span></div><p>${names.join(' · ')}</p>`,'big');
   // la traccia si disegna mentre parla il cronista
-  const line=L.polyline([],{color:'#ffd400',weight:5}).addTo(FILM.map);FILM.lay.push(L.polyline(ll,{color:'#10151c',weight:8,opacity:.35}).addTo(FILM.map),line);
-  const draw=(async()=>{const t0=performance.now();let k=0;while(FILM.on&&k<ll.length){if(!FILM.paused){k=Math.min(ll.length,Math.floor((performance.now()-t0)/9000*ll.length));line.setLatLngs(ll.slice(0,k+1));}await fWait(40);}})();
+  const line=L.polyline([],{color:'#ffd400',weight:5}).addTo(FILM.map);FILM.lay.push(L.polyline(LA,{color:'#10151c',weight:8,opacity:.35}).addTo(FILM.map),line);
+  const draw=(async()=>{const t0=performance.now();let k=0;while(FILM.on&&k<ll.length){if(!FILM.paused){k=Math.min(ll.length,Math.floor((performance.now()-t0)/9000*ll.length));line.setLatLngs(LS(0,k));}await fWait(40);}})();
   await fSay(`Ecco la sintesi ${when?`dell'uscita di ${when.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}`:'dell\'uscita'}: ${kmS(km)} chilometri e ${Math.round(up)} metri di dislivello`+(names.length>1?`, con ${names.slice(0,-1).join(', ')} e ${names[names.length-1]}.`:`, in sella ${names[0]}.`)+(H.length?` ${H.length===1?'Vediamo il momento chiave.':`Vediamo i ${H.length} momenti chiave.`}`:''),'c',.2);
   await draw;
-  H.forEach(h=>FILM.lay.push(L.polyline(ll.slice(h.i0,h.i1+1),{color:'#d32f2f',weight:7}).addTo(FILM.map)));
+  H.forEach(h=>FILM.lay.push(L.polyline(LS(h.i0,h.i1),{color:'#d32f2f',weight:7}).addTo(FILM.map)));
   const wins={};
   for(let k=0;k<H.length&&FILM.on;k++){const h=H[k],T=hlTexts(h,k,H.length);
     fCard(`<small>Momento ${k+1} di ${H.length} · km ${kmS(P[h.i0].d)}</small><h3>${h.nome}</h3><div class="fstats"><span><b>${kmS(h.L)}</b> km</span>${h.avg>.01?`<span><b>${pct(h.avg)}</b> media</span>`:''}<span><b>${Math.round(h.up)}</b> m D+</span></div>`);
     // sulla cartina solo il tratto, con partenza e arrivo
-    const fl=[L.circleMarker(ll[h.i0],{radius:9,color:'#fff',weight:3,fillColor:'#1b7a34',fillOpacity:1}).addTo(FILM.map),L.marker(ll[h.i1],{icon:L.divIcon({className:'',html:'<span style="font-size:26px">🏁</span>',iconSize:[28,28],iconAnchor:[6,26]})}).addTo(FILM.map)];FILM.lay.push(...fl);
-    await Promise.all([fFly(L.latLngBounds(ll.slice(h.i0,h.i1+1)),2.2),fSay(T.intro,'c',.3)]);
+    const fl=[L.circleMarker(ll[h.i0]||LS(h.i0,h.i1)[0],{radius:9,color:'#fff',weight:3,fillColor:'#1b7a34',fillOpacity:1}).addTo(FILM.map),L.marker(ll[h.i1]||LS(h.i0,h.i1).slice(-1)[0],{icon:L.divIcon({className:'',html:'<span style="font-size:26px">🏁</span>',iconSize:[28,28],iconAnchor:[6,26]})}).addTo(FILM.map)];FILM.lay.push(...fl);
+    await Promise.all([fFly(L.latLngBounds(LS(h.i0,h.i1)),2.2),fSay(T.intro,'c',.3)]);
     const has3D=!!h.S,tMap=clamp(per*.55,5,25)*1000,t3D=clamp(per-5,10,240)*1000;
     const ok=h.ok;wins[ok[0].i]=(wins[ok[0].i]||0)+1;
     if(has3D){await fClip(h,t3D,T);continue;}
@@ -615,7 +623,7 @@ async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if
     fCard(`<small>${h.nome}</small><table>${ok.map((x,j)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.tb-ok[0].tb):'1°'}</td></tr>`).join('')}</table>`);
     if(T.tec)await fSay(T.tec,'t',0);else await fWait(2500);$('fclock').style.display='none';}
   if(!FILM.on)return;
-  FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];await fFly(L.latLngBounds(ll),2);
+  FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];await fFly(L.latLngBounds(LA),2);
   const rk=Object.entries(wins).sort((a,b)=>b[1]-a[1]);
   fCard(`<h3>Com'è andata</h3>${rk.length&&riders.length>1?`<table>${rk.map(([i,n])=>`<tr><td><span class="dot" style="background:${riders[i].color}"></span>${riders[i].name}</td><td class="n">${n} ${n>1?'tratti vinti':'tratto vinto'}</td></tr>`).join('')}</table>`:''}<div class="fstats"><span><b>${kmS(km)}</b> km</span><span><b>${Math.round(up)}</b> m D+</span><span><b>${fmt(dur)}</b></span></div>`,'big');
   FX.fanfare(true);
@@ -631,16 +639,18 @@ async function fClip(h,ms,T){const S=h.S,ok=h.ok,m=5,lead=ok[0],last=ok[ok.lengt
   while(FILM.on){await fWait(150);const t=S.time;if(!said&&(t>=lead.tb-2.5||performance.now()-st>ms*.75)){FX.applause(2.5,.6);said=fSay(T.fatto,'c',.8);}if(t>=endT||performance.now()-st>ms+30000)break;}
   if(said)await said;S.hold(true);
   fCard(`<small>Distacchi · ${h.nome}</small>${tabGap(ok)}`);
-  if(ok.length>1&&ok[1].tb-ok[0].tb<=2){const pf=S.photoFinish();if(pf&&pf.length>1){await fWait(700);
+  if(ok.length>1&&ok[1].tb-ok[0].tb<=2){await fWait(1500);fCard('<h3>📸 Fotofinish</h3><small>Rivediamo l\'arrivo al rallentatore…</small>');const pf=S.photoFinish();if(pf&&pf.length>1){const st2=performance.now();while(FILM.on&&!S.frozen&&performance.now()-st2<20000)await fWait(100);
+      flash();FX.shutter();await fWait(500);
       fCard(`<h3>📸 Fotofinish</h3><table>${pf.filter((x,j)=>j<2||x.gap<10).slice(0,4).map((x,j)=>`<tr><td><span class="dot" style="background:${x.color}"></span>${x.name}</td><td class="n">${j?'+'+it(x.gap.toFixed(2))+'"':'1°'}</td></tr>`).join('')}</table>`,'big');
-      await fSay(`Fotofinish! ${pf[0].name} davanti a ${pf[1].name} per ${it(pf[1].gap.toFixed(1))} secondi.`,'c',.9);await fWait(1200);}}
+      setTimeout(()=>S.photoZoom(),900);await fSay(`Fotofinish! ${pf[0].name} davanti a ${pf[1].name} per ${it(pf[1].gap.toFixed(1))} secondi.`,'c',.9);await fWait(3000);}}
   if(T.tec)await fSay(T.tec,'t',0);else await fWait(2200);
   S.filmStop();FILM.curS=null;$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';FX.music(true);}
-function stopFilm(){FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
-$('fclose').addEventListener('click',stopFilm);
+function flash(){const f=$('flash');f.style.transition='none';f.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity=0;}));}
+function stopFilm(again){if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
+$('fclose').addEventListener('click',()=>stopFilm());
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;if(FILM.curS)FILM.curS.hold(FILM.paused);$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
-$('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm();filmSetup();});
-$('fexit').addEventListener('click',stopFilm);
+$('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm(true);if(SOLOF)startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D);else filmSetup();});
+$('fexit').addEventListener('click',()=>stopFilm());
 $('bsint').addEventListener('click',filmSetup);
 
 // ---------- DESCRIZIONE DEL PERCORSO ----------
@@ -718,32 +728,46 @@ async function describe(){if(!riders.length)return;const box=$('descr');box.styl
   // cartina e altimetria colorate per pendenza, con le criticità segnate
   S.splice(2,0,`<div id="dmap"></div><div class="dleg">${GRAD.map(g=>`<span><i style="background:${g[1]}"></i>${g[2]}</span>`).join('')}</div>
     <div class="dleg">${[['⚠️','curva'],['🚗','traffico'],['🕳️','fondo'],['💨','vento']].map(x=>`<span>${x[0]} ${x[1]}</span>`).join('')}</div><canvas id="dprof"></canvas><p class="meta">Tocca un punto della lista o dell'altimetria per vederlo sulla cartina.</p>`);
-  box.innerHTML=S.join('');
   // pendenza di ogni punto su ±100 m
   P.forEach((p,i)=>{const a=P[Math.max(0,i-4)],b=P[Math.min(n-1,i+4)];p.sl=(b.es-a.es)/Math.max(1,b.d-a.d);});
+  const r4=v=>Math.round(v*1e4)/1e4;
+  DESCR={v:1,titolo:$('titolo').value,html:S.join(''),km,mn,mx,
+    P:P.map(p=>[+p.la.toFixed(6),+p.lo.toFixed(6),Math.round(p.d),Math.round(p.es*10)/10,r4(p.sl)]),
+    ups:ups.map(c=>({i0:c.i0,i1:c.i1,avg:c.avg,len:c.len,max:c.max,df:diff(c)})),downs:downs.map(c=>({i0:c.i0,i1:c.i1,avg:c.avg,len:c.len,max:c.max})),
+    curves:curves.map(c=>({i:c.i,hair:c.hair})),trR:trR.map(r=>({i0:r.i0,i1:r.i1,v:r.v})),roR:roR.map(r=>({i0:r.i0,i1:r.i1,v:r.v})),
+    wiR:wiR.map(r=>{const w=windOf(P[Math.round((r.i0+r.i1)/2)]);return{i0:r.i0,i1:r.i1,v:r.v,ws:P[r.i0].ws,dir:w?w.dir:0};})};
+  drawDescr(DESCR,box);}
+let DESCR=null;
+// disegna la descrizione (anche da un file esportato, senza rifare le richieste a OpenStreetMap e al meteo)
+function drawDescr(D,box){
+  const P=D.P.map(q=>({la:q[0],lo:q[1],d:q[2],es:q[3],sl:q[4]})),n=P.length,km=D.km,mn=D.mn,mx=D.mx,{ups,downs,curves,trR,roR,wiR}=D;
+  const kmR=r=>`km ${kmS(P[r.i0].d)}–${kmS(P[r.i1].d)}`;
+  box.innerHTML=D.html.replace('<div id="dmap">',`<div class="btns" style="margin:6px 0">${window.__SOLO?'':'<button class="btn l" id="dexp">📤 Esporta la descrizione</button>'}</div><div id="dmap">`);
   if(DMAP){DMAP.remove();DMAP=null;}
+  const LL=P.map(p=>p.la==null?null:[p.la,p.lo]),seg=(a,b)=>LL.slice(a,b+1).filter(Boolean);
   if(window.L){DMAP=L.map('dmap',{zoomControl:true});
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(DMAP);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(DMAP);
-    const LL=P.map(p=>[p.la,p.lo]);L.polyline(LL,{color:'#10151c',weight:9,opacity:.7}).addTo(DMAP);
+    L.polyline(seg(0,n-1),{color:'#10151c',weight:9,opacity:.7}).addTo(DMAP);
     // traccia a colori: tratti con la stessa classe di pendenza
-    let st=0;for(let i=1;i<=n;i++){if(i===n||gradCol(P[i].sl)!==gradCol(P[st].sl)){L.polyline(LL.slice(st,Math.min(n,i+1)),{color:gradCol(P[st].sl),weight:5,opacity:1}).addTo(DMAP);st=i;}}
-    DMAP.fitBounds(L.latLngBounds(LL),{padding:[20,20]});
-    const tip=(i,txt,dir)=>L.tooltip({permanent:true,direction:dir,className:'dtip',offset:[0,0]}).setLatLng(LL[i]).setContent(txt).addTo(DMAP);
+    let st=0;for(let i=1;i<=n;i++){if(i===n||gradCol(P[i].sl)!==gradCol(P[st].sl)){const s2=seg(st,Math.min(n-1,i));if(s2.length>1)L.polyline(s2,{color:gradCol(P[st].sl),weight:5,opacity:1}).addTo(DMAP);st=i;}}
+    DMAP.fitBounds(L.latLngBounds(seg(0,n-1)),{padding:[20,20]});
+    const tip=(i,txt,dir)=>{if(LL[i])L.tooltip({permanent:true,direction:dir,className:'dtip',offset:[0,0]}).setLatLng(LL[i]).setContent(txt).addTo(DMAP);};
     // pendenza a lato delle salite e discese
-    ups.forEach((c,k)=>tip(Math.round((c.i0+c.i1)/2),`⛰️ <b>${pct(c.avg)}</b> · ${kmS(c.len)} km<br><small>max ${pct(c.max)} · ${diff(c)}</small>`,'auto'));
-    downs.forEach((c,k)=>tip(Math.round((c.i0+c.i1)/2),`⬇️ <b>−${pct(c.avg)}</b> · ${kmS(c.len)} km${c.max>.08?'<br><small>⚠️ attenzione</small>':''}`,'auto'));
-    const ico=(i,e,bg,txt)=>L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:${bg}">${e}</span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(txt).addTo(DMAP);
+    ups.forEach(c=>tip(Math.round((c.i0+c.i1)/2),`⛰️ <b>${pct(c.avg)}</b> · ${kmS(c.len)} km<br><small>max ${pct(c.max)} · ${c.df}</small>`,'auto'));
+    downs.forEach(c=>tip(Math.round((c.i0+c.i1)/2),`⬇️ <b>−${pct(c.avg)}</b> · ${kmS(c.len)} km${c.max>.08?'<br><small>⚠️ attenzione</small>':''}`,'auto'));
+    const ico=(i,e,bg,txt)=>{if(LL[i])L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:${bg}">${e}</span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(txt).addTo(DMAP);};
     curves.forEach(c=>ico(c.i,'⚠️','#fff3e0',`km ${kmS(P[c.i].d)}: ${c.hair?'tornante':'curva stretta'}`));
-    trR.forEach(r=>{L.polyline(LL.slice(r.i0,r.i1+1),{color:'#fb8c00',weight:13,opacity:.45}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🚗','#ffe0b2',`${kmR(r)}: strada ${r.v}`);});
-    roR.forEach(r=>{L.polyline(LL.slice(r.i0,r.i1+1),{color:'#6d4c41',weight:13,opacity:.45,dashArray:'4 6'}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🕳️','#d7ccc8',`${kmR(r)}: ${r.v}`);});
-    wiR.forEach(r=>{const i=Math.round((r.i0+r.i1)/2),w=windOf(P[i]);L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:#e0f7fa"><b style="display:inline-block;transform:rotate(${(w?w.dir:0)+180}deg)">⬆</b></span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(`${kmR(r)}: vento ${r.v} ${Math.round(P[r.i0].ws)} km/h`).addTo(DMAP);});
-    L.circleMarker(LL[0],{radius:8,color:'#fff',weight:3,fillColor:'#1b7a34',fillOpacity:1}).bindTooltip('Partenza').addTo(DMAP);
-    DDOT=L.circleMarker(LL[0],{radius:9,color:'#10151c',weight:3,fillColor:'#ffd400',fillOpacity:1}).addTo(DMAP);
+    trR.forEach(r=>{const s2=seg(r.i0,r.i1);if(s2.length>1)L.polyline(s2,{color:'#fb8c00',weight:13,opacity:.45}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🚗','#ffe0b2',`${kmR(r)}: strada ${r.v}`);});
+    roR.forEach(r=>{const s2=seg(r.i0,r.i1);if(s2.length>1)L.polyline(s2,{color:'#6d4c41',weight:13,opacity:.45,dashArray:'4 6'}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🕳️','#d7ccc8',`${kmR(r)}: ${r.v}`);});
+    wiR.forEach(r=>{const i=Math.round((r.i0+r.i1)/2);if(LL[i])L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:#e0f7fa"><b style="display:inline-block;transform:rotate(${r.dir+180}deg)">⬆</b></span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(`${kmR(r)}: vento ${r.v} ${Math.round(r.ws)} km/h`).addTo(DMAP);});
+    if(LL[0])L.circleMarker(LL[0],{radius:8,color:'#fff',weight:3,fillColor:'#1b7a34',fillOpacity:1}).bindTooltip('Partenza').addTo(DMAP);
+    DDOT=L.circleMarker(seg(0,n-1)[0],{radius:9,color:'#10151c',weight:3,fillColor:'#ffd400',fillOpacity:1}).addTo(DMAP);
     // lista → cartina
-    box.querySelectorAll('li[data-a]').forEach(el=>el.addEventListener('click',()=>{const a=+el.dataset.a,b=+el.dataset.b;DMAP.flyToBounds(L.latLngBounds(LL.slice(a,b+1)),{padding:[60,60],maxZoom:17,duration:1.2});DDOT.setLatLng(LL[Math.round((a+b)/2)]);$('dmap').scrollIntoView({behavior:'smooth',block:'center'});}));}
+    box.querySelectorAll('li[data-a]').forEach(el=>el.addEventListener('click',()=>{const a=+el.dataset.a,b=+el.dataset.b,s2=seg(a,b);if(!s2.length)return;DMAP.flyToBounds(L.latLngBounds(s2),{padding:[60,60],maxZoom:17,duration:1.2});DDOT.setLatLng(s2[Math.floor(s2.length/2)]);$('dmap').scrollIntoView({behavior:'smooth',block:'center'});}));}
   // altimetria con i colori della pendenza e le icone delle criticità
   const cv=$('dprof'),g=cv.getContext('2d'),marks=[...curves.map(c=>[c.i,'⚠️']),...trR.map(r=>[Math.round((r.i0+r.i1)/2),'🚗']),...roR.map(r=>[Math.round((r.i0+r.i1)/2),'🕳️']),...wiR.map(r=>[Math.round((r.i0+r.i1)/2),'💨'])];
+
   let cur=0;const drawP=()=>{const w=cv.clientWidth,h=cv.clientHeight,rr=devicePixelRatio||1;cv.width=w*rr;cv.height=h*rr;g.setTransform(rr,0,0,rr,0,0);
     const X=i=>6+i/(n-1)*(w-12),Y=e=>h-16-(e-mn)/Math.max(10,mx-mn)*(h-46);g.clearRect(0,0,w,h);
     for(let i=1;i<n;i++){g.fillStyle=gradCol(P[i].sl);g.beginPath();g.moveTo(X(i-1),h-16);g.lineTo(X(i-1),Y(P[i-1].es));g.lineTo(X(i),Y(P[i].es));g.lineTo(X(i),h-16);g.fill();}
@@ -752,10 +776,11 @@ async function describe(){if(!riders.length)return;const box=$('descr');box.styl
     g.fillStyle='#5b6470';g.font='600 11px Barlow,sans-serif';const stp=km>60000?20:km>25000?10:5;for(let k=0;k<=km/1000;k+=stp)g.fillText(k,X(Math.min(n-1,Math.round(k*1000/25)))-4,h-3);
     const x=X(cur);g.strokeStyle='#d32f2f';g.lineWidth=2;g.beginPath();g.moveTo(x,20);g.lineTo(x,h-16);g.stroke();};
   drawP();addEventListener('resize',drawP);
-  const pickP=e=>{const r=cv.getBoundingClientRect();cur=clamp(Math.round((e.clientX-r.left-6)/(r.width-12)*(n-1)),0,n-1);drawP();if(DDOT){DDOT.setLatLng([P[cur].la,P[cur].lo]);DDOT.bindTooltip(`km ${kmS(P[cur].d)} · ${Math.round(P[cur].es)} m · ${P[cur].sl>=0?'+':''}${pct(P[cur].sl)}`,{permanent:true}).openTooltip();if(!DMAP.getBounds().contains(DDOT.getLatLng()))DMAP.panTo(DDOT.getLatLng());}};
+  const pickP=e=>{const r=cv.getBoundingClientRect();cur=clamp(Math.round((e.clientX-r.left-6)/(r.width-12)*(n-1)),0,n-1);drawP();if(DDOT&&LL[cur]){DDOT.setLatLng(LL[cur]);DDOT.bindTooltip(`km ${kmS(P[cur].d)} · ${Math.round(P[cur].es)} m · ${P[cur].sl>=0?'+':''}${pct(P[cur].sl)}`,{permanent:true}).openTooltip();if(!DMAP.getBounds().contains(DDOT.getLatLng()))DMAP.panTo(DDOT.getLatLng());}};
   cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pickP(e);});cv.addEventListener('pointermove',e=>{if(e.buttons)pickP(e);});
   const plain=()=>[...box.querySelectorAll('h3,h4,p,li')].filter(e=>!e.closest('#dmap')&&!/Tocca un punto/.test(e.innerText)).map(e=>(e.tagName==='LI'?'• ':'')+e.innerText).join('\n').trim();
   $('dcopy').onclick=async()=>{try{await navigator.clipboard.writeText(plain());alert('Testo copiato.');}catch(e){prompt('Copia il testo:',plain());}};
+  if($('dexp'))$('dexp').onclick=()=>exportOpen('descr');
   $('dread').onclick=async()=>{unlockAudio();if(ricWanted())ricInit();FILM.voice=true;const parts=[...box.querySelectorAll('p:not(.meta),li')].map(e=>e.innerText);for(const t of parts){await speakLine(t.replace(/km (\d+),(\d)/g,'chilometro $1 virgola $2').replace(/–/g,' al '),'c',0);}};}
 $('bdescr').addEventListener('click',describe);
 
@@ -980,7 +1005,7 @@ function make3D(PATH,ROADS,BLDS){
     g.rotation.order='YXZ';scene.add(g);return g;}
 
   // --- ciclisti veri: posizione sulla strada secondo per secondo ---
-  let RID=[],T0=0,T1=0,cars=[];
+  let RID=[],T0=0,T1=0,cars=[],FD=null,finL=null;
   function setupRiders(){
     const ok=SEG.res.filter(x=>x.ok);T0=Math.min(...ok.map(x=>x.ta))-15;T1=Math.max(...ok.map(x=>x.tb))+20;
     const PS=[];for(let i=0;i<=PR.N;i+=4)PS.push([PR.px[i],PR.pz[i],i*PR.step]);
@@ -1023,7 +1048,7 @@ function make3D(PATH,ROADS,BLDS){
       m.visible=o.vis;o.r.__tag=u.tag;if(!o.vis){u.tag.style.opacity=0;return;}
       const h=at(PR,o.cur,o.off,m.position);m.rotation.y=h;const lean=Math.atan(o.v*o.v*curv(PR,o.cur)/9.8);u.lean+=(lean-u.lean)*.1;m.rotation.z=-u.lean*.8;m.rotation.x=-Math.atan(slope(PR,o.cur));
       const mv=u.lastP?Math.min(2,m.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(m.position);u.wheel+=mv/.34;u.crank+=mv/1.05;pedal(m,u.crank+u.phase);u.wheels.forEach(w=>w.rotation.x=u.wheel);});
-    for(const c of cars){c.mesh.visible=c.active;if(!c.active)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
+    for(const c of cars){c.mesh.visible=c.active&&!(FD&&FD.photo);if(!c.mesh.visible)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
   }
   function finish(){if(filmM){paused=true;return;}if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
   function showFine(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
@@ -1312,9 +1337,9 @@ function make3D(PATH,ROADS,BLDS){
     for(let k=1;k<lv.length;k++){const d=lv[k-1].cur-lv[k].cur;if(d>3&&d<20&&Math.random()<.5)return lv[k];}
     return Math.random()<.5?lv[0]:lv[Math.floor(Math.random()*lv.length)];}
   // regia della sintesi: arrivo col drone davanti o dietro, poi dall'alto per vedere le posizioni di tutti
-  let FD=null,finL=null;
+
   // nel fotofinish si tolgono gli alberi tra la telecamera e la strada
-  function clearView(a,b){const z=new THREE.Matrix4().makeScale(0,0,0),dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1;TMESH.forEach(T=>{let ch=false;T.list.forEach((t,i)=>{const u=clamp(((t[0]-a.x)*dx+(t[1]-a.z)*dz)/L2,0,1),ex=a.x+dx*u-t[0],ez=a.z+dz*u-t[1];if(u<.97&&ex*ex+ez*ez<36){T.crown.setMatrixAt(i,z);T.trunk.setMatrixAt(i,z);ch=true;}});if(ch){T.crown.instanceMatrix.needsUpdate=T.trunk.instanceMatrix.needsUpdate=true;}});}
+  function clearView(a,b){const z=new THREE.Matrix4().makeTranslation(0,-5000,0),dx=b.x-a.x,dz=b.z-a.z,L2=dx*dx+dz*dz||1;TMESH.forEach(T=>{let ch=false;T.list.forEach((t,i)=>{const u=clamp(((t[0]-a.x)*dx+(t[1]-a.z)*dz)/L2,0,1),ex=a.x+dx*u-t[0],ez=a.z+dz*u-t[1];if(u<.97&&ex*ex+ez*ez<36){T.crown.setMatrixAt(i,z);T.trunk.setMatrixAt(i,z);ch=true;}});if(ch){T.crown.instanceMatrix.needsUpdate=T.trunk.instanceMatrix.needsUpdate=true;}});}
   function filmDirector(){if(!FD)return false;if(FD.photo)return true;const arr=RID.slice().sort((a,b)=>a.x.tb-b.x.tb),L=arr[0];if(!L)return false;
     const want=tNow>=L.x.tb+.3?'gruppo':(L.vis&&endS(L)-L.cur<240)?FD.fin:null;
     if(want&&(!shot||shot.film!==want)){shot={type:want,subj:L,h0:0,dur:1e9,film:want};shotT=0;first=want!=='gruppo';}
@@ -1337,6 +1362,7 @@ function make3D(PATH,ROADS,BLDS){
     const dt=Math.min(clock.getDelta(),.05);
     if(!paused){if(!crHold()){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}}
     if(tele&&realNow()-capT>7)$('cron').style.opacity=0;
+    if(FD&&FD.stopAt!=null&&tNow>=FD.stopAt){tNow=FD.stopAt;FD.stopAt=null;step(0);paused=true;FD.frozen=true;}
     place(dt);if(CER.on||CER.done)cerFrame(dt);
     let o;if(view==='regia'){shotT+=dt;if(!(filmM&&filmDirector())&&(!shot||shotT>shot.dur||!shot.subj||!shot.subj.vis))newShot();o=shot.subj;}
     if(!o)o=follow>=0&&RID[follow].vis?RID[follow]:leader();if(!o&&INTRO.on)o=INTRO.first;if(!o&&(CER.on||CER.done))o=RID[0];if(!o){renderer.render(scene,camera);requestAnimationFrame(frame);return;}
@@ -1360,7 +1386,7 @@ function make3D(PATH,ROADS,BLDS){
         if(T==='pano'){const a=shot.h0+shotT*.32;goal.set(center.x+Math.cos(a)*15,cy+4.5,center.z+Math.sin(a)*15);lerpK=dt*6;}
         if(T==='zoom'){const d=46-37*e;F(-d*.75,-d*.45,4+20*(1-e));}
         if(T==='gru'){F(30-38*e,-9+6*e,60-56*e);}
-        if(T==='foto'){goal.copy(shot.fixed);look.copy(shot.look);lerpK=1;fov=shot.fov;}
+        if(T==='foto'){goal.copy(shot.fixed);look.copy(shot.look);lerpK=shot.smooth?dt*1.6:1;fov=shot.fov;}
         if(T==='bordo'&&shot.fixed){goal.copy(shot.fixed);lerpK=1;const dist=camera.position.distanceTo(center);fov=clamp(2*Math.atan(5/Math.max(1,dist))/D,14,baseFov);}}
       if(INTRO.on){lerpK=introCam(dt);fov=baseFov;}else if(CER.on||CER.done){lerpK=cerCam(dt);fov=baseFov;}
       {const nr=.5;if(Math.abs(camera.fov-fov)>.1||camera.near!==nr){camera.fov=fov;camera.near=nr;camera.updateProjectionMatrix();}}
@@ -1379,7 +1405,7 @@ function make3D(PATH,ROADS,BLDS){
     const showGap=lv.length>1&&(view==='gruppo'||(view==='regia'&&shot&&shot.type==='gruppo'));
     // nelle viste dall'alto i nomi vanno ai lati, collegati ai ciclisti con una freccia
     const aerial=camera.position.y-center.y>32&&!INTRO.on&&!CER.on&&!CER.done,W=innerWidth,Hh=innerHeight,ann=[],gl=[];
-    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=q.pod?q.pod.place+'° '+q.r.name:showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
+    RID.forEach((q,i)=>{if(!q.vis)return;const u=q.m.userData;{const k=lv.indexOf(q),txt=FD&&FD.pg&&FD.pg.has(q)?q.r.name+FD.pg.get(q):q.pod?q.pod.place+'° '+q.r.name:showGap?q.r.name+(k?' · +'+fmt(gapOf(lv[0],q)):' · 1°'):q.r.name,b=u.tag.firstChild;if(b.textContent!==txt)b.textContent=txt;}u.head.getWorldPosition(proj3);proj3.y+=.5+(i%2?0:.35);proj3.project(camera);
       const sx=(proj3.x*.5+.5)*W,sy=(-proj3.y*.5+.5)*Hh,on=proj3.z<1;
       if(aerial&&on){ann.push({q,u,sx:clamp(sx,6,W-6),sy:clamp(sy,6,Hh-6)});return;}
       u.tag.classList.remove('side');u.tag.style.opacity=on?1:0;u.tag.style.zIndex=Math.round((1-proj3.z)*1e5);if(on)gl.push({el:u.tag,sx,sy,z:proj3.z});else u.tag.style.transform=`translate(${sx}px,${sy}px) translate(-50%,-100%)`;});
@@ -1402,9 +1428,17 @@ function make3D(PATH,ROADS,BLDS){
     get time(){return tNow},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
     // fotofinish: fermo immagine di lato sulla linea d'arrivo nell'istante in cui passa il primo
     photoFinish(){const sB=FD.sB,arr=RID.map(o=>({o,t:crossT(o,sB)})).filter(x=>x.t!=null).sort((a,b)=>a.t-b.t);if(!arr.length)return null;
-      paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2+.6,span=back+5,fv=30,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
-      at(PR,mid,-d,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.4+d*.07;at(PR,mid,1,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1;
-      clearView(f,lk);shot={type:'foto',subj:arr[0].o,fixed:f,look:lk,fov:fv,dur:1e9,film:'foto'};first=true;return arr.map(x=>({name:x.o.r.name,color:x.o.r.color,gap:x.t-arr[0].t}));},
+      paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2,span=back+9,fv=30,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
+      at(PR,mid,-d,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.4+d*.07+(back<3?2.2:0);at(PR,mid,1,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1;
+      clearView(f,lk);shot={type:'foto',subj:arr[0].o,fixed:f,look:lk,fov:fv,dur:1e9,film:'foto'};first=true;
+      // al rallentatore gli ultimi 2 secondi, poi si ferma sulla linea (con i distacchi in centesimi sui nomi)
+      FD.pg=new Map(vis.map((x,j)=>[x.o,j?' +'+it((x.t-arr[0].t).toFixed(2))+'"':' 1°']));FD.stopAt=arr[0].t+.02;FD.frozen=false;tNow=arr[0].t-1;step(0);mult=.2;paused=false;
+      return arr.map(x=>({name:x.o.r.name,color:x.o.r.color,gap:x.t-arr[0].t}));},
+    get frozen(){return !!(FD&&FD.frozen)},
+    // dopo il fermo immagine la telecamera si avvicina ai primi due
+    photoZoom(){if(!shot||shot.type!=='foto'||!FD)return;const sB=FD.sB,two=RID.filter(o=>FD.pg&&FD.pg.has(o)).sort((a,b)=>b.cur-a.cur).slice(0,2);if(!two.length)return;
+      const back=Math.max(...two.map(o=>Math.abs(sB-o.cur))),mid=(Math.max(...two.map(o=>o.cur))+Math.min(...two.map(o=>o.cur)))/2,span=back+4.5,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(shot.fov*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),7,48);
+      at(PR,mid,-d,tA);const f=tA.clone();f.y=H(f.x,f.z)+1.3+d*.05+(back<3?1.5:0);at(PR,mid,1,tB);const lk=tB.clone();lk.y=H(lk.x,lk.z)+1;clearView(f,lk);shot.fixed=f;shot.look=lk;shot.smooth=true;},
     filmStop(){running=false;FD=null;document.body.classList.remove('filmtags');showEls(false);$('lines').innerHTML='';$('live').style.display='none';},
     hide(){showEls(false);},
     destroy(){running=false;filmM=false;qClear();try{renderer.dispose();renderer.forceContextLoss();}catch(e){}renderer.domElement.remove();RID.forEach(o=>o.m.userData.tag.remove());removeEventListener('resize',resize);},
@@ -1487,6 +1521,44 @@ function startSaved(d){window.__SCENA=true;loadData(d);$('setup').style.display=
 if(pre)startSaved(JSON.parse(pre.textContent));
 else if(location.hash.startsWith('#s=')){if(!window.DecompressionStream)alert('Per vedere la corsa serve un telefono aggiornato (iPhone con iOS 16.4 o più recente).');
   else{loading(true);prog('Apro la corsa…','',.03);readLink(location.hash.slice(3)).then(startSaved).catch(()=>{loading(false);alert('Il link della corsa è rovinato o incompleto: fattelo rimandare.');});}}
+// ---------- sintesi e descrizione da esportare (file HTML che si apre da solo) e pubblicare ----------
+let FEXP=null,SOLOF=null,EXK=null;
+const distM=(a,b)=>{const dy=(a[0]-b[0])*111195,dx=(a[1]-b[1])*111195*Math.cos(a[0]*D);return Math.hypot(dx,dy);};
+// "casa": inizio e fine di ogni traccia
+function homes(){const h=[];riders.forEach(r=>{if(r.pts.length){const a=r.pts[0],b=r.pts[r.pts.length-1];h.push([a.lat,a.lon],[b.lat,b.lon]);}});return h;}
+const farFrom=HM=>(la,lo)=>la!=null&&!HM.some(h=>distM(h,[la,lo])<600);
+function packFilm(F,hide){const far=farFrom(hide?homes():[]),H=F.H,keep=[...new Set([0,...H.flatMap(h=>h.ok.map(x=>x.i))])].sort((a,b)=>a-b),M={};keep.forEach((o,n)=>M[o]=n);
+  const W=H.map(h=>[Math.min(...h.ok.map(x=>x.ta))-240,Math.max(...h.ok.map(x=>x.tb))+240]),inW=T=>W.some(w=>T>=w[0]&&T<=w[1]);
+  const rs=keep.map(i=>{const r=riders[i];return{name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
+    pts:r.pts.filter(p=>inW(p.t+offE(r))&&far(p.lat,p.lon)).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])};});
+  const mp=x=>({...x,i:M[x.i]}),fp=p=>[Math.round(p.d),Math.round(p.es*10)/10,Math.round(p.t*10)/10];
+  return{v:1,titolo:$('titolo').value,dur:F.dur,use3D:F.use3D,riders:rs,
+    FP:FP.map(p=>far(p.la,p.lo)?[+p.la.toFixed(6),+p.lo.toFixed(6),...fp(p)]:[null,null,...fp(p)]),
+    H:F.H.map(h=>({nome:h.nome,a:h.a,b:h.b,kind:h.kind,i0:h.i0,i1:h.i1,L:h.L,up:h.up,avg:h.avg,ta:h.ta,tb:h.tb,on:true,ok:h.ok.map(mp),res:h.res.filter(x=>M[x.i]!=null).map(mp)}))};}
+function packDescr(hide){const far=farFrom(hide?homes():[]);return{...DESCR,P:DESCR.P.map(q=>far(q[0],q[1])?q:[null,null,q[2],q[3],q[4]])};}
+function exportHTML(id,data){let h=SRC;const k=h.indexOf('<body>')+6,m=h.slice(k).match(/^<script id="(scena|sintesi|descrizione)" type="application\/json">[\s\S]*?<\/script>/);if(m)h=h.slice(0,k)+h.slice(k+m[0].length);
+  return h.slice(0,k)+'<script id="'+id+'" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>'+h.slice(k);}
+async function sendHTML(html,name,onlyDl){const file=new File([html],name,{type:'text/html'});
+  if(!onlyDl)try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name.replace(/_/g,' ').replace('.html','')});return;}}catch(e){if(e.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+function exportOpen(kind){EXK=kind;$('exptit').textContent=kind==='film'?'Esporta la sintesi':'Esporta la descrizione';
+  $('expsub').textContent=kind==='film'?'Un file che, aperto, fa partire la sintesi con cronaca e immagini 3D.':'Un file con il testo, la cartina e l\'altimetria del percorso.';$('expbox').style.display='grid';}
+$('expbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(e.target.id==='expbox'||(b&&b.dataset.ex==='x')){$('expbox').style.display='none';return;}if(!b)return;
+  $('expbox').style.display='none';const hide=$('exphide').checked,t=$('titolo').value,base=(t&&!/segmento/i.test(t)?t:'uscita').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_');
+  try{if(EXK==='film'){if(!FEXP)return;await sendHTML(exportHTML('sintesi',packFilm(FEXP,hide)),'Sintesi_'+base+'.html',b.dataset.ex==='dl');}
+    else{if(!DESCR)return;await sendHTML(exportHTML('descrizione',packDescr(hide)),'Percorso_'+base+'.html',b.dataset.ex==='dl');}}catch(err){alert('Non riesco a creare il file: '+err.message);}});
+// apertura di un file esportato
+function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
+  $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
+    <button class="btn" id="playgo">▶ Guarda la sintesi</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
+  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D);};}
+function startSoloFilm(d){window.__SOLO=true;window.__SCENA=true;loadData({titolo:d.titolo,A:null,B:null,riders:d.riders});FP=d.FP.map(q=>({la:q[0],lo:q[1],d:q[2],es:q[3],t:q[4]}));SOLOF=d;soloPlay();}
+function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
+  // si lascia solo la descrizione (nascosti gli altri pezzi della pagina)
+  let e=box;while(e&&e.id!=='setup'){[...e.parentElement.children].forEach(c=>{if(c!==e)c.style.display='none';});e=e.parentElement;}
+  const h=document.createElement('div');h.innerHTML=`<h1 style="font:800 32px 'Barlow Condensed';margin:6px 0 2px">🚴 ${d.titolo&&!/segmento/i.test(d.titolo)?d.titolo:'Il percorso'}</h1><p class="meta" style="margin:0 0 6px">La banda in bici · descrizione del percorso</p>`;
+  box.parentElement.insertBefore(h,box);box.style.display='block';DESCR=d;drawDescr(d,box);}
+{const sf=document.getElementById('sintesi'),sd=document.getElementById('descrizione');try{if(sf)startSoloFilm(JSON.parse(sf.textContent));else if(sd)startSoloDescr(JSON.parse(sd.textContent));}catch(e){alert('Il file è rovinato: '+e.message);}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
