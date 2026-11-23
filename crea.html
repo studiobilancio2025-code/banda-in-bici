@@ -777,7 +777,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #fclock{position:absolute;right:12px;top:50%;z-index:500;background:var(--tag);color:var(--ink);font:800 28px "Barlow Condensed";padding:2px 12px;border-radius:10px;display:none}
 #fcap{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom) + 70px);z-index:500;background:rgba(16,21,28,.85);color:#fff;border-radius:10px;padding:8px 12px;font:600 19px/1.25 "Barlow Condensed";display:none;max-width:560px;margin:0 auto}
 #fcap b{color:var(--tag)}#fcap.tec{background:rgba(13,71,161,.88)}
-#fctl{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:500;display:flex;gap:8px}#fctl button{width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:#10151ccc;color:#fff;font-size:20px}
+#fctl{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:500;display:flex;gap:8px}#fctl button{width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:#10151ccc;color:#fff;font-size:20px}#fctl #fspeed{width:auto;min-width:64px;border-radius:24px;padding:0 12px;font:800 20px 'Barlow Condensed',system-ui,sans-serif}
 #frec{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 2px);z-index:502;background:#d32f2f;color:#fff;font:700 12px Barlow,system-ui;padding:2px 8px;border-radius:8px;display:none}
 #flash{position:absolute;inset:0;z-index:499;background:#fff;opacity:0;pointer-events:none}
 #fend{position:absolute;inset:auto 0 calc(env(safe-area-inset-bottom) + 76px);z-index:501;display:none;justify-content:center;gap:10px}
@@ -849,7 +849,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="pres"></div>
 <div id="play"></div>
 <div id="film"><div id="frec">● REC · video in registrazione</div><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
-  <div id="fctl"><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
+  <div id="fctl"><button id="fspeed" aria-label="Velocità della sintesi">1×</button><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
   <div id="flash"></div><div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="ric" id="engric"> Riccardo — voce naturale, gratis (consigliata)</label>
@@ -1176,16 +1176,19 @@ function posAt(r,T){const s=T-r.off,g=r.g,i=Math.floor(s);if(i<0||i+1>=g.n||isNa
 function avgPt(r,key,t0,t1){let a=0,n=0;for(const p of r.pts){const T=p.t+r.off;if(T<t0||T>t1||p[key]==null)continue;a+=p[key];n++;}return n>5?a/n:null;}
 
 // ---------- voce per sintesi e descrizione (Riccardo se c'è, altrimenti il telefono) ----------
-function speakLine(txt,who,ex){return new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;FX.duck(false);res();}},est=txt.length/12.5+.8;
+function speakLine(txt,who,ex){return new Promise(res=>{let done=false;const fin=()=>{if(!done){done=true;FX.duck(false);res();}},est=(txt.length/12.5+.8)/vSpd();
   if(!FILM.voice){setTimeout(fin,est*1000);return;}
-  if(ricOn()){const pr=ricParams(who,ex);ricSynth(txt,pr.len).then(buf=>{const src=FX.ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=pr.rate;src.connect(FX.out);src.onended=fin;FX.duck(true);src.start();FILM.src=src;
-      setTimeout(fin,(buf.duration/pr.rate+4)*1000);}).catch(()=>setTimeout(fin,est*1000));return;}
+  if(ricOn()){const pr=ricParams(who,ex);ricSynth(txt,pr.len).then(buf=>{const src=FX.ctx.createBufferSource(),rt=pr.rate*vSpd();src.buffer=buf;src.playbackRate.value=rt;src.connect(FX.out);src.onended=fin;FX.duck(true);src.start();FILM.src=src;
+      setTimeout(fin,(buf.duration/rt+4)*1000);}).catch(()=>setTimeout(fin,est*1000));return;}
   if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(txt);u.lang='it-IT';const v=speechSynthesis.getVoices().filter(x=>/^it/i.test(x.lang)).sort((a,b)=>isMale(b)-isMale(a))[0];if(v)u.voice=v;
-    u.pitch=who==='t'?.75:.88;u.onend=u.onerror=fin;FX.duck(true);speechSynthesis.speak(u);setTimeout(fin,(est*2+3)*1000);return;}
+    u.pitch=who==='t'?.75:.88;u.rate=vSpd();u.onend=u.onerror=fin;FX.duck(true);speechSynthesis.speak(u);setTimeout(fin,(est*2+3)*1000);return;}
   setTimeout(fin,est*1000);});}
 
 // ---------- SINTESI ANIMATA ----------
-const FILM={on:false,paused:false,voice:true,map:null,lay:[],dots:[],src:null};
+const FILM={on:false,paused:false,voice:true,map:null,lay:[],dots:[],src:null,speed:1};
+// velocità della sintesi (si cambia anche mentre va): tempi, mappa e regia 3D; la voce accelera un po' sopra 1× (max 1,3)
+const FSPEEDS=[.5,.75,1,1.5,2];try{const v=+localStorage.getItem('banda.sintesi.vel');if(FSPEEDS.includes(v))FILM.speed=v;}catch(e){}
+const vSpd=()=>FILM.speed>1?Math.min(1.3,1+(FILM.speed-1)*.3):1;
 function pickHighlights(P){const n=P.length,cand=(riders[0].segs||[]).map(g=>({nome:g.nome,a:g.a,b:g.b,kind:'seg'}));
   // finestre di 2 km ogni 500 m: salite, discese, tratto più veloce, sfide tra i ciclisti
   const W=80,wins=[];for(let i=0;i+W<n;i+=20){const a=P[i],b=P[i+W],g=b.es-a.es,v=b.t>a.t?(b.d-a.d)/(b.t-a.t):0;wins.push({i,g,v});}
@@ -1209,15 +1212,15 @@ function pickHighlights(P){const n=P.length,cand=(riders[0].segs||[]).map(g=>({n
   // per la scelta: segmenti Strava + i migliori automatici (niente doppioni sovrapposti tra gli automatici)
   const all=[];for(const h of H){if(h.kind!=='seg'&&!h.on&&all.some(a=>a.kind!=='seg'&&!(h.tb<a.ta||h.ta>a.tb)))continue;if(h.kind!=='seg'&&!h.on&&all.filter(a=>a.kind!=='seg').length>=8)continue;all.push(h);}
   return all.sort((p,q)=>p.ta-q.ta);}
-const fWait=ms=>new Promise(res=>{let left=ms,last=performance.now();const tick=()=>{if(!FILM.on)return res();const now=performance.now();if(!FILM.paused)left-=now-last;last=now;if(left<=0)res();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
+const fWait=ms=>new Promise(res=>{let left=ms,last=performance.now();const tick=()=>{if(!FILM.on)return res();const now=performance.now();if(!FILM.paused)left-=(now-last)*FILM.speed;last=now;if(left<=0)res();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
 function fCard(html,cls){const c=$('fcard');c.className=cls||'';c.innerHTML=html;c.style.display=html?'block':'none';}
 function fCap(txt,who){const c=$('fcap');c.style.display=txt?'block':'none';c.innerHTML=txt?`<b>${who==='t'?'🎧 Tonino':'🎙️ Gigi'}</b> ${txt}`:'';c.classList.toggle('tec',who==='t');}
 async function fSay(txt,who,ex){if(!FILM.on)return;fCap(txt,who);await speakLine(txt,who,ex);}
-function fFly(bounds,dur){return new Promise(res=>{FILM.map.once('moveend',()=>res());FILM.map.flyToBounds(bounds,{padding:[50,50],duration:dur||2,maxZoom:16});setTimeout(res,(dur||2)*1000+1500);});}
+function fFly(bounds,dur){return new Promise(res=>{FILM.map.once('moveend',()=>res());const d=(dur||2)/FILM.speed;FILM.map.flyToBounds(bounds,{padding:[50,50],duration:d,maxZoom:16});setTimeout(res,d*1000+1500);});}
 // i pallini dei ciclisti scorrono sul tratto: "real" secondi di corsa in "ms" millisecondi
 function fRun(h,ms){return new Promise(res=>{const t0=h.ta-8,t1=Math.max(...h.ok.map(x=>x.tb))+3,start=performance.now();let el=0,last=start;
   FILM.dots.forEach(d=>d.m.remove());FILM.dots=h.ok.map(x=>{const r=riders[x.i];const m=L.circleMarker([0,0],{radius:8,color:'#10151c',weight:2,fillColor:r.color,fillOpacity:1}).bindTooltip(r.name,{permanent:true,direction:'right',className:'ftip'}).addTo(FILM.map);return{m,r,x};});
-  const step=()=>{if(!FILM.on)return res();const now=performance.now();if(!FILM.paused)el+=now-last;last=now;const T=t0+(t1-t0)*Math.min(1,el/ms);
+  const step=()=>{if(!FILM.on)return res();const now=performance.now();if(!FILM.paused)el+=(now-last)*FILM.speed;last=now;const T=t0+(t1-t0)*Math.min(1,el/ms);
     FILM.dots.forEach(d=>{const p=posAt(d.r,Math.min(T,d.x.tb+2));if(p){d.m.setLatLng(p);d.m.setStyle({opacity:1,fillOpacity:1});}
       const done=T>=d.x.tb;d.m.setTooltipContent(d.r.name+(done?` ✓ ${fmt(d.x.dt)}`:''));});
     $('fclock').textContent=T<h.ta?'':fmt(Math.min(T,Math.max(...h.ok.map(x=>x.tb)))-h.ta);
@@ -1279,7 +1282,7 @@ async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return
   fCard(`<h3>La sintesi dell'uscita</h3><div class="fstats"><span><b>${kmS(km)}</b> km</span><span><b>${Math.round(up)}</b> m D+</span><span><b>${fmt(dur)}</b></span><span><b>${H.length}</b> momenti chiave</span></div><p>${names.join(' · ')}</p>`,'big');
   // la traccia si disegna mentre parla il cronista
   const line=L.polyline([],{color:'#ffd400',weight:5}).addTo(FILM.map);FILM.lay.push(L.polyline(LA,{color:'#10151c',weight:8,opacity:.35}).addTo(FILM.map),line);
-  const draw=(async()=>{const t0=performance.now();let k=0;while(FILM.on&&k<ll.length){if(!FILM.paused){k=Math.min(ll.length,Math.floor((performance.now()-t0)/9000*ll.length));line.setLatLngs(LS(0,k));}await fWait(40);}})();
+  const draw=(async()=>{let el=0,last=performance.now(),k=0;while(FILM.on&&k<ll.length){const now=performance.now();if(!FILM.paused){el+=(now-last)*FILM.speed;k=Math.min(ll.length,Math.floor(el/9000*ll.length));line.setLatLngs(LS(0,k));}last=now;await fWait(40);}})();
   await fSay(`Ecco la sintesi ${when?`dell'uscita di ${when.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}`:'dell\'uscita'}: ${kmS(km)} chilometri e ${Math.round(up)} metri di dislivello`+(names.length>1?`, con ${names.slice(0,-1).join(', ')} e ${names[names.length-1]}.`:`, in sella ${names[0]}.`)+(H.length?` ${H.length===1?'Vediamo il momento chiave.':`Vediamo i ${H.length} momenti chiave.`}`:''),'c',.2);
   await draw;
   H.forEach(h=>FILM.lay.push(L.polyline(LS(h.i0,h.i1),{color:'#d32f2f',weight:7}).addTo(FILM.map)));
@@ -1337,7 +1340,7 @@ async function fClip(h,ms,T){const S=h.S,ok=h.ok,m=5,lead=ok[0],last=ok[ok.lengt
       else if(!(pf2&&arrK===1)){C.q.push({arr:[nm(x),x.tb-ok[0].tb],at:performance.now(),keep:true});run();}
       arrK++;}};
   FILM.curS=S;S.filmPlay(t0,m);const st0=performance.now();
-  const play=async until=>{while(FILM.on){await fWait(150);const t=S.time;watch(t);if(t>=until||performance.now()-st0>ms+40000)break;}};
+  const play=async until=>{while(FILM.on){await fWait(150);const t=S.time;watch(t);if(t>=until||performance.now()-st0>ms/Math.min(1,FILM.speed)+40000)break;}};
   if(pf2){await play(ok[1].tb+.8);watch(Math.max(S.time,ok[1].tb+.8));S.hold(true);await idle(7000);
     fCard('<h3>📸 Fotofinish</h3><small>Rivediamo l\'arrivo al rallentatore…</small>');const pf=S.photoFinish();
     if(pf&&pf.length>1){say(pick2(['Vediamo al rallentatore…','Ecco le immagini al rallentatore.'])[0],'c',.4);const s2=performance.now();while(FILM.on&&!S.frozen&&performance.now()-s2<20000)await fWait(100);
@@ -1405,6 +1408,8 @@ function recStop(save){if(!REC.on)return;REC.on=false;$('frec').style.display='n
 function flash(){const f=$('flash');f.style.transition='none';f.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity=0;}));}
 function stopFilm(again){if(REC.on){recStop(false);FILM.rec=false;}if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
 $('fclose').addEventListener('click',()=>stopFilm());
+const fSpeedLbl=()=>{$('fspeed').textContent=String(FILM.speed).replace('.',',')+'×';};fSpeedLbl();
+$('fspeed').addEventListener('click',()=>{FILM.speed=FSPEEDS[(FSPEEDS.indexOf(FILM.speed)+1)%FSPEEDS.length];fSpeedLbl();try{localStorage.setItem('banda.sintesi.vel',FILM.speed);}catch(e){}});
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;if(FILM.curS)FILM.curS.hold(FILM.paused);$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
 $('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm(true);if(SOLOF)startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D,SOLOF.CL);else filmSetup();});
 $('fexit').addEventListener('click',()=>stopFilm());
@@ -2124,7 +2129,7 @@ function make3D(PATH,ROADS,BLDS){
   function frame(){
     if(!running)return;
     const dt=Math.min(clock.getDelta(),.05);
-    if(!paused){if(!crHold()){let left=dt*mult;while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}}
+    if(!paused){if(!crHold()){let left=dt*mult*(filmM?FILM.speed:1);while(left>1e-4){const h=Math.min(left,.04);step(h);left-=h;}crUpdate();}}
     if(tele&&realNow()-capT>7)$('cron').style.opacity=0;
     if(FD&&FD.stopAt!=null&&tNow>=FD.stopAt){tNow=FD.stopAt;FD.stopAt=null;step(0);paused=true;FD.frozen=true;}
     if(filmM&&FD&&(++FD.fc)%10===0)clearView(camera.position,look);
