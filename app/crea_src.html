@@ -1809,7 +1809,7 @@ const unb64s=b=>{const s=atob(b.replace(/\n/g,'')),u=new Uint8Array(s.length);fo
 // ---------- foto vere della strada: Mapillary (foto scattate dagli utenti, licenza CC BY-SA, da citare con l'autore) ----------
 // Serve un "Client Token" gratuito (mapillary.com → Dashboard → Developers): è fatto per stare nelle pagine web, quindi si può scrivere qui
 // sotto perché lo usino anche gli amici nelle pagine pubblicate; altrimenti ognuno lo incolla una volta (localStorage banda.mly).
-const MLY_TOKEN='';
+const MLY_TOKEN='MLY|29253414010933750|6ffd8fdae75363af052eff80891ac62b';
 const MLY={tok(){try{return localStorage.getItem('banda.mly')||MLY_TOKEN;}catch(e){return MLY_TOKEN;}},cache:new Map()};
 function mlyBox(la0,lo0,la1,lo1,sv){const k=[la0,lo0,la1,lo1].map(v=>v.toFixed(4)).join(',')+(sv?'sv':'');if(MLY.cache.has(k))return MLY.cache.get(k);
   const u=`https://graph.mapillary.com/images?access_token=${encodeURIComponent(MLY.tok())}&fields=id,thumb_1024_url,computed_geometry,geometry,captured_at,creator${sv?',thumb_2048_url,computed_rotation,computed_compass_angle,compass_angle,camera_type,camera_parameters':''}&bbox=${lo0.toFixed(6)},${la0.toFixed(6)},${lo1.toFixed(6)},${la1.toFixed(6)}&limit=200`;
