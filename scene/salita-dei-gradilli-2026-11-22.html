@@ -755,9 +755,9 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #vocibox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
 #vocibox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:8px;width:min(92vw,400px);max-height:92vh;overflow:auto}
 #vocibox h3{margin:0;font:800 24px "Barlow Condensed"}#vocibox label{display:flex;flex-direction:column;font-weight:600;gap:4px;margin-top:6px}#vocibox select{min-height:44px;font:inherit;border-radius:8px;border:1px solid var(--line);padding:0 8px}
-#sharebox,#expbox{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
-#expbox{z-index:600}#sharebox>div,#expbox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
-#sharebox h3,#expbox h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn,#expbox .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
+#sharebox,#expbox,#ghbox,#ghdone{position:fixed;inset:0;z-index:40;display:none;place-items:center;background:#0009;padding:16px}
+#expbox,#ghbox,#ghdone{z-index:600}#sharebox>div,#expbox>div,#ghbox>div,#ghdone>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
+#sharebox h3,#expbox h3,#ghbox h3,#ghdone h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn,#expbox .btn,#ghbox .btn,#ghdone .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
 #expbox label{display:flex;gap:8px;align-items:flex-start;font:500 15px Barlow,system-ui}#sharebox small,#expbox small{font:500 13px Barlow,system-ui;opacity:.8}
 .dico{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #10151c;font-size:16px;box-shadow:0 2px 6px #0006}
 #dmap{height:62vh;min-height:320px;border-radius:12px;margin:8px 0}#dprof{width:100%;height:150px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none}
@@ -861,8 +861,16 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <button class="btn" data-pv="x">Fatto</button></div></div>
 <div id="expbox"><div><h3 id="exptit">Esporta</h3><p class="meta" id="expsub" style="margin:0"></p>
   <label><input type="checkbox" id="exphide" checked><span>Nascondi partenza e arrivo<br><small>toglie i primi e gli ultimi 600 m (di solito sono casa): consigliato se va pubblicata</small></span></label>
-  <button class="btn" data-ex="send">📤 Manda il file<small>WhatsApp o altre app (Android)</small></button><button class="btn l" data-ex="dl">⬇️ Scarica sul telefono</button><button class="btn l" data-ex="x">Annulla</button>
-  <p class="meta" style="margin:0">Per pubblicarla sul sito della banda mandami il file: la metto nella pagina delle corse (solo con l'ok di tutti i ciclisti).</p></div></div>
+  <button class="btn" data-ex="send">📤 Manda il file<small>WhatsApp o altre app (Android)</small></button><button class="btn l" data-ex="dl">⬇️ Scarica sul telefono<small>va nella cartella Download</small></button>
+  <hr style="border:0;border-top:1px solid #dde2e8;width:100%;margin:2px 0">
+  <label><input type="checkbox" id="expok"><span>Tutti i ciclisti presenti sono d'accordo a pubblicarla</span></label>
+  <button class="btn" data-ex="gh" style="background:#1b7a34;border-color:#1b7a34;color:#fff">🌐 Crea e pubblica sul sito<small>con il link che si apre anche su iPhone</small></button>
+  <button class="btn l" data-ex="x">Annulla</button></div></div>
+<div id="ghbox"><div><h3>Collega il sito</h3><p class="meta" style="margin:0">Serve una sola volta: una "chiave" di GitHub che permette all'app di pubblicare. Resta solo su questo telefono.</p>
+  <ol class="meta" style="margin:0;padding-left:18px"><li>Apri <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com → nuova chiave</a> (entra con l'account del sito)</li><li>Nome: "app banda"; scadenza: 1 anno</li><li>Repository access: <b>Only select repositories</b> → <b>banda-in-bici</b></li><li>Permissions → Repository → <b>Contents: Read and write</b></li><li>Generate token, copia la chiave (inizia con github_pat_) e incollala qui</li></ol>
+  <input id="ghtok" type="password" autocomplete="off" placeholder="github_pat_…" style="font:16px system-ui;padding:10px;border:1px solid #c9d0d8;border-radius:10px">
+  <button class="btn" data-gh="ok">Collega</button><button class="btn l" data-gh="x">Annulla</button></div></div>
+<div id="ghdone"></div>
 <div id="sharebox"><div><h3>Manda la corsa</h3>
   <button class="btn" data-sh="link">🔗 Manda il link<small>funziona su tutti i telefoni, anche iPhone</small></button>
   <button class="btn l" data-sh="file">📄 Manda il file<small>solo Android: su iPhone WhatsApp non lo apre</small></button>
@@ -2206,8 +2214,17 @@ function exportOpen(kind){EXK=kind;$('exptit').textContent=kind==='film'?'Esport
   $('expsub').textContent=kind==='film'?'Un file che, aperto, fa partire la sintesi con cronaca e immagini 3D.':'Un file con il testo, la cartina e l\'altimetria del percorso.';$('expbox').style.display='grid';}
 $('expbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(e.target.id==='expbox'||(b&&b.dataset.ex==='x')){$('expbox').style.display='none';return;}if(!b)return;
   $('expbox').style.display='none';const hide=$('exphide').checked,t=$('titolo').value,base=(t&&!/segmento/i.test(t)?t:'uscita').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_');
-  try{if(EXK==='film'){if(!FEXP)return;await sendHTML(exportHTML('sintesi',packFilm(FEXP,hide)),'Sintesi_'+base+'.html',b.dataset.ex==='dl');}
-    else{if(!DESCR)return;await sendHTML(exportHTML('descrizione',packDescr(hide)),'Percorso_'+base+'.html',b.dataset.ex==='dl');}}catch(err){alert('Non riesco a creare il file: '+err.message);}});
+  const name=(EXK==='film'?'Sintesi_':'Percorso_')+base+'.html',dl=b.dataset.ex==='dl';
+  try{if(EXK==='film'&&!FEXP||EXK!=='film'&&!DESCR)return;
+    if(b.dataset.ex==='gh'){if(!$('expok').checked){alert('Prima chiedi a tutti i ciclisti se sono d\'accordo, poi spunta la casella.');$('expbox').style.display='grid';return;}
+      // sul sito partenza e arrivo sono sempre nascosti
+      const html=EXK==='film'?exportHTML('sintesi',packFilm(FEXP,true)):exportHTML('descrizione',packDescr(true));
+      const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):null,ds=when?when.toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})+' · ':'';
+      const tt=t&&!/segmento/i.test(t)?t:(EXK==='film'?'Sintesi dell\'uscita':'Il percorso');
+      const sub=EXK==='film'?ds+'Sintesi · '+riders.filter((r,i)=>FEXP.H.some(h=>h.ok.some(x=>x.i===i))).map(r=>r.name).join(', '):ds+'Descrizione del percorso · '+kmS(DESCR.km)+' km';
+      await publishGH(EXK,html,(EXK==='film'?'🎬 ':'🧭 ')+tt,sub);return;}
+    const html=EXK==='film'?exportHTML('sintesi',packFilm(FEXP,hide)):exportHTML('descrizione',packDescr(hide));
+    await sendHTML(html,name,dl);if(dl)setTimeout(()=>alert('Fatto! Il file «'+name+'» è nella cartella Download del telefono (app «File» o «Download»). Aprilo con Chrome o Safari.'),800);}catch(err){alert('Non riesco a creare il file: '+err.message);}});
 // apertura di un file esportato
 function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
   $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
@@ -2220,6 +2237,42 @@ function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
   const h=document.createElement('div');h.innerHTML=`<h1 style="font:800 32px 'Barlow Condensed';margin:6px 0 2px">🚴 ${d.titolo&&!/segmento/i.test(d.titolo)?d.titolo:'Il percorso'}</h1><p class="meta" style="margin:0 0 6px">La banda in bici · descrizione del percorso</p>`;
   box.parentElement.insertBefore(h,box);box.style.display='block';DESCR=d;drawDescr(d,box);}
 {const sf=document.getElementById('sintesi'),sd=document.getElementById('descrizione');try{if(sf)startSoloFilm(JSON.parse(sf.textContent));else if(sd)startSoloDescr(JSON.parse(sd.textContent));}catch(e){alert('Il file è rovinato: '+e.message);}}
+// ---------- pubblicazione diretta sul sito (GitHub) ----------
+// serve un "token" di GitHub con permesso di scrittura solo su questo repository: si incolla una volta e resta solo su questo telefono
+const GH={repo:'studiobilancio2025-code/banda-in-bici',key:'banda.gh',site:'https://studiobilancio2025-code.github.io/banda-in-bici/'};
+const ghTok=()=>{try{return localStorage.getItem(GH.key)||'';}catch(e){return'';}};
+async function gh(path,opt){const r=await fetch('https://api.github.com/repos/'+GH.repo+path,{...opt,headers:{Authorization:'Bearer '+ghTok(),Accept:'application/vnd.github+json',...(opt&&opt.body?{'Content-Type':'application/json'}:{})}});
+  if(r.status===404)return null;if(!r.ok){const t=await r.text();throw new Error(r.status===401?'la chiave di GitHub non è valida o è scaduta':r.status===403?'la chiave non ha il permesso di scrivere sul sito':('GitHub '+r.status+' '+t.slice(0,120)));}return r.json();}
+const b64s=str=>{const u=new TextEncoder().encode(str);let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s);};
+const unb64s=b=>{const s=atob(b.replace(/\n/g,'')),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new TextDecoder().decode(u);};
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug=t=>t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,50)||'uscita';
+async function ghSetup(){$('ghbox').style.display='grid';$('ghtok').value='';return new Promise(res=>{GH.done=res;});}
+$('ghbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.gh==='x'){$('ghbox').style.display='none';GH.done&&GH.done(false);return;}
+  if(b.dataset.gh==='ok'){const t=$('ghtok').value.trim();$('ghtok').value='';if(!t){alert('Incolla la chiave.');return;}
+    try{localStorage.setItem(GH.key,t);const r=await gh('');if(!r||!r.permissions||!r.permissions.push)throw new Error('la chiave non ha il permesso di scrivere sul sito');
+      $('ghbox').style.display='none';GH.done&&GH.done(true);}catch(err){try{localStorage.removeItem(GH.key);}catch(e2){}alert('Non funziona: '+err.message+'. Controlla la chiave e riprova.');}}});
+// pubblica il file in scene/ e aggiunge la riga in cima all'elenco delle corse
+async function publishGH(kind,html,title,sub){
+  if(!ghTok()&&!(await ghSetup()))return;
+  const R0=riders[0],when=R0&&R0.abs&&R0.t0?new Date(R0.t0):new Date(),day=when.toISOString().slice(0,10);
+  const file=(kind==='film'?'sintesi-':'percorso-')+slug(title)+'-'+day+'.html',path='scene/'+file;
+  loading(true);prog('Pubblico sul sito…',file,.2);
+  try{const old=await gh('/contents/'+path);if(old&&!confirm('Sul sito c\'è già «'+file+'». La sostituisco?')){loading(false);return;}
+    await gh('/contents/'+path,{method:'PUT',body:JSON.stringify({message:'Pubblica '+file+' (dall\'app)',content:b64s(html),...(old?{sha:old.sha}:{})})});
+    prog('Aggiorno l\'elenco delle corse…',file,.7);
+    const ix=await gh('/contents/scene/index.html');if(ix){let s=unb64s(ix.content);const row=`<a class="corsa" href="${file}"><div><b>${esc(title)}</b><span>${esc(sub)}</span></div><i>${kind==='film'?'🎬 Guarda':'🧭 Leggi'}</i></a>`;
+      const re=new RegExp('<a class="corsa" href="'+file.replace(/\./g,'\\.')+'">.*?</a>');
+      if(re.test(s))s=s.replace(re,row);else s=s.replace(/(<!-- CORSE[^\n]*-->\n?)/,'$1'+row+'\n');
+      await gh('/contents/scene/index.html',{method:'PUT',body:JSON.stringify({message:'Elenco corse: '+file,content:b64s(s),sha:ix.sha})});}
+    loading(false);const url=GH.site+path;
+    $('ghdone').innerHTML=`<div><h3>✅ Pubblicata!</h3><p>Fra un paio di minuti si vede qui (anche su iPhone):</p><p style="word-break:break-all"><a href="${url}" target="_blank">${url}</a></p><p class="meta">È anche nell'elenco delle corse: <a href="${GH.site}scene/" target="_blank">${GH.site}scene/</a></p>
+      <button class="btn" id="ghshare">📤 Manda il link</button><button class="btn l" id="ghclose">Chiudi</button></div>`;$('ghdone').style.display='grid';
+    $('ghclose').onclick=()=>{$('ghdone').style.display='none';};
+    $('ghshare').onclick=async()=>{try{if(navigator.share){await navigator.share({title,text:'🚴 '+title+' – la banda in bici:',url});return;}}catch(e){if(e.name==='AbortError')return;}
+      try{await navigator.clipboard.writeText(url);alert('Link copiato: incollalo su WhatsApp.');}catch(e){prompt('Copia il link:',url);}};}
+  catch(err){loading(false);alert('Non sono riuscito a pubblicare: '+err.message+'.');}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
@@ -2234,6 +2287,44 @@ function startSaved(d){window.__SCENA=true;loadData(d);$('setup').style.display=
 if(pre)startSaved(JSON.parse(pre.textContent));
 else if(location.hash.startsWith('#s=')){if(!window.DecompressionStream)alert('Per vedere la corsa serve un telefono aggiornato (iPhone con iOS 16.4 o più recente).');
   else{loading(true);prog('Apro la corsa…','',.03);readLink(location.hash.slice(3)).then(startSaved).catch(()=>{loading(false);alert('Il link della corsa è rovinato o incompleto: fattelo rimandare.');});}}
+// ---------- sintesi e descrizione da esportare (file HTML che si apre da solo) e pubblicare ----------
+let FEXP=null,SOLOF=null,EXK=null;
+const distM=(a,b)=>{const dy=(a[0]-b[0])*111195,dx=(a[1]-b[1])*111195*Math.cos(a[0]*D);return Math.hypot(dx,dy);};
+// "casa": inizio e fine di ogni traccia
+function homes(){const h=[];riders.forEach(r=>{if(r.pts.length){const a=r.pts[0],b=r.pts[r.pts.length-1];h.push([a.lat,a.lon],[b.lat,b.lon]);}});return h;}
+const farFrom=HM=>(la,lo)=>la!=null&&!HM.some(h=>distM(h,[la,lo])<600);
+function packFilm(F,hide){const far=farFrom(hide?homes():[]),H=F.H,keep=[...new Set([0,...H.flatMap(h=>h.ok.map(x=>x.i))])].sort((a,b)=>a-b),M={};keep.forEach((o,n)=>M[o]=n);
+  const W=H.map(h=>[Math.min(...h.ok.map(x=>x.ta))-240,Math.max(...h.ok.map(x=>x.tb))+240]),inW=T=>W.some(w=>T>=w[0]&&T<=w[1]);
+  const rs=keep.map(i=>{const r=riders[i];return{name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
+    pts:r.pts.filter(p=>inW(p.t+offE(r))&&far(p.lat,p.lon)).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])};});
+  const mp=x=>({...x,i:M[x.i]}),fp=p=>[Math.round(p.d),Math.round(p.es*10)/10,Math.round(p.t*10)/10];
+  return{v:1,titolo:$('titolo').value,dur:F.dur,use3D:F.use3D,riders:rs,
+    FP:FP.map(p=>far(p.la,p.lo)?[+p.la.toFixed(6),+p.lo.toFixed(6),...fp(p)]:[null,null,...fp(p)]),
+    H:F.H.map(h=>({nome:h.nome,a:h.a,b:h.b,kind:h.kind,i0:h.i0,i1:h.i1,L:h.L,up:h.up,avg:h.avg,ta:h.ta,tb:h.tb,on:true,ok:h.ok.map(mp),res:h.res.filter(x=>M[x.i]!=null).map(mp)}))};}
+function packDescr(hide){const far=farFrom(hide?homes():[]);return{...DESCR,P:DESCR.P.map(q=>far(q[0],q[1])?q:[null,null,q[2],q[3],q[4]])};}
+function exportHTML(id,data){let h=SRC;const k=h.indexOf('<body>')+6,m=h.slice(k).match(/^<script id="(scena|sintesi|descrizione)" type="application\/json">[\s\S]*?<\/script>/);if(m)h=h.slice(0,k)+h.slice(k+m[0].length);
+  return h.slice(0,k)+'<script id="'+id+'" type="application/json">'+JSON.stringify(data).replace(/</g,'\\u003c')+'<\/script>'+h.slice(k);}
+async function sendHTML(html,name,onlyDl){const file=new File([html],name,{type:'text/html'});
+  if(!onlyDl)try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name.replace(/_/g,' ').replace('.html','')});return;}}catch(e){if(e.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);}
+function exportOpen(kind){EXK=kind;$('exptit').textContent=kind==='film'?'Esporta la sintesi':'Esporta la descrizione';
+  $('expsub').textContent=kind==='film'?'Un file che, aperto, fa partire la sintesi con cronaca e immagini 3D.':'Un file con il testo, la cartina e l\'altimetria del percorso.';$('expbox').style.display='grid';}
+$('expbox').addEventListener('click',async e=>{const b=e.target.closest('button');if(e.target.id==='expbox'||(b&&b.dataset.ex==='x')){$('expbox').style.display='none';return;}if(!b)return;
+  $('expbox').style.display='none';const hide=$('exphide').checked,t=$('titolo').value,base=(t&&!/segmento/i.test(t)?t:'uscita').replace(/[^\w\- àèéìòù]+/g,'').trim().replace(/\s+/g,'_');
+  try{if(EXK==='film'){if(!FEXP)return;await sendHTML(exportHTML('sintesi',packFilm(FEXP,hide)),'Sintesi_'+base+'.html',b.dataset.ex==='dl');}
+    else{if(!DESCR)return;await sendHTML(exportHTML('descrizione',packDescr(hide)),'Percorso_'+base+'.html',b.dataset.ex==='dl');}}catch(err){alert('Non riesco a creare il file: '+err.message);}});
+// apertura di un file esportato
+function soloPlay(){const rs=riders.filter((r,i)=>!i||r.sync.ok);$('setup').style.display='none';
+  $('play').innerHTML=`<div><h2>${$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:'La sintesi dell\'uscita'}</h2><div class="pf">${rs.map(r=>`<span><i style="border-color:${r.color};${r.face?`background-image:url(${r.face})`:`background:${r.color}`}"></i>${r.name}</span>`).join('')}</div>
+    <button class="btn" id="playgo">▶ Guarda la sintesi</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
+  $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();$('play').style.display='none';startFilm(SOLOF.H,SOLOF.dur,SOLOF.use3D);};}
+function startSoloFilm(d){window.__SOLO=true;window.__SCENA=true;loadData({titolo:d.titolo,A:null,B:null,riders:d.riders});FP=d.FP.map(q=>({la:q[0],lo:q[1],d:q[2],es:q[3],t:q[4]}));SOLOF=d;soloPlay();}
+function startSoloDescr(d){window.__SOLO=true;const box=$('descr');
+  // si lascia solo la descrizione (nascosti gli altri pezzi della pagina)
+  let e=box;while(e&&e.id!=='setup'){[...e.parentElement.children].forEach(c=>{if(c!==e)c.style.display='none';});e=e.parentElement;}
+  const h=document.createElement('div');h.innerHTML=`<h1 style="font:800 32px 'Barlow Condensed';margin:6px 0 2px">🚴 ${d.titolo&&!/segmento/i.test(d.titolo)?d.titolo:'Il percorso'}</h1><p class="meta" style="margin:0 0 6px">La banda in bici · descrizione del percorso</p>`;
+  box.parentElement.insertBefore(h,box);box.style.display='block';DESCR=d;drawDescr(d,box);}
+{const sf=document.getElementById('sintesi'),sd=document.getElementById('descrizione');try{if(sf)startSoloFilm(JSON.parse(sf.textContent));else if(sd)startSoloDescr(JSON.parse(sd.textContent));}catch(e){alert('Il file è rovinato: '+e.message);}}
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
