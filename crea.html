@@ -759,6 +759,12 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #sharebox>div{background:#fff;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px;width:min(92vw,380px)}
 #sharebox h3{margin:0 0 4px;font:800 24px "Barlow Condensed"}#sharebox .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 16px}
 #sharebox small{font:500 13px Barlow,system-ui;opacity:.8}
+.dico{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:2px solid #10151c;font-size:16px;box-shadow:0 2px 6px #0006}
+#dmap{height:62vh;min-height:320px;border-radius:12px;margin:8px 0}#dprof{width:100%;height:150px;display:block;background:#fff;border:1px solid var(--line);border-radius:10px;touch-action:none}
+.dleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:13px;margin:4px 0}.dleg i{display:inline-block;width:18px;height:8px;border-radius:3px;margin-right:4px;vertical-align:middle}
+.dtip{font:700 14px/1.15 'Barlow Condensed';background:#10151cdd;color:#fff;border:0;border-radius:8px}.dtip:before{display:none}.dtip small{font-weight:500;color:#ffd400}
+#descr li[data-a]{cursor:pointer}#descr li[data-a]:active{background:#fff3c4}
+.hl{display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow:auto;margin-top:6px}.hl label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px}.hl input{width:22px;height:22px;flex:none;margin-top:2px}.hl b{display:block;font:800 18px 'Barlow Condensed'}.hl small{color:var(--mut)}
 #film{position:fixed;inset:0;z-index:35;display:none;background:#10151c}#fmap{position:absolute;inset:0}
 #fcard{position:absolute;left:10px;right:10px;top:calc(env(safe-area-inset-top) + 10px);z-index:500;background:rgba(16,21,28,.86);color:#fff;border-radius:12px;padding:10px 14px;display:none;max-width:520px;margin:0 auto}
 #fcard h3{margin:2px 0 4px;font:800 26px/1.05 "Barlow Condensed";color:var(--tag)}#fcard.big h3{font-size:32px}#fcard small{opacity:.8}#fcard p{margin:4px 0 0}
@@ -814,6 +820,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="card" id="riders" style="margin-top:10px;display:none"></div>
 
   <div class="btns" id="uscbtn" style="display:none;margin-top:14px"><button class="btn" id="bsint">🎬 Sintesi dell'uscita (2 minuti)</button><button class="btn l" id="bdescr">🧭 Descrizione del percorso</button></div>
+  <div class="card" id="fsetup" style="display:none;margin-top:10px"></div>
   <div class="card" id="descr" style="display:none;margin-top:10px"></div>
   <h2><i>2</i>Il tratto</h2>
   <input id="titolo" type="text" value="Il nostro segmento" aria-label="Nome del tratto">
@@ -1180,7 +1187,10 @@ function pickHighlights(P){const n=P.length,cand=(riders[0].segs||[]).map(g=>({n
     H.push({...c,res,ok,i0,i1,L,up,avg:(P[i1].es-P[i0].es)/L,score,ta:R.ta,tb:R.tb});}
   H.sort((p,q)=>q.score-p.score);const sel=[],kinds={};
   for(const h of H){if(sel.length>=5)break;if((kinds[h.kind]||0)>=(h.kind==='seg'?5:2))continue;if(sel.some(s=>!(h.tb<s.ta-30||h.ta>s.tb+30)))continue;sel.push(h);kinds[h.kind]=(kinds[h.kind]||0)+1;}
-  return sel.sort((p,q)=>p.ta-q.ta);}
+  sel.forEach(h=>h.on=true);
+  // per la scelta: segmenti Strava + i migliori automatici (niente doppioni sovrapposti tra gli automatici)
+  const all=[];for(const h of H){if(h.kind!=='seg'&&!h.on&&all.some(a=>a.kind!=='seg'&&!(h.tb<a.ta||h.ta>a.tb)))continue;if(h.kind!=='seg'&&!h.on&&all.filter(a=>a.kind!=='seg').length>=8)continue;all.push(h);}
+  return all.sort((p,q)=>p.ta-q.ta);}
 const fWait=ms=>new Promise(res=>{let left=ms,last=performance.now();const tick=()=>{if(!FILM.on)return res();const now=performance.now();if(!FILM.paused)left-=now-last;last=now;if(left<=0)res();else requestAnimationFrame(tick);};requestAnimationFrame(tick);});
 function fCard(html,cls){const c=$('fcard');c.className=cls||'';c.innerHTML=html;c.style.display=html?'block':'none';}
 function fCap(txt,who){const c=$('fcap');c.style.display=txt?'block':'none';c.innerHTML=txt?`<b>${who==='t'?'🎧 Tonino':'🎙️ Gigi'}</b> ${txt}`:'';c.classList.toggle('tec',who==='t');}
@@ -1206,9 +1216,31 @@ function hlTexts(h,k,n){const ok=h.ok,w=riders[ok[0].i],R0=riders[0],L=kmS(h.L),
   return{intro,fatto,tec:tec[0]||null};}
 const pick2=a=>[a[Math.floor(Math.random()*a.length)]];
 const dS2=t=>{t=Math.max(0,Math.round(t));const m=Math.floor(t/60),x=t%60;return m?(m===1?'un minuto':m+' minuti')+(x?' e '+(x===1?'un secondo':x+' secondi'):''):(x===1?'un secondo':x+' secondi');};
-async function startFilm(){if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
-  const P=trackSamples(25);if(P.length<20){alert('La traccia è troppo corta.');return;}
-  const H=pickHighlights(P);
+// pannello di scelta: momenti (spuntati quelli consigliati), durata, immagini 3D
+let FALL=null,FP=null;
+function filmSetup(){if(!riders.length)return;const box=$('fsetup');FP=trackSamples(25);if(FP.length<20){alert('La traccia è troppo corta.');return;}
+  box.style.display='block';box.innerHTML='<p class="hint">Cerco i momenti chiave…</p>';box.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>{FALL=pickHighlights(FP);const kindL={seg:'segmento Strava',su:'salita',giu:'discesa',veloce:'il più veloce',sfida:'sfida'};
+    box.innerHTML=`<h3 style="margin:0 0 4px;font:800 24px 'Barlow Condensed'">🎬 La sintesi</h3><p class="meta">Spunta i tratti da mettere nella sintesi (consigliati quelli già spuntati).</p>
+    <div class="hl">${FALL.map((h,i)=>{const w=riders[h.ok[0].i];return`<label><input type="checkbox" data-h="${i}" ${h.on?'checked':''}><span><b>${h.nome}</b><small>km ${kmS(FP[h.i0].d)} · ${kmS(h.L)} km${h.avg>.015?' · '+pct(h.avg):''} · ${kindL[h.kind]}${h.ok.length>1?' · vince '+w.name:''}</small></span></label>`;}).join('')}</div>
+    <div class="rrow" style="margin-top:10px;gap:8px;flex-wrap:wrap"><label>Durata <select id="fdur"><option value="60">1 minuto</option><option value="120" selected>2 minuti</option><option value="180">3 minuti</option><option value="300">5 minuti</option></select></label>
+    <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="f3d" checked> Immagini 3D della regia</label></div>
+    <p class="meta">Con le immagini 3D prima della sintesi l'app prepara le scene: circa mezzo minuto per tratto.</p>
+    <div class="btns"><button class="btn" id="fgo">▶ Avvia la sintesi</button></div>`;
+    $('fgo').onclick=()=>{const H=[...box.querySelectorAll('[data-h]')].filter(c=>c.checked).map(c=>FALL[+c.dataset.h]);if(!H.length){alert('Scegli almeno un tratto.');return;}
+      startFilm(H,+$('fdur').value,$('f3d').checked);};},30);}
+// prepara le scene 3D dei tratti scelti (una alla volta, poi restano nascoste fino al loro momento)
+async function prep3D(H){const keep={A,B,SEG,segSel};let k=0;
+  for(const h of H){k++;try{A=h.a.slice();B=h.b.slice();computeSeg(true);if(!SEG)continue;loading(true);
+      const pr=(t,s,p)=>prog(`Preparo le immagini 3D (${k} di ${H.length})`,`${h.nome} · ${t}`,(k-1+p)/H.length);
+      const d=await sceneData(pr);h.S=await make3Dfull(d.path,d.ROADS,d.BLDS,pr);h.S.hide();h.seg=SEG;}catch(e){h.S=null;}}
+  A=keep.A;B=keep.B;segSel=keep.segSel;if(A&&B)computeSeg(true);else{SEG=null;computeSeg(true);}loading(false);}
+function film3Dclear(){(FILM.H||[]).forEach(h=>{if(h.S){h.S.destroy();h.S=null;}});}
+async function startFilm(H,durS,use3D){if(!riders.length)return;unlockAudio();if(ricWanted())ricInit();
+  const P=FP||trackSamples(25);durS=durS||120;H=H||pickHighlights(P).filter(h=>h.on);
+  film3Dclear();FILM.H=H;if(use3D&&window.THREE&&H.length){await prep3D(H);}
+  // tempo per ogni momento (intro e finale ~25 s)
+  const per=Math.max(12,(durS-25)/Math.max(1,H.length));FILM.per=per;
   $('film').style.display='block';FILM.on=true;FILM.paused=false;$('fpause').textContent='⏸';
   if(!FILM.map){FILM.map=L.map('fmap',{zoomControl:false,attributionControl:true});
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(FILM.map);
@@ -1231,7 +1263,10 @@ async function startFilm(){if(!riders.length)return;unlockAudio();if(ricWanted()
   for(let k=0;k<H.length&&FILM.on;k++){const h=H[k],T=hlTexts(h,k,H.length);
     fCard(`<small>Momento ${k+1} di ${H.length} · km ${kmS(P[h.i0].d)}</small><h3>${h.nome}</h3><div class="fstats"><span><b>${kmS(h.L)}</b> km</span>${h.avg>.01?`<span><b>${pct(h.avg)}</b> media</span>`:''}<span><b>${Math.round(h.up)}</b> m D+</span></div>`);
     await Promise.all([fFly(L.latLngBounds(ll.slice(h.i0,h.i1+1)),2.2),fSay(T.intro,'c',.3)]);
-    $('fclock').style.display='block';await Promise.all([fRun(h,11000),(async()=>{await fWait(4000);await fSay(T.fatto,'c',.8);})()]);
+    const has3D=!!h.S,tMap=clamp(per*(has3D?.3:.55),5,25)*1000,t3D=clamp(per*.42,6,60)*1000;
+    $('fclock').style.display='block';
+    if(has3D){await fRun(h,tMap);$('fclock').style.display='none';await fClip(h,t3D,T.fatto);}
+    else await Promise.all([fRun(h,tMap),(async()=>{await fWait(Math.min(4000,tMap*.35));await fSay(T.fatto,'c',.8);})()]);
     const ok=h.ok;wins[ok[0].i]=(wins[ok[0].i]||0)+1;if(ok.length>1)FX.applause(2,.5);
     fCard(`<small>${h.nome}</small><table>${ok.map((x,j)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${j?'+'+fmt(x.tb-ok[0].tb):'1°'}</td></tr>`).join('')}</table>`);
     if(T.tec)await fSay(T.tec,'t',0);else await fWait(2500);$('fclock').style.display='none';}
@@ -1242,12 +1277,18 @@ async function startFilm(){if(!riders.length)return;unlockAudio();if(ricWanted()
   FX.fanfare(true);
   await fSay(rk.length&&riders.length>1?`In sintesi: ${riders[rk[0][0]].name} si porta a casa ${rk[0][1]>1?rk[0][1]+' tratti':'un tratto'}`+(rk[1]?`, ${riders[rk[1][0]].name} ${rk[1][1]>1?rk[1][1]:'uno'}`:'')+`. Dalla banda in bici è tutto, alla prossima uscita!`:`Bella uscita! Dalla banda in bici è tutto, alla prossima!`,'c',.4);
   await fWait(1500);if(FILM.on){fCap('');$('fend').style.display='flex';}}
-function stopFilm(){FILM.on=false;try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
+// pezzo di regia 3D: la parte decisiva del tratto, accelerata per stare nel tempo
+async function fClip(h,ms,line){const S=h.S,ok=h.ok,tb=Math.min(...ok.map(x=>x.tb)),last=Math.max(...ok.map(x=>x.tb)),win=Math.max(20,Math.min(h.tb-h.ta,Math.max(60,last-h.ta)));
+  const span=Math.min(win,(last-h.ta)*.6+12),m=clamp(span/(ms/1000),1,20),t0=Math.max(h.ta-4,last+3-m*ms/1000);
+  $('fmap').style.visibility='hidden';$('film').style.background='transparent';$('setup').style.visibility='hidden';
+  S.filmPlay(t0,m);await Promise.all([fWait(ms),(async()=>{await fWait(1200);await fSay(line,'c',.8);})()]);
+  S.filmStop();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';FX.music(true);}
+function stopFilm(){FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
 $('fclose').addEventListener('click',stopFilm);
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
-$('fagain').addEventListener('click',()=>{$('fend').style.display='none';startFilm();});
+$('fagain').addEventListener('click',()=>{$('fend').style.display='none';stopFilm();filmSetup();});
 $('fexit').addEventListener('click',stopFilm);
-$('bsint').addEventListener('click',startFilm);
+$('bsint').addEventListener('click',filmSetup);
 
 // ---------- DESCRIZIONE DEL PERCORSO ----------
 // dati: la traccia (salite, discese, curve), OpenStreetMap via Overpass (tipo di strada, fondo, centri abitati, campi, boschi), Open-Meteo (vento all'ora dell'uscita)
@@ -1265,7 +1306,10 @@ function runs(P,lab,minLen){const out=[];let cur=null;P.forEach((p,i)=>{const v=
   // si uniscono i tratti uguali separati da meno di 400 m
   const m=[];out.filter(r=>r.v).forEach(r=>{const l=m[m.length-1];if(l&&l.v===r.v&&P[r.i0].d-P[l.i1].d<400)l.i1=r.i1;else m.push({...r});});
   return m.filter(r=>P[r.i1].d-P[r.i0].d>=(minLen||300));}
-let DLAY=[];
+let DMAP=null,DDOT=null;
+// classi di pendenza: colore e legenda
+const GRAD=[[-.06,'#0d47a1','discesa forte'],[-.025,'#64b5f6','discesa'],[.015,'#66bb6a','piano'],[.04,'#fdd835','1,5–4%'],[.07,'#fb8c00','4–7%'],[.1,'#e53935','7–10%'],[9,'#7b1fa2','oltre 10%']];
+const gradCol=v=>GRAD.find(g=>v<g[0])[1];
 async function describe(){if(!riders.length)return;const box=$('descr');box.style.display='block';box.innerHTML='<p class="hint">Studio la traccia… (mappa OpenStreetMap e meteo)</p>';box.scrollIntoView({behavior:'smooth',block:'start'});
   const R0=riders[0],P=trackSamples(25),n=P.length,km=P[n-1].d;let up=0,dn=0,mx=-1e9,mn=1e9;P.forEach((p,i)=>{if(i){const d=p.es-P[i-1].es;if(d>0)up+=d;else dn-=d;}mx=Math.max(mx,p.es);mn=Math.min(mn,p.es);});
   const hasT=P[n-1].t-P[0].t>0&&R0.pts.length>50&&R0.pts[R0.pts.length-1].t>R0.pts.length*.3;
@@ -1311,19 +1355,53 @@ async function describe(){if(!riders.length)return;const box=$('descr');box.styl
   const li=(arr,f)=>arr.length?`<ul>${arr.map(f).join('')}</ul>`:'<p class="meta">Niente da segnalare.</p>';
   if(!ups.length){let best=null;const W=160;for(let i=0;i+W<n;i+=8){const g=P[i+W].es-P[i].es;if(g>=25&&(!best||g>best.g))best={i,g};}
     if(best)S.push(`<h4>⛰️ Salite</h4><p>Nessuna salita ripida. Il tratto in salita più lungo è al <b>km ${kmS(P[best.i].d)}</b>: +${Math.round(best.g)} m in 4 km, una salita dolce (${pct(best.g/4000)} di media)${nm({i0:best.i,i1:best.i+W})}.</p>`);}
-  if(ups.length||!S.some(x=>x.includes('Salite')))S.push(`<h4>⛰️ Salite</h4>`+li(ups,c=>`<li><b>km ${kmS(c.km*1000)}</b>: ${kmS(c.len)} km al ${pct(c.avg)} di media, punte del ${pct(c.max)}, +${Math.round(c.gain)} m — <i>${diff(c)}</i>${nm({i0:c.i0,i1:c.i1})}</li>`));
-  S.push(`<h4>⬇️ Discese</h4>`+li(downs,c=>`<li><b>km ${kmS(c.km*1000)}</b>: ${kmS(c.len)} km al −${pct(c.avg)}${c.max>.08?`, tratti al −${pct(c.max)}: <b>attenzione alla velocità</b>`:''}${nm({i0:c.i0,i1:c.i1})}</li>`));
-  S.push(`<h4>⚠️ Curve pericolose</h4>`+li(curves,c=>`<li><b>km ${kmS(P[c.i].d)}</b>: ${c.hair?'tornante':'curva stretta'}${c.sl<-.035?' in discesa ('+pct(-c.sl)+')':''}${c.v?`, qui si arrivava a ${Math.round(c.v*3.6)} km/h`:''}${name(P[c.i])?' — '+name(P[c.i]):''}</li>`));
-  S.push(`<h4>💨 Vento</h4>`+(wind?`<p class="meta">Vento ${windWhen}: ${Math.round(P[0].ws)} km/h da ${cardinal(windOf(P[0]).dir)}, raffiche fino a ${Math.round(Math.max(...P.map(p=>p.wg||0)))} km/h (Open-Meteo).${wiTot>0?` In tutto ${kmS(wiTot)} km esposti al vento: ecco i tratti più duri.`:''}</p>`+li(wiR,r=>`<li><b>${kmR(r)}</b>: vento ${r.v==='contro'?'<b>contro</b>':'laterale'} ${Math.round(P[r.i0].ws)} km/h, tratto aperto${P[r.i0].area?' tra '+({farmland:'i campi',meadow:'i prati',orchard:'i frutteti',vineyard:'le vigne',grass:'i prati',beach:'la spiaggia',water:'l\'acqua',grassland:'i prati'}[P[r.i0].area]||'campi'):''}${nm(r)}</li>`):`<p class="meta">Dati del vento non disponibili adesso.</p>`));
-  S.push(`<h4>🚗 Traffico</h4>`+(osm?li(trR,r=>`<li><b>${kmR(r)}</b>: strada ${r.v}${nm(r)}</li>`)+(roundabouts.size?`<p class="meta">${roundabouts.size} ${roundabouts.size>1?'rotatorie':'rotatoria'} lungo il percorso. ${urR.length} attraversament${urR.length===1?'o':'i'} di centri abitati.</p>`:''):`<p class="meta">Mappa delle strade non disponibile adesso (${osmErr?'servizio OpenStreetMap occupato':'nessun dato'}).</p>`));
-  S.push(`<h4>🕳️ Fondo stradale</h4>`+(osm?li(roR,r=>`<li><b>${kmR(r)}</b>: ${r.v}${nm(r)}</li>`)+`<p class="meta">Il fondo è quello indicato sulla mappa OpenStreetMap: dove nessuno l'ha segnato, le buche non si vedono.</p>`:''));
+  if(ups.length||!S.some(x=>x.includes('Salite')))S.push(`<h4>⛰️ Salite</h4>`+li(ups,c=>`<li data-a="${c.i0}" data-b="${c.i1}"><b>km ${kmS(c.km*1000)}</b>: ${kmS(c.len)} km al ${pct(c.avg)} di media, punte del ${pct(c.max)}, +${Math.round(c.gain)} m — <i>${diff(c)}</i>${nm({i0:c.i0,i1:c.i1})}</li>`));
+  S.push(`<h4>⬇️ Discese</h4>`+li(downs,c=>`<li data-a="${c.i0}" data-b="${c.i1}"><b>km ${kmS(c.km*1000)}</b>: ${kmS(c.len)} km al −${pct(c.avg)}${c.max>.08?`, tratti al −${pct(c.max)}: <b>attenzione alla velocità</b>`:''}${nm({i0:c.i0,i1:c.i1})}</li>`));
+  S.push(`<h4>⚠️ Curve pericolose</h4>`+li(curves,c=>`<li data-a="${Math.max(0,c.i-6)}" data-b="${Math.min(n-1,c.i+6)}"><b>km ${kmS(P[c.i].d)}</b>: ${c.hair?'tornante':'curva stretta'}${c.sl<-.035?' in discesa ('+pct(-c.sl)+')':''}${c.v?`, qui si arrivava a ${Math.round(c.v*3.6)} km/h`:''}${name(P[c.i])?' — '+name(P[c.i]):''}</li>`));
+  S.push(`<h4>💨 Vento</h4>`+(wind?`<p class="meta">Vento ${windWhen}: ${Math.round(P[0].ws)} km/h da ${cardinal(windOf(P[0]).dir)}, raffiche fino a ${Math.round(Math.max(...P.map(p=>p.wg||0)))} km/h (Open-Meteo).${wiTot>0?` In tutto ${kmS(wiTot)} km esposti al vento: ecco i tratti più duri.`:''}</p>`+li(wiR,r=>`<li data-a="${r.i0}" data-b="${r.i1}"><b>${kmR(r)}</b>: vento ${r.v==='contro'?'<b>contro</b>':'laterale'} ${Math.round(P[r.i0].ws)} km/h, tratto aperto${P[r.i0].area?' tra '+({farmland:'i campi',meadow:'i prati',orchard:'i frutteti',vineyard:'le vigne',grass:'i prati',beach:'la spiaggia',water:'l\'acqua',grassland:'i prati'}[P[r.i0].area]||'campi'):''}${nm(r)}</li>`):`<p class="meta">Dati del vento non disponibili adesso.</p>`));
+  S.push(`<h4>🚗 Traffico</h4>`+(osm?li(trR,r=>`<li data-a="${r.i0}" data-b="${r.i1}"><b>${kmR(r)}</b>: strada ${r.v}${nm(r)}</li>`)+(roundabouts.size?`<p class="meta">${roundabouts.size} ${roundabouts.size>1?'rotatorie':'rotatoria'} lungo il percorso. ${urR.length} attraversament${urR.length===1?'o':'i'} di centri abitati.</p>`:''):`<p class="meta">Mappa delle strade non disponibile adesso (${osmErr?'servizio OpenStreetMap occupato':'nessun dato'}).</p>`));
+  S.push(`<h4>🕳️ Fondo stradale</h4>`+(osm?li(roR,r=>`<li data-a="${r.i0}" data-b="${r.i1}"><b>${kmR(r)}</b>: ${r.v}${nm(r)}</li>`)+`<p class="meta">Il fondo è quello indicato sulla mappa OpenStreetMap: dove nessuno l'ha segnato, le buche non si vedono.</p>`:''));
   S.push(`<div class="btns"><button class="btn l" id="dread">🔊 Leggi ad alta voce</button><button class="btn l" id="dcopy">📋 Copia il testo</button></div><p class="meta">Dati: traccia GPX · © OpenStreetMap (Overpass) · Open-Meteo · Esri, Maxar, Earthstar Geographics</p>`);
+  // cartina e altimetria colorate per pendenza, con le criticità segnate
+  S.splice(2,0,`<div id="dmap"></div><div class="dleg">${GRAD.map(g=>`<span><i style="background:${g[1]}"></i>${g[2]}</span>`).join('')}</div>
+    <div class="dleg">${[['⚠️','curva'],['🚗','traffico'],['🕳️','fondo'],['💨','vento']].map(x=>`<span>${x[0]} ${x[1]}</span>`).join('')}</div><canvas id="dprof"></canvas><p class="meta">Tocca un punto della lista o dell'altimetria per vederlo sulla cartina.</p>`);
   box.innerHTML=S.join('');
-  // sulla mappa
-  DLAY.forEach(l=>l.remove());DLAY=[];if(map){const LL=i=>[P[i].la,P[i].lo],seg=(r,c,w,da)=>DLAY.push(L.polyline(P.slice(r.i0,r.i1+1).map(p=>[p.la,p.lo]),{color:c,weight:w,dashArray:da}).addTo(map));
-    trR.forEach(r=>seg(r,'#fb8c00',9,'8 8'));roR.forEach(r=>seg(r,'#6d4c41',9,'3 6'));ups.forEach(c=>seg(c,'#d32f2f',6));downs.forEach(c=>seg(c,'#1e88e5',6));wiR.forEach(r=>seg(r,'#00acc1',4,'2 8'));
-    curves.forEach(c=>DLAY.push(L.marker(LL(c.i),{icon:L.divIcon({className:'',html:'<span style="font-size:22px">⚠️</span>',iconSize:[24,24],iconAnchor:[12,12]})}).bindTooltip(`km ${kmS(P[c.i].d)}: ${c.hair?'tornante':'curva stretta'}`).addTo(map)));}
-  const plain=()=>box.innerText.replace(/🔊 Leggi ad alta voce|📋 Copia il testo/g,'').trim();
+  // pendenza di ogni punto su ±100 m
+  P.forEach((p,i)=>{const a=P[Math.max(0,i-4)],b=P[Math.min(n-1,i+4)];p.sl=(b.es-a.es)/Math.max(1,b.d-a.d);});
+  if(DMAP){DMAP.remove();DMAP=null;}
+  if(window.L){DMAP=L.map('dmap',{zoomControl:true});
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(DMAP);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(DMAP);
+    const LL=P.map(p=>[p.la,p.lo]);L.polyline(LL,{color:'#10151c',weight:9,opacity:.7}).addTo(DMAP);
+    // traccia a colori: tratti con la stessa classe di pendenza
+    let st=0;for(let i=1;i<=n;i++){if(i===n||gradCol(P[i].sl)!==gradCol(P[st].sl)){L.polyline(LL.slice(st,Math.min(n,i+1)),{color:gradCol(P[st].sl),weight:5,opacity:1}).addTo(DMAP);st=i;}}
+    DMAP.fitBounds(L.latLngBounds(LL),{padding:[20,20]});
+    const tip=(i,txt,dir)=>L.tooltip({permanent:true,direction:dir,className:'dtip',offset:[0,0]}).setLatLng(LL[i]).setContent(txt).addTo(DMAP);
+    // pendenza a lato delle salite e discese
+    ups.forEach((c,k)=>tip(Math.round((c.i0+c.i1)/2),`⛰️ <b>${pct(c.avg)}</b> · ${kmS(c.len)} km<br><small>max ${pct(c.max)} · ${diff(c)}</small>`,'auto'));
+    downs.forEach((c,k)=>tip(Math.round((c.i0+c.i1)/2),`⬇️ <b>−${pct(c.avg)}</b> · ${kmS(c.len)} km${c.max>.08?'<br><small>⚠️ attenzione</small>':''}`,'auto'));
+    const ico=(i,e,bg,txt)=>L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:${bg}">${e}</span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(txt).addTo(DMAP);
+    curves.forEach(c=>ico(c.i,'⚠️','#fff3e0',`km ${kmS(P[c.i].d)}: ${c.hair?'tornante':'curva stretta'}`));
+    trR.forEach(r=>{L.polyline(LL.slice(r.i0,r.i1+1),{color:'#fb8c00',weight:13,opacity:.45}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🚗','#ffe0b2',`${kmR(r)}: strada ${r.v}`);});
+    roR.forEach(r=>{L.polyline(LL.slice(r.i0,r.i1+1),{color:'#6d4c41',weight:13,opacity:.45,dashArray:'4 6'}).addTo(DMAP);ico(Math.round((r.i0+r.i1)/2),'🕳️','#d7ccc8',`${kmR(r)}: ${r.v}`);});
+    wiR.forEach(r=>{const i=Math.round((r.i0+r.i1)/2),w=windOf(P[i]);L.marker(LL[i],{icon:L.divIcon({className:'',html:`<span class="dico" style="background:#e0f7fa"><b style="display:inline-block;transform:rotate(${(w?w.dir:0)+180}deg)">⬆</b></span>`,iconSize:[30,30],iconAnchor:[15,15]})}).bindTooltip(`${kmR(r)}: vento ${r.v} ${Math.round(P[r.i0].ws)} km/h`).addTo(DMAP);});
+    L.circleMarker(LL[0],{radius:8,color:'#fff',weight:3,fillColor:'#1b7a34',fillOpacity:1}).bindTooltip('Partenza').addTo(DMAP);
+    DDOT=L.circleMarker(LL[0],{radius:9,color:'#10151c',weight:3,fillColor:'#ffd400',fillOpacity:1}).addTo(DMAP);
+    // lista → cartina
+    box.querySelectorAll('li[data-a]').forEach(el=>el.addEventListener('click',()=>{const a=+el.dataset.a,b=+el.dataset.b;DMAP.flyToBounds(L.latLngBounds(LL.slice(a,b+1)),{padding:[60,60],maxZoom:17,duration:1.2});DDOT.setLatLng(LL[Math.round((a+b)/2)]);$('dmap').scrollIntoView({behavior:'smooth',block:'center'});}));}
+  // altimetria con i colori della pendenza e le icone delle criticità
+  const cv=$('dprof'),g=cv.getContext('2d'),marks=[...curves.map(c=>[c.i,'⚠️']),...trR.map(r=>[Math.round((r.i0+r.i1)/2),'🚗']),...roR.map(r=>[Math.round((r.i0+r.i1)/2),'🕳️']),...wiR.map(r=>[Math.round((r.i0+r.i1)/2),'💨'])];
+  let cur=0;const drawP=()=>{const w=cv.clientWidth,h=cv.clientHeight,rr=devicePixelRatio||1;cv.width=w*rr;cv.height=h*rr;g.setTransform(rr,0,0,rr,0,0);
+    const X=i=>6+i/(n-1)*(w-12),Y=e=>h-16-(e-mn)/Math.max(10,mx-mn)*(h-46);g.clearRect(0,0,w,h);
+    for(let i=1;i<n;i++){g.fillStyle=gradCol(P[i].sl);g.beginPath();g.moveTo(X(i-1),h-16);g.lineTo(X(i-1),Y(P[i-1].es));g.lineTo(X(i),Y(P[i].es));g.lineTo(X(i),h-16);g.fill();}
+    g.strokeStyle='#10151c';g.lineWidth=1.2;g.beginPath();P.forEach((p,i)=>i?g.lineTo(X(i),Y(p.es)):g.moveTo(X(i),Y(p.es)));g.stroke();
+    g.font='14px system-ui';marks.forEach(([i,e])=>g.fillText(e,X(i)-8,16));
+    g.fillStyle='#5b6470';g.font='600 11px Barlow,sans-serif';const stp=km>60000?20:km>25000?10:5;for(let k=0;k<=km/1000;k+=stp)g.fillText(k,X(Math.min(n-1,Math.round(k*1000/25)))-4,h-3);
+    const x=X(cur);g.strokeStyle='#d32f2f';g.lineWidth=2;g.beginPath();g.moveTo(x,20);g.lineTo(x,h-16);g.stroke();};
+  drawP();addEventListener('resize',drawP);
+  const pickP=e=>{const r=cv.getBoundingClientRect();cur=clamp(Math.round((e.clientX-r.left-6)/(r.width-12)*(n-1)),0,n-1);drawP();if(DDOT){DDOT.setLatLng([P[cur].la,P[cur].lo]);DDOT.bindTooltip(`km ${kmS(P[cur].d)} · ${Math.round(P[cur].es)} m · ${P[cur].sl>=0?'+':''}${pct(P[cur].sl)}`,{permanent:true}).openTooltip();if(!DMAP.getBounds().contains(DDOT.getLatLng()))DMAP.panTo(DDOT.getLatLng());}};
+  cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);pickP(e);});cv.addEventListener('pointermove',e=>{if(e.buttons)pickP(e);});
+  const plain=()=>[...box.querySelectorAll('h3,h4,p,li')].filter(e=>!e.closest('#dmap')&&!/Tocca un punto/.test(e.innerText)).map(e=>(e.tagName==='LI'?'• ':'')+e.innerText).join('\n').trim();
   $('dcopy').onclick=async()=>{try{await navigator.clipboard.writeText(plain());alert('Testo copiato.');}catch(e){prompt('Copia il testo:',plain());}};
   $('dread').onclick=async()=>{unlockAudio();if(ricWanted())ricInit();FILM.voice=true;const parts=[...box.querySelectorAll('p:not(.meta),li')].map(e=>e.innerText);for(const t of parts){await speakLine(t.replace(/km (\d+),(\d)/g,'chilometro $1 virgola $2').replace(/–/g,' al '),'c',0);}};}
 $('bdescr').addEventListener('click',describe);
@@ -1337,6 +1415,13 @@ const loading=v=>{$('loading').style.display=v?'grid':'none';};
 async function buildScene(){
   if(built){showScene();return;}
   loading(true);prog('Preparo la strada…','',.05);await new Promise(r=>setTimeout(r,30));
+  const {path,ROADS,BLDS}=await sceneData(prog);
+  prog('Costruisco il terreno…','',.2);await new Promise(r=>setTimeout(r,20));
+  S3=await make3Dfull(path,ROADS,BLDS,(t,s,p)=>prog(t,s,p));
+  built=true;loading(false);showScene();
+}
+// strada (traccia agganciata alle strade OSM), strade e case del tratto SEG
+async function sceneData(prog){
   const V3=THREE.Vector3,R0=riders[0],g0=R0.g;
   // percorso: traccia del primo da 150 m prima a 200 m dopo il tratto
   const raw=[];let acc=0;for(let s=0;s<g0.n;s++){if(isNaN(g0.X[s]))continue;if(raw.length){const p=raw[raw.length-1];acc+=Math.hypot(g0.X[s]-p[0],g0.Z[s]-p[1]);}raw.push([g0.X[s],g0.Z[s],g0.E[s],acc,s+R0.off]);}
@@ -1360,15 +1445,14 @@ async function buildScene(){
   const cand=ROADS.filter(r=>!/^(track|service)$/.test(r[0]));
   path=path.map(p=>{let best=[14,null];for(const [,pts] of cand){for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(Math.min(a[0],b[0])-15>p[0]||Math.max(a[0],b[0])+15<p[0]||Math.min(a[1],b[1])-15>p[1]||Math.max(a[1],b[1])+15<p[1])continue;const [d,q]=segd(p,a,b);if(d<best[0])best=[d,q];}}return best[1]?[best[1][0],best[1][1],p[2]]:p;});
   const px=sm(path,0,1),pz=sm(path,1,1);path=path.map((p,i)=>[px[i],pz[i],p[2]]);
-  prog('Costruisco il terreno…','',.2);await new Promise(r=>setTimeout(r,20));
-  S3=make3D(path,ROADS,BLDS);
-  await S3.imagery((d,n)=>prog('Scarico le foto satellitari…',`${d} di ${n}`,.25+.55*d/n));
-  prog('Alberi e tetti dalle foto…','',.85);await new Promise(r=>setTimeout(r,20));
-  S3.fromPhotos();
-  prog('Metto in sella i ciclisti…','',.95);await new Promise(r=>setTimeout(r,20));
-  S3.riders();
-  built=true;loading(false);showScene();
+  return{path,ROADS,BLDS};
 }
+async function make3Dfull(path,ROADS,BLDS,pr){const S=make3D(path,ROADS,BLDS);
+  await S.imagery((d,n)=>pr('Scarico le foto satellitari…',`${d} di ${n}`,.25+.55*d/n));
+  pr('Alberi e tetti dalle foto…','',.85);await new Promise(r=>setTimeout(r,20));
+  S.fromPhotos();
+  pr('Metto in sella i ciclisti…','',.95);await new Promise(r=>setTimeout(r,20));
+  S.riders();return S;}
 async function fetchOSM(la0,lo0,la1,lo1,depth=0){
   const url=`https://api.openstreetmap.org/api/0.6/map?bbox=${lo0.toFixed(5)},${la0.toFixed(5)},${lo1.toFixed(5)},${la1.toFixed(5)}`;
   const rs=await fetch(url);
@@ -1565,7 +1649,7 @@ function make3D(PATH,ROADS,BLDS){
     for(let s=40;s<PR.len;s+=60+Math.random()*90){const sd=Math.random()<.5?-1:1;if(Math.random()<.4)continue;const h=at(PR,s,sd*4.4,tA);if(bldHit(tA.x,tA.z,1.6))continue;const mm=makeCar(COLS[Math.floor(Math.random()*COLS.length)]);mm.position.copy(tA);mm.position.y+=.25;mm.rotation.y=sd>0?h:h+Math.PI;}
     reset();
   }
-  let tNow=0,paused=false,mult=5,view='regia',follow=-1;
+  let tNow=0,paused=false,mult=5,view='regia',follow=-1,filmM=false;
   function reset(){endCer();tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);crReset(T0);}
   const sAt=(o,t)=>{const k=t-T0,i=Math.floor(k),u=k-i,a=o.s[i],b=o.s[i+1];if(isNaN(a))return isNaN(b)?NaN:b;if(isNaN(b))return a;return a+(b-a)*u;};
   function step(dt){if(CER.on||CER.done)return;
@@ -1588,7 +1672,7 @@ function make3D(PATH,ROADS,BLDS){
       const mv=u.lastP?Math.min(2,m.position.distanceTo(u.lastP)):0;u.lastP=(u.lastP||new V3()).copy(m.position);u.wheel+=mv/.34;u.crank+=mv/1.05;pedal(m,u.crank+u.phase);u.wheels.forEach(w=>w.rotation.x=u.wheel);});
     for(const c of cars){c.mesh.visible=c.active;if(!c.active)continue;const h=at(c.path,c.s,c.off,c.pos);c.fx=Math.sin(h);c.fz=Math.cos(h);c.mesh.position.copy(c.pos);c.mesh.rotation.y=h;c.mesh.rotation.x=-Math.atan(slope(c.path,c.s));}
   }
-  function finish(){if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
+  function finish(){if(filmM){paused=true;return;}if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
   function showFine(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
     $('fine').innerHTML=`<h2>Arrivo</h2><table>${ok.map((x,k)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${k?'+'+fmt(x.tb-l.tb):'1°'}</td></tr>`).join('')}</table><div class="btns"><button class="btn" id="dinuovo">Rivedi</button></div>`;
     $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='Pausa';};}
@@ -1939,7 +2023,14 @@ function make3D(PATH,ROADS,BLDS){
     if(svg!==lastSvg){$('lines').innerHTML='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#10151c"/></marker></defs>'+svg;lastSvg=svg;}
     renderer.render(scene,camera);requestAnimationFrame(frame);
   }
-  return{imagery,fromPhotos,riders:setupRiders,start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();qClear();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
+  const showEls=v=>{renderer.domElement.style.display=v?'block':'none';RID.forEach(o=>{o.m.userData.tag.style.display=v?'':'none';});};
+  return{imagery,fromPhotos,riders:setupRiders,
+    // sintesi: un pezzo di regia automatica senza telecronaca, da t0 a velocità m
+    filmPlay(t0,m){filmM=true;tele=false;view='regia';follow=-1;shot=null;mult=m;showEls(true);seek(t0);paused=false;resize();if(!running){running=true;clock.getDelta();frame();}},
+    filmStop(){running=false;showEls(false);$('lines').innerHTML='';$('live').style.display='none';},
+    hide(){showEls(false);},
+    destroy(){running=false;filmM=false;qClear();try{renderer.dispose();renderer.forceContextLoss();}catch(e){}renderer.domElement.remove();RID.forEach(o=>o.m.userData.tag.remove());removeEventListener('resize',resize);},
+    start(){resize();if(!running){running=true;clock.getDelta();frame();FX.music(true);}},stop(){running=false;renderer.dispose();qClear();FX.music(false);FX.wind(0);FX.crowd(0);if(window.speechSynthesis)speechSynthesis.cancel();},debug:{get cer(){return CER.on?CER.i:CER.done?99:-1},get intro(){return INTRO.on?INTRO.i:-1},get camY(){return camera.position.y},get cron(){return $('cron').textContent},seek:v=>seek(v),get shot(){return shot&&shot.type},setShot(t){newShot();shot.type=t;if(t==='bordo'){at(PR,Math.min(PR.len-5,shot.subj.cur+40),-7.5,tA);shot.fixed=tA.clone();shot.fixed.y=H(tA.x,tA.z)+1.7;}},get view(){return view},step,place,get t(){return tNow},get RID(){return RID},T0:()=>T0,T1:()=>T1}};
 }
 // voce e suoni partono solo dopo un tocco: nelle scene salvate (aperte da WhatsApp) si chiede un tocco prima di cominciare
 function unlockAudio(){window.__unlocked=true;FX.init();try{if(window.speechSynthesis){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u);}}catch(e){}}
