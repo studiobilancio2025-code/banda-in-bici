@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Il ballerino ingessato</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Monoton&family=Rubik:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: festoso, da discoteca anni '70, un po' comico
+   IDEA: la pista illuminata di una balera, il ballerino è la star
+   PICTURE: scena three.js a tutto schermo, pista a quadri luminosi, palla specchiata
+   COLOUR and TYPE: notte viola profondo, magenta e ciano dei faretti; Monoton + Rubik
+   LAYOUT: scena piena, titolo in alto, tre pulsanti mossa in basso */
+:root{color-scheme:dark;--bg:#12061f;--ink:#fbeefe;--acc:#ff3fa4;--cy:#3fe6ff}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 Rubik,system-ui,sans-serif;overflow:hidden}
+#scena{position:fixed;inset:0;touch-action:none}
+#scena canvas{display:block;width:100%;height:100%}
+header{position:fixed;top:0;left:0;right:0;padding:16px max(5vw,16px) 0;pointer-events:none;text-align:center}
+h1{font:400 clamp(26px,6vw,48px)/1.05 Monoton,Rubik,sans-serif;margin:0;color:var(--acc);text-shadow:0 0 18px rgba(255,63,164,.6);text-wrap:balance}
+.sub{margin:6px 0 0;font-size:14px;opacity:.8}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:14px max(4vw,12px) max(16px,env(safe-area-inset-bottom))}
+button{font:600 16px Rubik,sans-serif;min-height:44px;padding:0 18px;border-radius:22px;border:2px solid var(--cy);background:rgba(18,6,31,.7);color:var(--ink);cursor:pointer}
+button[aria-pressed=true]{background:var(--cy);color:#12061f}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="scena"></div>
+<header>
+  <h1>Saturday Gesso Fever</h1>
+  <p class="sub">Trascina per girare intorno alla pista</p>
+</header>
+<nav>
+  <button id="m0" aria-pressed="true">Disco</button>
+  <button id="m1" aria-pressed="false">Twist</button>
+  <button id="m2" aria-pressed="false">Tarantella</button>
+  <button id="luci" aria-pressed="true">Luci</button>
+</nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+{
+const box = document.getElementById('scena');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+box.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x12061f);
+scene.fog = new THREE.Fog(0x12061f, 14, 30);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+
+// Luci
+scene.add(new THREE.AmbientLight(0x6a4a8a, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 0.6);
+key.position.set(4, 8, 5); key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+scene.add(key);
+const spots = [0xff3fa4, 0x3fe6ff, 0xffe14a].map((c,i)=>{
+  const s = new THREE.SpotLight(c, 1.6, 20, 0.35, 0.5);
+  s.position.set(Math.cos(i*2.1)*5, 7, Math.sin(i*2.1)*5);
+  s.target.position.set(0,0,0);
+  scene.add(s, s.target);
+  return s;
+});
+
+// Pista a quadri luminosi
+const N = 8, T = 1;
+const tiles = [];
+const tileGeo = new THREE.BoxGeometry(T*0.96, 0.12, T*0.96);
+const palette = [0xff3fa4,0x3fe6ff,0xffe14a,0x8b5cff,0x3dff8b,0xff7a2f].map(c=>new THREE.Color(c));
+for(let x=0;x<N;x++) for(let z=0;z<N;z++){
+  const m = new THREE.MeshStandardMaterial({color:0x222, emissive:palette[(x+z)%6].clone(), emissiveIntensity:0.6, roughness:0.3, metalness:0.2});
+  const t = new THREE.Mesh(tileGeo, m);
+  t.position.set((x-N/2+0.5)*T, -0.06, (z-N/2+0.5)*T);
+  t.receiveShadow = true;
+  t.userData = {x, z, phase: Math.random()*6};
+  scene.add(t); tiles.push(t);
+}
+const bordo = new THREE.Mesh(new THREE.BoxGeometry(N+0.4,0.1,N+0.4), new THREE.MeshStandardMaterial({color:0x2a1440, metalness:.6, roughness:.4}));
+bordo.position.y = -0.1; scene.add(bordo);
+
+// Palla specchiata
+const pallaMat = new THREE.MeshStandardMaterial({color:0xdddddd, metalness:1, roughness:0.15, flatShading:true, emissive:0x222233});
+const palla = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 12), pallaMat);
+palla.position.set(0, 5.2, 0); scene.add(palla);
+const filo = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,3), new THREE.MeshBasicMaterial({color:0x555555}));
+filo.position.set(0,7.2,0); scene.add(filo);
+
+// Puntini luminosi riflessi sulla pista
+const punti = new THREE.Group();
+const pGeo = new THREE.CircleGeometry(0.07, 8);
+for(let i=0;i<60;i++){
+  const p = new THREE.Mesh(pGeo, new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.7}));
+  p.rotation.x = -Math.PI/2;
+  const r = 0.5 + Math.random()*4, a = Math.random()*Math.PI*2;
+  p.position.set(Math.cos(a)*r, 0.01, Math.sin(a)*r);
+  punti.add(p);
+}
+scene.add(punti);
+
+// Texture del gesso con firme degli amici
+function texGesso(){
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0,0,256,256);
+  for(let i=0;i<300;i++){ g.fillStyle = 'rgba(0,0,0,'+(Math.random()*0.04)+')'; g.fillRect(Math.random()*256, Math.random()*256, 2, 2); }
+  // bende incrociate appena accennate
+  g.strokeStyle = 'rgba(0,0,0,0.06)'; g.lineWidth = 3;
+  for(let y=-256;y<512;y+=28){ g.beginPath(); g.moveTo(0,y); g.lineTo(256,y+60); g.stroke(); }
+  const tx = new THREE.CanvasTexture(c);
+  tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+  return tx;
+}
+
+// Ballerino
+// Maglia da ciclista: gialla con fascia azzurra e scritta
+function texMaglia(){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffd400'; g.fillRect(0,0,512,256);
+  g.fillStyle = '#0a7cff'; g.fillRect(0,110,512,46);
+  g.fillStyle = '#ff2d55'; g.fillRect(0,156,512,10);
+  g.fillStyle = '#ffffff'; g.font = 'bold 34px Rubik, sans-serif'; g.textAlign = 'center';
+  g.fillText('GESSO TEAM', 128, 145); g.fillText('GESSO TEAM', 384, 145);
+  g.fillStyle = '#111'; g.fillRect(0,0,512,14);
+  return new THREE.CanvasTexture(c);
+}
+const pelle = new THREE.MeshStandardMaterial({color:0xf2b48c, roughness:.6});
+const camicia = new THREE.MeshStandardMaterial({map:texMaglia(), roughness:.45});
+const manica = new THREE.MeshStandardMaterial({color:0xffd400, roughness:.45});
+const pantaloni = new THREE.MeshStandardMaterial({color:0x151515, roughness:.35, metalness:.1});
+const calze = new THREE.MeshStandardMaterial({color:0xffffff, roughness:.7});
+const scarpe = new THREE.MeshStandardMaterial({color:0xffffff, roughness:.25, metalness:.2});
+const capelliMat = new THREE.MeshStandardMaterial({color:0x2b1a10, roughness:.8});
+const caschoMat = new THREE.MeshStandardMaterial({color:0xff2d55, roughness:.3, metalness:.3});
+const occhialiMat = new THREE.MeshStandardMaterial({color:0x1a1a2a, roughness:.05, metalness:.9, emissive:0x2a0a40});
+const gessoMat = new THREE.MeshStandardMaterial({map:texGesso(), color:0xffffff, roughness:.95, emissive:0xffffff, emissiveIntensity:.35});
+const fasciaMat = new THREE.MeshStandardMaterial({color:0x2f6cff, roughness:.8});
+const neroMat = new THREE.MeshBasicMaterial({color:0x111111});
+
+const omino = new THREE.Group(); scene.add(omino);
+const anche = new THREE.Group(); anche.position.y = 1.05; omino.add(anche);
+
+function mesh(geo, mat, parent, x=0,y=0,z=0){ const m = new THREE.Mesh(geo, mat); m.position.set(x,y,z); m.castShadow = true; parent.add(m); return m; }
+
+// Busto (appena un filo di pancetta)
+const busto = new THREE.Group(); anche.add(busto);
+const pancia = mesh(new THREE.SphereGeometry(0.46, 32, 24), camicia, busto, 0, 0.5, 0);
+pancia.scale.set(0.95, 1.25, 0.78);
+const panciaBassa = mesh(new THREE.SphereGeometry(0.4, 32, 24), pantaloni, busto, 0, 0.08, 0);
+panciaBassa.scale.set(1.02, 0.6, 0.85);
+// bretelle della salopette
+[-1,1].forEach(s=>{ const br = mesh(new THREE.BoxGeometry(0.07,0.7,0.04), pantaloni, busto, s*0.17, 0.45, 0.35); br.rotation.x = -0.15; });
+// zip e colletto
+mesh(new THREE.BoxGeometry(0.03,0.5,0.02), new THREE.MeshStandardMaterial({color:0xcccccc, metalness:.9, roughness:.2}), busto, 0, 0.65, 0.37);
+mesh(new THREE.CylinderGeometry(0.17,0.2,0.1,20), manica, busto, 0, 1.06, 0);
+
+// Testa
+const testa = new THREE.Group(); testa.position.y = 1.35; busto.add(testa);
+mesh(new THREE.SphereGeometry(0.36, 32, 24), pelle, testa);
+const guance = [-1,1].map(s=>mesh(new THREE.SphereGeometry(0.11,16,12), new THREE.MeshStandardMaterial({color:0xff8f8f, roughness:.7}), testa, s*0.2, -0.06, 0.27));
+[-1,1].forEach(s=>{
+  mesh(new THREE.SphereGeometry(0.07,16,12), new THREE.MeshStandardMaterial({color:0xffffff}), testa, s*0.12, 0.07, 0.31);
+  mesh(new THREE.SphereGeometry(0.035,12,8), neroMat, testa, s*0.12, 0.07, 0.37);
+});
+const naso = mesh(new THREE.SphereGeometry(0.06,12,8), pelle, testa, 0, -0.01, 0.36);
+const bocca = mesh(new THREE.TorusGeometry(0.09, 0.02, 8, 16, Math.PI), neroMat, testa, 0, -0.13, 0.31);
+bocca.rotation.z = Math.PI;
+const baffi = mesh(new THREE.BoxGeometry(0.22,0.04,0.05), capelliMat, testa, 0, -0.07, 0.34);
+// Caschetto da bici con prese d'aria e occhiali sportivi alzati
+const casco = mesh(new THREE.SphereGeometry(0.34, 24, 16, 0, Math.PI*2, 0, Math.PI/2), caschoMat, testa, 0, 0.1, -0.03);
+casco.scale.set(1.12, 1.0, 1.3);
+for(let i=-1;i<=1;i++){ const v = mesh(new THREE.BoxGeometry(0.06,0.04,0.55), neroMat, testa, i*0.14, 0.43-Math.abs(i)*0.05, -0.05); v.rotation.x = 0.1; }
+mesh(new THREE.TorusGeometry(0.33, 0.012, 6, 32, Math.PI), neroMat, testa, 0, 0.02, 0.0).rotation.y = Math.PI/2;
+const occhiali = mesh(new THREE.BoxGeometry(0.5,0.09,0.06), occhialiMat, testa, 0, 0.26, 0.32);
+occhiali.rotation.x = -0.4;
+
+// Braccio sano (destro del ballerino, a sinistra dello schermo)
+const spallaR = new THREE.Group(); spallaR.position.set(-0.48, 0.82, 0); busto.add(spallaR);
+mesh(new THREE.SphereGeometry(0.13,16,12), manica, spallaR);
+mesh(new THREE.CylinderGeometry(0.11,0.1,0.25,16), manica, spallaR, 0, -0.14, 0);
+mesh(new THREE.CylinderGeometry(0.085,0.08,0.27,16), pelle, spallaR, 0, -0.38, 0);
+const gomitoR = new THREE.Group(); gomitoR.position.y = -0.52; spallaR.add(gomitoR);
+mesh(new THREE.CylinderGeometry(0.08,0.07,0.42,16), pelle, gomitoR, 0, -0.21, 0);
+const manoR = mesh(new THREE.SphereGeometry(0.1,16,12), neroMat, gomitoR, 0, -0.46, 0); // guantino
+const ditoR = mesh(new THREE.CylinderGeometry(0.03,0.03,0.18,8), pelle, gomitoR, 0, -0.6, 0);
+
+// Braccio ingessato (sinistro) con fascia al collo
+const spallaL = new THREE.Group(); spallaL.position.set(0.5, 0.82, 0); busto.add(spallaL);
+mesh(new THREE.SphereGeometry(0.13,16,12), manica, spallaL);
+// gesso bianco dalla spalla alla mano, bello spesso
+mesh(new THREE.CylinderGeometry(0.19,0.18,0.48,24), gessoMat, spallaL, 0, -0.26, 0);
+const gomitoL = new THREE.Group(); gomitoL.position.y = -0.5; spallaL.add(gomitoL);
+mesh(new THREE.SphereGeometry(0.2,20,16), gessoMat, gomitoL, 0, 0, 0);
+const gesso = mesh(new THREE.CylinderGeometry(0.19,0.16,0.6,24), gessoMat, gomitoL, 0, 0, 0.3);
+gesso.rotation.x = Math.PI/2;
+mesh(new THREE.TorusGeometry(0.16,0.03,8,24), gessoMat, gomitoL, 0, 0, 0.6);
+mesh(new THREE.SphereGeometry(0.08,12,10), pelle, gomitoL, 0, 0, 0.66);
+spallaL.rotation.z = 0.15;
+gomitoL.rotation.y = -0.9;
+// fascia a tracolla
+const fascia = mesh(new THREE.TorusGeometry(0.52, 0.04, 8, 40, Math.PI*1.1), fasciaMat, busto, 0.12, 0.7, 0.16);
+fascia.rotation.set(0.25, 0, -0.85);
+const amaca = mesh(new THREE.BoxGeometry(0.42,0.05,0.5), fasciaMat, gomitoL, 0, -0.21, 0.32);
+
+// Gambe
+function gamba(s){
+  const g = new THREE.Group(); g.position.set(s*0.2, 0, 0); anche.add(g);
+  mesh(new THREE.CylinderGeometry(0.15,0.12,0.42,16), pantaloni, g, 0, -0.21, 0); // pantaloncino
+  mesh(new THREE.CylinderGeometry(0.115,0.1,0.1,16), pelle, g, 0, -0.46, 0);
+  const ginocchio = new THREE.Group(); ginocchio.position.y = -0.5; g.add(ginocchio);
+  const polpaccio = mesh(new THREE.SphereGeometry(0.11,16,12), pelle, ginocchio, 0, -0.14, -0.01);
+  polpaccio.scale.set(1, 1.8, 1.05);
+  mesh(new THREE.CylinderGeometry(0.075,0.075,0.14,16), calze, ginocchio, 0, -0.36, 0);
+  const sc = mesh(new THREE.BoxGeometry(0.17,0.1,0.34), scarpe, ginocchio, 0, -0.47, 0.06);
+  mesh(new THREE.BoxGeometry(0.175,0.03,0.12), new THREE.MeshStandardMaterial({color:0xff2d55}), ginocchio, 0, -0.41, 0.08);
+  return {g, ginocchio};
+}
+const gL = gamba(1), gR = gamba(-1);
+
+// Ombra a terra morbida
+const ombra = new THREE.Mesh(new THREE.CircleGeometry(0.9, 32), new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0.35}));
+ombra.rotation.x = -Math.PI/2; ombra.position.y = 0.005; scene.add(ombra);
+
+// Controllo camera a trascinamento
+let theta = 0.5, phi = 1.15, dist = 9, tTheta = theta, tPhi = phi;
+let drag = null;
+box.addEventListener('pointerdown', e=>{ drag = {x:e.clientX, y:e.clientY, th:tTheta, ph:tPhi}; box.setPointerCapture(e.pointerId); });
+box.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  tTheta = drag.th - (e.clientX-drag.x)*0.008;
+  tPhi = Math.min(1.45, Math.max(0.55, drag.ph - (e.clientY-drag.y)*0.006));
+});
+['pointerup','pointercancel'].forEach(ev=>box.addEventListener(ev, ()=>drag=null));
+box.addEventListener('wheel', e=>{ dist = Math.min(16, Math.max(5, dist + e.deltaY*0.01)); e.preventDefault(); }, {passive:false});
+
+function resize(){
+  const w = box.clientWidth, h = box.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w/h;
+  dist = w < 600 ? Math.max(dist, 11) : dist;
+  camera.updateProjectionMatrix();
+}
+const ro = new ResizeObserver(resize); ro.observe(box);
+
+// Mosse
+let mossa = 0, luciOn = true;
+const btns = [0,1,2].map(i=>document.getElementById('m'+i));
+btns.forEach((b,i)=>b.addEventListener('click', ()=>{ mossa = i; btns.forEach((x,j)=>x.setAttribute('aria-pressed', j===i)); }));
+const bLuci = document.getElementById('luci');
+bLuci.addEventListener('click', ()=>{ luciOn = !luciOn; bLuci.setAttribute('aria-pressed', luciOn); });
+
+const lento = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clock = new THREE.Clock();
+function anima(){
+  const t = clock.getElapsedTime() * (lento ? 0.4 : 1);
+  const b = t * 2 * Math.PI * 2; // ~120 bpm
+
+  // reset
+  let bounce = Math.abs(Math.sin(b/2))*0.08;
+  anche.rotation.set(0,0,0); busto.rotation.set(0,0,0); omino.rotation.y = 0; omino.position.x = 0;
+
+  if(mossa === 0){ // Disco: braccio sano che punta al cielo e poi in basso
+    const su = Math.sin(b/4) > 0;
+    spallaR.rotation.z = su ? -2.6 : -0.6; spallaR.rotation.x = su ? 0 : -0.5;
+    gomitoR.rotation.z = su ? -0.2 : -0.3;
+    anche.rotation.z = Math.sin(b/2)*0.15;
+    busto.rotation.z = -Math.sin(b/2)*0.1;
+    testa.rotation.z = Math.sin(b/2)*0.15;
+    gL.g.rotation.x = Math.max(0, Math.sin(b/2))*-0.4; gL.ginocchio.rotation.x = Math.max(0, Math.sin(b/2))*0.6;
+    gR.g.rotation.x = Math.max(0, -Math.sin(b/2))*-0.4; gR.ginocchio.rotation.x = Math.max(0, -Math.sin(b/2))*0.6;
+    omino.rotation.y = Math.sin(t*0.5)*0.6;
+  } else if(mossa === 1){ // Twist
+    anche.rotation.y = Math.sin(b)*0.5;
+    busto.rotation.y = -Math.sin(b)*0.8;
+    spallaR.rotation.z = -1.0 + Math.sin(b)*0.3; spallaR.rotation.x = -0.6;
+    gomitoR.rotation.z = -1.2;
+    const giu = (Math.sin(t*0.8)+1)*0.12;
+    gL.g.rotation.x = -giu*2; gL.ginocchio.rotation.x = giu*4;
+    gR.g.rotation.x = -giu*2; gR.ginocchio.rotation.x = giu*4;
+    bounce = -giu*0.9;
+    testa.rotation.z = Math.sin(b)*0.1;
+  } else { // Tarantella: saltelli e giri
+    bounce = Math.abs(Math.sin(b))*0.25;
+    omino.rotation.y = t*1.8;
+    spallaR.rotation.z = -2.4 + Math.sin(b*2)*0.2; spallaR.rotation.x = 0;
+    gomitoR.rotation.z = -0.8;
+    gL.g.rotation.x = Math.sin(b)*0.5; gL.ginocchio.rotation.x = Math.max(0,Math.sin(b))*0.9;
+    gR.g.rotation.x = -Math.sin(b)*0.5; gR.ginocchio.rotation.x = Math.max(0,-Math.sin(b))*0.9;
+    testa.rotation.z = Math.sin(b)*0.2;
+    busto.rotation.z = Math.sin(b)*0.08;
+  }
+  anche.position.y = 1.05 + bounce;
+  // la pancia ballonzola in ritardo
+  const jig = 1 + Math.sin(b - 0.8)*0.02;
+  pancia.scale.set(0.95/Math.sqrt(jig), 1.25*jig, 0.78/Math.sqrt(jig));
+  ombra.scale.setScalar(1 - bounce*0.8);
+  // il braccio ingessato oscilla appena nella fascia
+  spallaL.rotation.x = Math.sin(b/2)*0.06;
+  guance.forEach(g=>g.scale.setScalar(0.8 + Math.sin(b)*0.04));
+
+  // pista
+  tiles.forEach(tl=>{
+    const {x,z,phase} = tl.userData;
+    const onda = Math.sin(t*3 - Math.hypot(x-3.5, z-3.5)*0.9 + phase*0.3);
+    tl.material.emissiveIntensity = luciOn ? 0.25 + Math.max(0,onda)*0.9 : 0.08;
+    if(luciOn && Math.floor(t*2) !== tl.userData.last){ tl.userData.last = Math.floor(t*2); if(Math.random()<0.15) tl.material.emissive.copy(palette[Math.floor(Math.random()*6)]); }
+  });
+  palla.rotation.y = t*0.6;
+  punti.rotation.y = t*0.6;
+  punti.visible = luciOn;
+  spots.forEach((s,i)=>{
+    s.intensity = luciOn ? 1.6 : 0;
+    s.target.position.set(Math.cos(t*0.9+i*2)*2.5, 0, Math.sin(t*0.7+i*2)*2.5);
+  });
+
+  theta += (tTheta-theta)*0.1; phi += (tPhi-phi)*0.1;
+  camera.position.set(Math.sin(theta)*Math.sin(phi)*dist, Math.cos(phi)*dist + 1.2, Math.cos(theta)*Math.sin(phi)*dist);
+  camera.lookAt(0, 1.4, 0);
+  renderer.render(scene, camera);
+  requestAnimationFrame(anima);
+}
+resize();
+anima();
+}
+</script>
+</body>
+</html>
