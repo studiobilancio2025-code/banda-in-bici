@@ -140,6 +140,8 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #mly img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#222}#mly p{margin:0;padding:4px 8px;font:12px/1.3 Barlow,system-ui,sans-serif;color:#cfd6de}
 #mly .x{position:absolute;right:4px;top:4px;width:36px;height:36px;border-radius:50%;border:0;background:#10151ccc;color:#fff;font-size:20px}#mly.big{left:8px;right:8px;width:auto;top:70px;bottom:auto!important}
 #fcard img.fph{display:block;width:100%;max-height:26vh;object-fit:cover;border-radius:8px;margin-top:8px}#fcard .fsrc{display:block;font-size:11px;opacity:.75;margin-top:2px}
+details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4px 8px;background:#faf9f6}details.kit summary{cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;min-height:40px}
+.kc{display:flex;flex-direction:column;font-size:13px;color:#5b6470;gap:2px}.kc input[type=color]{width:56px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0;background:#fff}.kc select{height:36px}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
 #live em{font-style:normal;margin-left:auto;padding-left:8px;opacity:.85}
@@ -194,7 +196,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 <div id="pres"></div>
 <div id="play"></div>
 <div id="film"><div id="frec">● REC · video in registrazione</div><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
-  <div id="fctl"><button id="fspeed" aria-label="Velocità della sintesi">1×</button><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
+  <div id="fctl"><button id="fmus" aria-label="Musica">🎵</button><button id="fspeed" aria-label="Velocità della sintesi">1×</button><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
   <div id="flash"></div><div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="ric" id="engric"> Riccardo — voce naturale, gratis (consigliata)</label>
@@ -235,7 +237,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
   <div class="row">
     <select id="chi" aria-label="Chi inquadrare"></select>
     <button id="molt" aria-label="Velocità della scena">×5</button>
-    <button id="tele" class="on">🎙️ Telecronaca</button><button id="sfx" class="on">🔊 Effetti</button><button id="mus" class="on">🎵 Musica</button><button id="voci">🗣️ Voci</button><button id="foto">📷 Foto vere</button><button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
+    <button id="tele" class="on">🎙️ Telecronaca</button><button id="sfx" class="on">🔊 Effetti</button><button id="mus" class="on">🎵 Musica</button><button id="voci">🗣️ Voci</button><button id="foto">📷 Foto vere</button><button id="opali">💡 Pali</button><button id="omarc">🚶 Marciapiede</button><button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
     <button id="mod">Modifica</button><button id="salvatr2">Salva tratto</button><button id="salva">Salva scena</button>
   </div>
 </div>
@@ -295,8 +297,8 @@ function syncRider(r){
 const PK='banda.ciclisti';let BANDA=[];try{BANDA=JSON.parse(localStorage.getItem(PK)||'[]');}catch(e){}
 const saveBanda=()=>{try{localStorage.setItem(PK,JSON.stringify(BANDA));return true;}catch(e){alert('Non riesco a salvare sul telefono (memoria piena?). Prova a togliere qualche ciclista dalla banda.');return false;}};
 const keyN=n=>(n||'').trim().toLowerCase();
-function applyProf(r,p){Object.assign(r,{name:p.name,color:p.color,face:p.face,alt:p.alt||'media',fis:p.fis||'normale',nick:p.nick||'',bat:p.bat||'',prof:p.name,dirty:false});}
-function upsert(r){const p={name:r.name.trim(),color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:(r.nick||'').trim(),bat:(r.bat||'').trim()};if(!p.name)return false;
+function applyProf(r,p){Object.assign(r,{name:p.name,color:p.color,face:p.face,kit:p.kit||null,alt:p.alt||'media',fis:p.fis||'normale',nick:p.nick||'',bat:p.bat||'',prof:p.name,dirty:false});}
+function upsert(r){const p={name:r.name.trim(),color:r.color,face:r.face,kit:r.kit||null,alt:r.alt,fis:r.fis,nick:(r.nick||'').trim(),bat:(r.bat||'').trim()};if(!p.name)return false;
   // se il ciclista era già nella banda, il nome nuovo sostituisce quello vecchio (correzione)
   let i=r.prof?BANDA.findIndex(q=>keyN(q.name)===keyN(r.prof)):-1;const j=BANDA.findIndex(q=>keyN(q.name)===keyN(p.name));
   if(i<0)i=j;else if(j>=0&&j!==i){if(!confirm(`Nella banda c'è già «${BANDA[j].name}». Lo sostituisco con questa scheda?`))return false;BANDA.splice(j,1);if(j<i)i--;}
@@ -327,6 +329,23 @@ async function addFiles(fl){
   renderRiders();drawMap();computeSeg();renderSegs();
 }
 $('files').addEventListener('change',e=>addFiles([...e.target.files]));
+// completino e bici: m1 colore maglia, m2 secondo colore (disegno), pat disegno, sh pantaloncini, he casco, bk telaio
+const KITP={unita:'Tinta unita',fascia:'Fascia sul petto',righe:'A righe',pois:'A pois',bordi:'Fianchi e colletto'};
+function kitOf(r){const k=r.kit||{};return{m1:k.m1||r.color,m2:k.m2||'#ffffff',pat:KITP[k.pat]?k.pat:'unita',sh:k.sh||'#1b1b1b',he:k.he||k.m1||r.color,bk:k.bk||r.color};}
+function kitCanvas(k,w=256,h=128){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.fillStyle=k.pat==='pois'?k.m2:k.m1;g.fillRect(0,0,w,h);g.fillStyle=k.pat==='pois'?k.m1:k.m2;
+  if(k.pat==='fascia')g.fillRect(0,h*.28,w,h*.2);
+  if(k.pat==='righe')for(let x=0;x<w;x+=w/10)g.fillRect(x,0,w/20,h);
+  if(k.pat==='pois')for(let y=h*.08,j=0;y<h;y+=h/6,j++)for(let x=(j%2)*w/24;x<w;x+=w/12){g.beginPath();g.arc(x,y,Math.max(2,h*.045),0,7);g.fill();}
+  if(k.pat==='bordi'){g.fillRect(0,0,w,h*.1);g.fillRect(0,h*.9,w,h*.1);g.fillRect(w*.2,0,w*.1,h);g.fillRect(w*.7,0,w*.1,h);}
+  return c;}
+const kitPrev=r=>{const k=kitOf(r),c=document.createElement('canvas');c.width=84;c.height=72;const g=c.getContext('2d');
+  g.save();g.beginPath();g.moveTo(22,4);g.lineTo(62,4);g.lineTo(82,20);g.lineTo(72,32);g.lineTo(64,26);g.lineTo(64,68);g.lineTo(20,68);g.lineTo(20,26);g.lineTo(12,32);g.lineTo(2,20);g.closePath();g.clip();
+  g.drawImage(kitCanvas(k,84,72),0,0);g.restore();g.strokeStyle='#444';g.lineWidth=2;g.lineJoin='round';g.beginPath();g.moveTo(22,4);g.lineTo(62,4);g.lineTo(82,20);g.lineTo(72,32);g.lineTo(64,26);g.lineTo(64,68);g.lineTo(20,68);g.lineTo(20,26);g.lineTo(12,32);g.lineTo(2,20);g.closePath();g.stroke();
+  g.fillStyle='#fff';g.beginPath();g.arc(42,4,8,0,Math.PI);g.fill();g.stroke();return c.toDataURL();};
+function kitBox(r,i){const k=kitOf(r),col=(f,l)=>`<label class="kc">${l}<input type="color" data-i="${i}" data-kit="${f}" value="${k[f]}"></label>`;
+  return `<details class="kit"><summary><img src="${kitPrev(r)}" alt="" width="42" height="36"> 👕 Completino e bici</summary>
+    <div class="rrow">${col('m1','Maglia')}${col('m2','2° colore')}<label class="kc">Disegno<select data-i="${i}" data-kit="pat">${Object.entries(KITP).map(([v,l])=>`<option value="${v}" ${v===k.pat?'selected':''}>${l}</option>`).join('')}</select></label></div>
+    <div class="rrow">${col('sh','Pantaloncini')}${col('he','Casco')}${col('bk','Bici')}</div></details>`;}
 function renderRiders(){
   const box=$('riders');box.style.display=riders.length?'block':'none';
   box.innerHTML=riders.map((r,i)=>{const P=r.pts,km=r.g?distOf(r)/1000:0;
@@ -337,13 +356,13 @@ function renderRiders(){
     <div class="rrow">${BANDA.length?`<select data-i="${i}" data-k="who" aria-label="Chi è"><option value="">Già salvato? scegli il nome</option>${BANDA.map(p=>`<option ${keyN(p.name)===keyN(r.prof)?'selected':''} value="${p.name.replace(/"/g,'')}">${p.name}</option>`).join('')}</select>`:''}
     </div><div class="rrow"><button class="save${r.prof&&!r.dirty?' done':''}" data-save="${i}">${r.prof&&!r.dirty?'✓ Salvato nella banda':'💾 Salva '+(r.name.trim()||'ciclista')+' nella banda'}</button>${r.dirty&&r.prof?'<span class="warn">modifiche non salvate</span>':''}</div>
     <div class="rrow"><select data-i="${i}" data-k="alt" aria-label="Altezza">${['bassa','media','alta'].map(v=>`<option ${v===r.alt?'selected':''} value="${v}">Altezza ${v}</option>`).join('')}</select>
-    <select data-i="${i}" data-k="fis" aria-label="Fisico">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===r.fis?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>
+    <select data-i="${i}" data-k="fis" aria-label="Fisico">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===r.fis?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>${kitBox(r,i)}
     <div class="rrow"><input type="text" data-i="${i}" data-f="nick" value="${(r.nick||'').replace(/"/g,'')}" placeholder="Soprannome (es. il Diesel)" aria-label="Soprannome" style="width:100%"></div>
     <div class="rrow"><textarea data-i="${i}" data-f="bat" rows="2" placeholder="Battute per il telecronista, una per riga (es. {n} giura che oggi non aveva le gambe)" aria-label="Battute">${(r.bat||'').replace(/</g,'&lt;')}</textarea></div>
     <div class="meta"><b>${it(km.toFixed(1))} km</b> · ${fmt(P[P.length-1].t)} · ${P.length} punti${P.some(p=>p.pw!=null)?' · watt':''}${P.some(p=>p.hr!=null)?' · battiti':''} · ${st}</div></div></div>`;}).join('');
 }
 function distOf(r){let d=0;const g=r.g;for(let s=1;s<g.n;s++)if(!isNaN(g.X[s])&&!isNaN(g.X[s-1]))d+=Math.hypot(g.X[s]-g.X[s-1],g.Z[s]-g.Z[s-1]);return d;}
-$('riders').addEventListener('input',e=>{const i=e.target.dataset.i,f=e.target.dataset.f;if(f){const r=riders[i];r[f]=e.target.value.slice(0,f==='nick'?24:800);r.dirty=true;const b=document.querySelector(`[data-save="${i}"]`);if(b){b.className='save';b.textContent='💾 Salva '+(r.name.trim()||'ciclista')+' nella banda';}return;}
+$('riders').addEventListener('input',e=>{if(e.target.dataset.kit)return;const i=e.target.dataset.i,f=e.target.dataset.f;if(f){const r=riders[i];r[f]=e.target.value.slice(0,f==='nick'?24:800);r.dirty=true;const b=document.querySelector(`[data-save="${i}"]`);if(b){b.className='save';b.textContent='💾 Salva '+(r.name.trim()||'ciclista')+' nella banda';}return;}
   if(e.target.type==='text'){const r=riders[i];r.name=e.target.value.slice(0,18);r.dirty=true;
   const b=document.querySelector(`[data-save="${i}"]`);if(b){b.className='save';b.textContent='💾 Salva '+(r.name.trim()||'ciclista')+' nella banda';}computeSeg(true);}});
 // appena scrivi un nome vero (diverso da quello del file) il ciclista entra nella banda da solo
@@ -352,7 +371,9 @@ $('riders').addEventListener('click',e=>{const b=e.target.closest('button');if(!
   if(b.dataset.save!==undefined){const r=riders[b.dataset.save];if(!r.name.trim()){alert('Scrivi prima il nome del ciclista.');return;}upsert(r);renderRiders();}
   if(b.dataset.c){const r=riders[b.dataset.i];r.color=b.dataset.c;r.dirty=true;renderRiders();drawMap();computeSeg(true);}
   if(b.dataset.del!==undefined){riders.splice(+b.dataset.del,1);if(!riders.length){REF=null;A=B=null;}else if(b.dataset.del==='0'){riders[0].off=0;riders.slice(1).forEach(syncRider);}renderRiders();drawMap();computeSeg();renderSegs();}});
-$('riders').addEventListener('change',e=>{const k=e.target.dataset.k;if(k==='who'){const r=riders[e.target.dataset.i],p=BANDA.find(q=>q.name===e.target.value);if(p){applyProf(r,p);renderRiders();drawMap();computeSeg(true);}return;}
+$('riders').addEventListener('change',e=>{if(e.target.dataset.kit){const r=riders[e.target.dataset.i];r.kit=Object.assign(kitOf(r),r.kit||{},{[e.target.dataset.kit]:e.target.value});r.dirty=true;
+    const d=e.target.closest('details'),im=d&&d.querySelector('summary img');if(im)im.src=kitPrev(r);const b=document.querySelector(`[data-save="${e.target.dataset.i}"]`);if(b){b.className='save';b.textContent='💾 Salva '+(r.name.trim()||'ciclista')+' nella banda';}return;}
+  const k=e.target.dataset.k;if(k==='who'){const r=riders[e.target.dataset.i],p=BANDA.find(q=>q.name===e.target.value);if(p){applyProf(r,p);renderRiders();drawMap();computeSeg(true);}return;}
   if(k){const r=riders[e.target.dataset.i];r[k]=e.target.value;r.dirty=true;renderRiders();return;}if(e.target.type!=='file')return;const f=e.target.files[0],i=e.target.dataset.i;if(!f)return;
   const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),s=Math.min(img.width,img.height)*.85;
     g.drawImage(img,(img.width-s)/2,Math.max(0,img.height*.42-s/2),s,s,0,0,256,256);riders[i].face=c.toDataURL('image/jpeg',.85);riders[i].dirty=true;renderRiders();URL.revokeObjectURL(img.src);};
@@ -481,20 +502,43 @@ const FX={ctx:null,on:true,mus:true,
   wind(v){if(!this.ctx)return;this.windG.gain.setTargetAtTime(this.on?Math.min(.06,v*v/2400):0,this.t(),.4);},
   crowd(k){if(!this.ctx)return;this.crowdG.gain.setTargetAtTime(this.on?k*.05:0,this.t(),.6);},
   duck(on){this.ducked=on;if(this.ctx)this.musG.gain.setTargetAtTime(this.mus&&this.playing?(on?.018:.05):0,this.t(),.25);},
-  // sottofondo leggero: giro di accordi con basso e arpeggio
-  music(on){if(!this.ctx)return;this.playing=on;this.duck(!!this.ducked);if(!on||this.timer)return;const c=this.ctx,bpm=104,beat=60/bpm;
-    const CH=[[220,277,330],[196,247,294],[175,220,262],[196,247,330]];let bar=0,next=c.currentTime+.1;
-    const sched=()=>{if(!this.playing){clearInterval(this.timer);this.timer=null;return;}while(next<c.currentTime+1.2){const ch=CH[bar%4];
-      for(let b=0;b<4;b++){const t=next+b*beat;const o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.value=ch[0]/2;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.5,t+.01);g.gain.exponentialRampToValueAtTime(.001,t+beat*.9);o.connect(g);g.connect(this.musG);o.start(t);o.stop(t+beat);
-        for(let a=0;a<2;a++){const ta=t+a*beat/2,oa=c.createOscillator(),ga=c.createGain();oa.type='square';oa.frequency.value=ch[(b*2+a)%3]*2;ga.gain.setValueAtTime(.0001,ta);ga.gain.linearRampToValueAtTime(.09,ta+.005);ga.gain.exponentialRampToValueAtTime(.001,ta+beat*.4);oa.connect(ga);ga.connect(this.musG);oa.start(ta);oa.stop(ta+beat*.5);}}
-      ch.forEach(hz=>{const o=c.createOscillator(),g=c.createGain();o.type='sawtooth';o.frequency.value=hz;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;g.gain.setValueAtTime(.0001,next);g.gain.linearRampToValueAtTime(.06,next+.4);g.gain.setValueAtTime(.06,next+beat*3.5);g.gain.linearRampToValueAtTime(.0001,next+beat*4);o.connect(lp);lp.connect(g);g.connect(this.musG);o.start(next);o.stop(next+beat*4+.05);});
+  // musichette di sottofondo (tutte sintetizzate): si sceglie col pulsante 🎵, scelta ricordata (banda.musica)
+  STY:{allegra:{n:'Allegra',bpm:104,ch:[[220,277,330],[196,247,294],[175,220,262],[196,247,330]],arp:'square',arpV:.09,pad:'sawtooth',padV:.06,bass:'triangle',k:[0]},
+    epica:{n:'Epica',bpm:76,ch:[[220,262,330],[175,220,262],[262,330,392],[196,247,294]],arp:'sawtooth',arpV:.05,pad:'sawtooth',padV:.1,bass:'sawtooth',k:[0,2.5],tim:1},
+    tesa:{n:'Tesa',bpm:128,ch:[[220,262,330],[220,262,330],[208,262,311],[196,247,294]],arp:'square',arpV:.05,pad:'sawtooth',padV:.05,bass:'sawtooth',b16:1,k:[0,1,2,3],h:1},
+    relax:{n:'Rilassata',bpm:78,ch:[[262,330,392,494],[220,262,330,392],[175,220,262,330],[196,247,294,349]],arp:'triangle',arpV:.12,arp1:1,pad:'triangle',padV:.07,bass:'triangle',k:[0,2.5],sn:[1,3],h:1,soft:1},
+    rock:{n:'Rock',bpm:140,ch:[[165,247,330],[196,294,392],[220,330,440],[147,220,294]],pow:1,bass:'sawtooth',k:[0,1.5,2],sn:[1,3],h:1}},
+  style:(()=>{try{return localStorage.getItem('banda.musica')||'allegra';}catch(e){return'allegra';}})(),
+  setStyle(st){this.style=st;try{localStorage.setItem('banda.musica',st);}catch(e){}if(this.timer){clearInterval(this.timer);this.timer=null;if(this.playing)this.music(true);}},
+  drum(kind,t,v){const c=this.ctx,g=c.createGain();g.connect(this.musG);
+    if(kind==='k'){const o=c.createOscillator();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+.13);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(.9*v,t+.004);g.gain.exponentialRampToValueAtTime(.001,t+.32);o.connect(g);o.start(t);o.stop(t+.35);return;}
+    const n=c.createBufferSource(),f=c.createBiquadFilter();n.buffer=this.noise;f.type=kind==='h'?'highpass':'bandpass';f.frequency.value=kind==='h'?7500:1700;n.connect(f);f.connect(g);
+    const d=kind==='h'?.045:kind==='T'?.5:.16;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime((kind==='h'?.12:kind==='T'?.5:.35)*v,t+.003);g.gain.exponentialRampToValueAtTime(.001,t+d);n.start(t);n.stop(t+d+.02);
+    if(kind==='T'){const o=c.createOscillator(),g2=c.createGain();o.frequency.setValueAtTime(90,t);o.frequency.exponentialRampToValueAtTime(55,t+.4);g2.gain.setValueAtTime(.6*v,t);g2.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g2);g2.connect(this.musG);o.start(t);o.stop(t+.65);}},
+  mnote(type,hz,t,d,v,lp){const c=this.ctx,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=hz;g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+Math.min(.02,d*.2));g.gain.exponentialRampToValueAtTime(.001,t+d);
+    if(lp){const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=lp;o.connect(f);f.connect(g);}else o.connect(g);g.connect(this.musG);o.start(t);o.stop(t+d+.05);},
+  music(on){if(!this.ctx)return;this.playing=on;this.duck(!!this.ducked);if(!on||this.timer)return;const c=this.ctx,S=this.STY[this.style]||this.STY.allegra,beat=60/S.bpm,sv=S.soft?.6:1;let bar=0,next=c.currentTime+.1;
+    const sched=()=>{if(!this.playing){clearInterval(this.timer);this.timer=null;return;}while(next<c.currentTime+1.2){const ch=S.ch[bar%S.ch.length];
+      for(let b=0;b<4;b++){const t=next+b*beat;
+        if(S.b16)for(let q=0;q<4;q++)this.mnote(S.bass,ch[0]/2,t+q*beat/4,beat/4*.9,.35,700);else this.mnote(S.bass,ch[0]/2,t,beat*.9,S.pow?.4:.5,S.pow?500:0);
+        if(S.arp){const n=S.arp1?1:2;for(let a=0;a<n;a++)this.mnote(S.arp,ch[(b*n+a)%ch.length]*2,t+a*beat/n,beat/n*.8,S.arpV,S.arp==='sawtooth'?1600:0);}
+        if(S.pow)for(let q=0;q<2;q++)ch.slice(0,2).forEach(hz=>this.mnote('sawtooth',hz,t+q*beat/2,beat*.42,.07,1300));
+        if(S.h)for(let q=0;q<2;q++)this.drum('h',t+q*beat/2,sv);
+        if(S.sn&&S.sn.includes(b))this.drum('s',t,sv);}
+      (S.k||[]).forEach(kb=>{if(S.tim&&kb===0&&bar%2===0)this.drum('T',next,1);else this.drum('k',next+kb*beat,sv);});
+      if(S.pad)ch.forEach(hz=>{const o=c.createOscillator(),g=c.createGain();o.type=S.pad;o.frequency.value=hz;const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;g.gain.setValueAtTime(.0001,next);g.gain.linearRampToValueAtTime(S.padV,next+.4);g.gain.setValueAtTime(S.padV,next+beat*3.5);g.gain.linearRampToValueAtTime(.0001,next+beat*4);o.connect(lp);lp.connect(g);g.connect(this.musG);o.start(next);o.stop(next+beat*4+.05);});
       next+=beat*4;bar++;}};sched();this.timer=setInterval(sched,400);},
   pause(p){if(this.ctx){if(p)this.ctx.suspend();else this.ctx.resume();}}};
 $('voci').addEventListener('click',()=>{FX.init();fillVoci();$('vocibox').style.display='grid';});
 $('vocibox').addEventListener('change',saveVoci);
 $('vocibox').addEventListener('click',e=>{const b=e.target.closest('button');if(e.target.id==='vocibox'||(b&&b.dataset.pv==='x')){$('vocibox').style.display='none';return;}if(b&&b.dataset.pv)provaVoce(b.dataset.pv);});
 $('sfx').addEventListener('click',()=>{FX.init();FX.on=!FX.on;$('sfx').textContent=FX.on?'🔊 Effetti':'🔈 Effetti';$('sfx').classList.toggle('on',FX.on);});
-$('mus').addEventListener('click',()=>{FX.init();FX.mus=!FX.mus;$('mus').textContent=FX.mus?'🎵 Musica':'🎵 Musica no';$('mus').classList.toggle('on',FX.mus);FX.duck(!!FX.ducked);});
+// 🎵: ogni tocco passa alla musica successiva (Allegra, Epica, Tesa, Rilassata, Rock) e poi a "senza musica"
+const MUSL=['allegra','epica','tesa','relax','rock'];
+function musLbl(){const t=FX.mus?'🎵 '+FX.STY[FX.style].n:'🎵 Musica no';['mus','fmus'].forEach(id=>{const b=$(id);if(b){b.textContent=id==='fmus'?(FX.mus?'🎵':'🔇'):t;b.classList.toggle('on',FX.mus);b.title=t;}});}
+function musNext(){FX.init();if(!FX.mus){FX.mus=true;FX.setStyle(MUSL[0]);}else{const i=MUSL.indexOf(FX.style);if(i>=MUSL.length-1)FX.mus=false;else FX.setStyle(MUSL[i+1]);}
+  try{localStorage.setItem('banda.musica.on',FX.mus?'1':'0');}catch(e){}FX.duck(!!FX.ducked);musLbl();}
+$('mus').addEventListener('click',musNext);try{if(localStorage.getItem('banda.musica.on')==='0')FX.mus=false;}catch(e){}musLbl();
 window.__FX=FX;window.__RIC=RIC;
 addEventListener('pointerdown',()=>{if(FX.ctx&&FX.ctx.state==='suspended'&&!window.__pausa)FX.ctx.resume();},{passive:true});
 
@@ -755,6 +799,7 @@ function recStop(save){if(!REC.on)return;REC.on=false;$('frec').style.display='n
 function flash(){const f=$('flash');f.style.transition='none';f.style.opacity=1;requestAnimationFrame(()=>requestAnimationFrame(()=>{f.style.transition='opacity .7s';f.style.opacity=0;}));}
 function stopFilm(again){if(REC.on){recStop(false);FILM.rec=false;}if(SOLOF&&again!==true)setTimeout(soloPlay,50);FILM.on=false;(FILM.H||[]).forEach(h=>{if(h.S)h.S.filmStop();});film3Dclear();$('fmap').style.visibility='visible';$('film').style.background='#10151c';$('setup').style.visibility='';try{FILM.src&&FILM.src.stop();}catch(e){}if(window.speechSynthesis)speechSynthesis.cancel();FX.music(false);FX.pause(false);$('film').style.display='none';$('fend').style.display='none';fCap('');}
 $('fclose').addEventListener('click',()=>stopFilm());
+$('fmus').addEventListener('click',()=>{musNext();const t=$('fmus');t.dataset.n=FX.mus?FX.STY[FX.style].n:'no';const f=$('fspeed');f.textContent=t.dataset.n;clearTimeout(t.tm);t.tm=setTimeout(fSpeedLbl,1300);});
 const fSpeedLbl=()=>{$('fspeed').textContent=String(FILM.speed).replace('.',',')+'×';};fSpeedLbl();
 $('fspeed').addEventListener('click',()=>{FILM.speed=FSPEEDS[(FSPEEDS.indexOf(FILM.speed)+1)%FSPEEDS.length];fSpeedLbl();try{localStorage.setItem('banda.sintesi.vel',FILM.speed);}catch(e){}});
 $('fpause').addEventListener('click',()=>{FILM.paused=!FILM.paused;if(FILM.curS)FILM.curS.hold(FILM.paused);$('fpause').textContent=FILM.paused?'▶':'⏸';FX.pause(FILM.paused);if(window.speechSynthesis){FILM.paused?speechSynthesis.pause():speechSynthesis.resume();}});
@@ -975,7 +1020,7 @@ async function fetchOSM(la0,lo0,la1,lo1,depth=0){
   return{nodes,ways};
 }
 
-let S3=null;
+let S3=null;const SCN={pali:true,marc:true};try{Object.assign(SCN,JSON.parse(localStorage.getItem('banda.scena')||'{}'));}catch(e){}
 function make3D(PATH,ROADS,BLDS,DEM){
   const V3=THREE.Vector3;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -1014,12 +1059,15 @@ function make3D(PATH,ROADS,BLDS,DEM){
     for(let i=0;i<=p.N;i++){const s=i*p.step;for(const [o,u] of[[o1,1],[o2,0]]){pos.push(p.px[i]-p.tz[i]*o,p.py[i]+dy,p.pz[i]+p.tx[i]*o);uv.push(uvRoad?u:o/4,s/10);}if(i<p.N){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();const m=new THREE.Mesh(g,mat);m.receiveShadow=true;scene.add(m);}
   const tc=document.createElement('canvas');tc.width=128;tc.height=256;{const g=tc.getContext('2d');g.fillStyle='#4b4e53';g.fillRect(0,0,128,256);for(let i=0;i<1500;i++){g.fillStyle=`rgba(255,255,255,${Math.random()*.07})`;g.fillRect(Math.random()*128,Math.random()*256,2,2);}
-   g.fillStyle='#f2f2f2';g.fillRect(4,0,4,256);g.fillRect(120,0,4,256);g.fillStyle='#f6c400';g.fillRect(61,0,6,140);}
+   g.fillStyle='#f2f2f2';g.fillRect(4,0,4,256);g.fillRect(120,0,4,256);g.fillStyle='#f2f2f2';g.fillRect(61,0,6,140);}
   const roadTex=new THREE.CanvasTexture(tc);roadTex.wrapT=THREE.RepeatWrapping;roadTex.encoding=THREE.sRGBEncoding;roadTex.anisotropy=4;
   const RD=buildPath(Array.from({length:PR.N+1},(_,i)=>[PR.px[i],PR.pz[i],PR.py[i]]).filter((_,i)=>i%4===0),1);
   strip(RD,-3.4,3.4,.12,new THREE.MeshLambertMaterial({map:roadTex}),true);
   const lam=c=>new THREE.MeshLambertMaterial({color:c}),walk=lam(0xc9c4ba),kerb=lam(0xe6e6e6);
-  for(const sd of[-1,1]){strip(RD,sd*3.4,sd*3.6,.26,kerb);strip(RD,sd*3.6,sd*5.2,.25,walk);}
+  // marciapiedi e pali si possono togliere (pulsanti nella scena, scelta ricordata: SCN)
+  const SIDE=[],POLES=new THREE.Group();scene.add(POLES);
+  for(const sd of[-1,1]){strip(RD,sd*3.4,sd*3.6,.26,kerb);SIDE.push(scene.children[scene.children.length-1]);strip(RD,sd*3.6,sd*5.2,.25,walk);SIDE.push(scene.children[scene.children.length-1]);}
+  function applyOpt(){SIDE.forEach(m=>m.visible=SCN.marc);POLES.visible=SCN.pali;}applyOpt();
   // --- indici per strade ed edifici ---
   const RW={primary:8,secondary:7.5,tertiary:6.5,tertiary_link:5,unclassified:5.5,residential:5,living_street:4.5,service:3.4,track:3};
   const RS=[];for(const [ty,pts] of ROADS){const w=(RW[ty]||4)/2;for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(L/3);for(let k=0;k<=n;k++)RS.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n,w]);}}
@@ -1148,40 +1196,80 @@ function make3D(PATH,ROADS,BLDS,DEM){
     // paletti e lampioni
     const postM=lam(0xffffff),redM=lam(0xd32f2f),gray=lam(0x9e9e9e),bulb=new THREE.MeshBasicMaterial({color:0xfff8e1}),bxm=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
     for(let s=8;s<PR.len;s+=22)for(const sd of[-1,1]){const h=at(PR,s,sd*5.6,tA);if(bldHit(tA.x,tA.z,.4))continue;
-      const p=new THREE.Group(),a1=bxm(.12,.9,.12,postM),b1=bxm(.13,.14,.13,redM);a1.position.y=.6;b1.position.y=.92;a1.castShadow=true;p.add(a1,b1);p.position.copy(tA);scene.add(p);
+      const p=new THREE.Group(),a1=bxm(.12,.9,.12,postM),b1=bxm(.13,.14,.13,redM);a1.position.y=.6;b1.position.y=.92;a1.castShadow=true;p.add(a1,b1);p.position.copy(tA);POLES.add(p);
       if(Math.round(s/22)%3===0){at(PR,s+6,sd*5.9,tB);if(bldHit(tB.x,tB.z,.6))continue;const gg=new THREE.Group(),rx=-Math.cos(h),rz=Math.sin(h);const pole=bxm(.14,7,.14,gray);pole.position.y=3.5;pole.castShadow=true;
-        const arm=bxm(.1,.1,1.8,gray);arm.position.set(0,6.95,.85);const lb=bxm(.35,.15,.6,bulb);lb.position.set(0,6.85,1.6);gg.add(pole,arm,lb);gg.position.copy(tB);gg.rotation.y=Math.atan2(-sd*rx,-sd*rz);scene.add(gg);}}
+        const arm=bxm(.1,.1,1.8,gray);arm.position.set(0,6.95,.85);const lb=bxm(.35,.15,.6,bulb);lb.position.set(0,6.85,1.6);gg.add(pole,arm,lb);gg.position.copy(tB);gg.rotation.y=Math.atan2(-sd*rx,-sd*rz);POLES.add(gg);}}
+    applyOpt();
   }
   function roadNear(q){return Math.min(...SAMP.map(s=>Math.abs(s[0]-q[0])+Math.abs(s[1]-q[1])))<330;}
 
   // --- ciclista (pupazzetto con il volto dalla foto) ---
   const UP=new V3(0,1,0),tmp=new V3();
   function limb(m,a,b){tmp.subVectors(b,a);const Lg=tmp.length();m.position.copy(a).addScaledVector(tmp,.5);m.scale.set(1,Lg,1);m.quaternion.setFromUnitVectors(UP,tmp.normalize());}
-  const unitCyl=r=>new THREE.CylinderGeometry(r,r,1,8),black=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6}),skin=new THREE.MeshStandardMaterial({color:0xe0ac82,roughness:.8}),metal=new THREE.MeshStandardMaterial({color:0xb0b4ba,metalness:.7,roughness:.3});
+  const unitCyl=r=>new THREE.CylinderGeometry(r,r,1,8),black=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6}),skin=new THREE.MeshStandardMaterial({color:new THREE.Color('#e3b08a').convertSRGBToLinear(),roughness:.75}),metal=new THREE.MeshStandardMaterial({color:0xb0b4ba,metalness:.7,roughness:.3});
   // morfotipo: altezza scala tutto (bici compresa), fisico ingrossa busto, braccia e gambe; il grasso ha la pancia
   const ALT={bassa:.92,media:1,alta:1.09},FIS={magro:.78,normale:1,robusto:1.22,grasso:1.45};
-  function makeRider(color,face,alt='media',fis='normale'){
-    const W=FIS[fis]||1,grp=new THREE.Group(),jersey=new THREE.MeshStandardMaterial({color,roughness:.7}),frameM=new THREE.MeshStandardMaterial({color,metalness:.3,roughness:.4});grp.rotation.order='YXZ';
-    const add=m=>{m.castShadow=true;grp.add(m);return m;},V=(x,y,z)=>new V3(x,y,z),wheels=[];
-    for(const z of[-.52,.52]){const w=new THREE.Group();w.position.set(0,.34,z);const ty=new THREE.Mesh(new THREE.TorusGeometry(.33,.025,8,32),black);ty.rotation.y=Math.PI/2;ty.castShadow=true;w.add(ty);
-      for(let k=0;k<3;k++){const s=new THREE.Mesh(new THREE.BoxGeometry(.01,.64,.01),metal);s.rotation.x=k*Math.PI/3;w.add(s);}grp.add(w);wheels.push(w);}
-    const P={bb:V(0,.3,0),seat:V(0,.88,-.16),head:V(0,.82,.42),rear:V(0,.34,-.52),front:V(0,.34,.52),bar:V(0,1,.46)};
-    [[P.bb,P.seat],[P.bb,P.head],[P.seat,P.head],[P.bb,P.rear],[P.seat,P.rear],[P.head,P.front],[P.head,P.bar]].forEach(([a,b])=>limb(add(new THREE.Mesh(unitCyl(.022),frameM)),a,b));
-    const bar=add(new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.42,6),black));bar.rotation.z=Math.PI/2;bar.position.copy(P.bar);
-    add(new THREE.Mesh(new THREE.BoxGeometry(.12,.04,.26),black)).position.set(0,.92,-.17);
-    limb(add(new THREE.Mesh(new THREE.CylinderGeometry(.15*W,.13*W,1,10),jersey)),V(0,.96,-.17),V(0,1.36,.22));
-    if(fis==='grasso'){const pb=add(new THREE.Mesh(new THREE.SphereGeometry(.17,14,10),jersey));pb.scale.set(1.15,.95,1.1);pb.position.set(0,1.05,.08);}
-    const R=face?.15:.11,head=add(new THREE.Mesh(new THREE.SphereGeometry(R,16,12),skin));head.position.set(0,1.5+(R-.11)*.8,.34);
-    const hm=add(new THREE.Mesh(new THREE.SphereGeometry(R*1.12,16,10,0,Math.PI*2,0,Math.PI/2.1),jersey));hm.position.set(0,head.position.y+.02,.32);hm.rotation.x=-.15;
-    if(face){const t=new THREE.TextureLoader().load(face);t.encoding=THREE.sRGBEncoding;const f=new THREE.Mesh(new THREE.CircleGeometry(R*.93,24),new THREE.MeshBasicMaterial({map:t}));
-      f.position.set(0,head.position.y-.01,head.position.z+R*.98);grp.add(f);}
-    for(const x of[-.16,.16]){const s=V(x,1.33,.2),h=V(x*.9,1,.44),e=V(x*1.15,1.16,.36);limb(add(new THREE.Mesh(unitCyl(.045*Math.sqrt(W)),jersey)),s,e);limb(add(new THREE.Mesh(unitCyl(.038*Math.sqrt(W)),skin)),e,h);}
-    const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(unitCyl(.065*W),black)),shin:add(new THREE.Mesh(unitCyl(.045*Math.sqrt(W)),skin)),crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),metal)),hip:V(sd*.09,.96,-.15)}));
+  // ciclista più umano (busto modellato, spalle, gomiti, ginocchia, mani e scarpe) su una bici da corsa vera
+  // (telaio con foderi, forcella, manubrio da corsa, ruote a profilo alto con raggi, guarnitura, borraccia); completino e colore bici scelti nella scheda
+  function makeRider(r){const k=kitOf(r),face=r.face,alt=r.alt||'media',fis=r.fis||'normale';
+    const W=FIS[fis]||1,sW=Math.sqrt(W),grp=new THREE.Group();grp.rotation.order='YXZ';
+    const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(c).convertSRGBToLinear(),roughness:.65},o||{}));
+    const kt=new THREE.CanvasTexture(kitCanvas(k));kt.encoding=THREE.sRGBEncoding;
+    const jersey=new THREE.MeshStandardMaterial({map:kt,roughness:.7}),sleeve=M(k.pat==='pois'?k.m2:k.m1,{roughness:.7}),shorts=M(k.sh,{roughness:.55}),helm=M(k.he,{roughness:.35,metalness:.1}),
+      frameM=M(k.bk,{metalness:.45,roughness:.3}),dark=M('#1c1c1c',{roughness:.5}),tyre=M('#111',{roughness:.9}),rimM=M('#2a2d31',{metalness:.5,roughness:.35}),alu=M('#c3c7cc',{metalness:.8,roughness:.3}),sock=M('#f4f4f4'),shoeM=M('#f0f0f0',{roughness:.4});
+    const add=m=>{m.castShadow=true;grp.add(m);return m;},V=(x,y,z)=>new V3(x,y,z),wheels=[],tube=(a,b,rr,mat)=>{const m=add(new THREE.Mesh(new THREE.CylinderGeometry(rr,rr,1,10),mat));limb(m,a,b);return m;};
+    // ruote: copertone, cerchio alto, mozzo e raggi
+    for(const z of[-.5,.5]){const w=new THREE.Group();w.position.set(0,.34,z);
+      const ty=new THREE.Mesh(new THREE.TorusGeometry(.322,.016,8,40),tyre);ty.rotation.y=Math.PI/2;ty.castShadow=true;
+      const rim=new THREE.Mesh(new THREE.TorusGeometry(.29,.024,6,40),rimM);rim.rotation.y=Math.PI/2;rim.scale.set(1,1,.45);rim.castShadow=true;
+      const hub=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.1,10),alu);hub.rotation.z=Math.PI/2;
+      const sp=[];for(let i=0;i<20;i++){const a=i/20*Math.PI*2,sd=i%2?.03:-.03;sp.push(sd,0,0,0,Math.sin(a)*.27,Math.cos(a)*.27);}
+      const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));w.add(ty,rim,hub,new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:0x9aa0a6})));grp.add(w);wheels.push(w);}
+    // telaio
+    const P={bb:V(0,.3,0),sc:V(0,.83,-.15),ht:V(0,.86,.41),hb:V(0,.73,.45),rh:V(0,.34,-.5),fh:V(0,.34,.52)};
+    tube(P.bb,P.sc,.02,frameM);tube(P.sc,P.ht,.019,frameM);tube(P.bb,P.hb,.028,frameM);tube(P.hb,P.ht,.025,frameM);
+    for(const x of[-.045,.045]){tube(V(x*.5,.3,-.02),V(x,.34,-.5),.011,frameM);tube(V(x*.4,.82,-.16),V(x,.35,-.49),.01,frameM);tube(V(x*.5,.73,.45),V(x,.34,.52),.012,frameM);}
+    tube(V(0,.82,-.15),V(0,.92,-.19),.012,alu);
+    const sad=add(new THREE.Mesh(new THREE.SphereGeometry(1,14,8),dark));sad.scale.set(.06,.022,.14);sad.position.set(0,.935,-.2);
+    tube(P.ht,V(0,.9,.5),.014,dark);
+    // manubrio da corsa: parte alta e due curve verso il basso
+    tube(V(-.2,.9,.5),V(.2,.9,.5),.013,dark);
+    for(const sd of[-1,1]){const cv=new THREE.CatmullRomCurve3([V(sd*.2,.9,.5),V(sd*.21,.91,.58),V(sd*.21,.86,.64),V(sd*.21,.78,.61),V(sd*.21,.77,.53)]);
+      add(new THREE.Mesh(new THREE.TubeGeometry(cv,12,.013,6),dark));const hood=add(new THREE.Mesh(new THREE.BoxGeometry(.035,.05,.07),dark));hood.position.set(sd*.21,.93,.6);hood.rotation.x=-.4;}
+    // guarnitura, pignoni, borraccia
+    const cr=add(new THREE.Mesh(new THREE.TorusGeometry(.1,.009,6,28),alu));cr.rotation.y=Math.PI/2;cr.position.set(.07,.3,0);
+    const cs=add(new THREE.Mesh(new THREE.TorusGeometry(.045,.012,6,18),alu));cs.rotation.y=Math.PI/2;cs.position.set(.055,.34,-.5);
+    tube(V(.065,.39,0),V(.055,.385,-.5),.004,dark);tube(V(.065,.21,0),V(.055,.3,-.5),.004,dark);
+    {const a=V(0,.43,.13),b=V(0,.61,.33),bt=tube(a.clone().add(V(0,.04,-.03)),b.clone().add(V(0,.04,-.03)),.033,M(k.m2,{roughness:.4}));bt.castShadow=true;}
+    // corpo: bacino, busto modellato (col disegno della maglia), spalle, collo, testa, casco
+    const pel=add(new THREE.Mesh(new THREE.SphereGeometry(.13*W,14,10),shorts));pel.scale.set(1.05,.75,1.1);pel.position.set(0,.99,-.15);
+    const tor=add(new THREE.Mesh(new THREE.LatheGeometry([[0,0],[.115,.01],[.135,.07],[.128,.18],[.145,.32],[.158,.42],[.13,.5],[.06,.545],[0,.55]].map(([x,y])=>new THREE.Vector2(x,y)),18),jersey));
+    {const a=V(0,.97,-.15),b=V(0,1.36,.2),d=tmp.subVectors(b,a);tor.position.copy(a);tor.scale.set(W*1.08,d.length()/.55,W*.82);tor.quaternion.setFromUnitVectors(UP,d.clone().normalize());}
+    if(fis==='grasso'){const pb=add(new THREE.Mesh(new THREE.SphereGeometry(.17,14,10),jersey));pb.scale.set(1.15,.95,1.1);pb.position.set(0,1.04,.06);}
+    for(const x of[-1,1]){const sh=add(new THREE.Mesh(new THREE.SphereGeometry(.062*sW,12,8),sleeve));sh.position.set(x*.17*Math.min(1.25,W*.9+.1),1.33,.19);}
+    tube(V(0,1.36,.22),V(0,1.44,.3),.045,M('#e0ac82'));
+    const R=face?.145:.112,head=add(new THREE.Mesh(new THREE.SphereGeometry(R,18,14),skin));head.position.set(0,1.5+(R-.11)*.8,.35);head.scale.set(.95,1.05,1);
+    const hm=add(new THREE.Mesh(new THREE.SphereGeometry(R*1.15,18,10,0,Math.PI*2,0,Math.PI/2.05),helm));hm.scale.set(1,.9,1.2);hm.position.set(0,head.position.y+.025,.33);hm.rotation.x=-.2;
+    for(const x of[-.04,0,.04]){const v=add(new THREE.Mesh(new THREE.BoxGeometry(.015,.01,R*1.9),dark));v.position.set(x,head.position.y+R*1.02,.33);v.rotation.x=-.2;}
+    if(face){const t=new THREE.TextureLoader().load(face);t.encoding=THREE.sRGBEncoding;const f=new THREE.Mesh(new THREE.CircleGeometry(R*.9,24),new THREE.MeshBasicMaterial({map:t}));
+      f.position.set(0,head.position.y-.015,head.position.z+R*.99);grp.add(f);}
+    else{const gl=add(new THREE.Mesh(new THREE.BoxGeometry(.2,.04,.03),M('#111',{metalness:.6,roughness:.15})));gl.position.set(0,head.position.y+.01,head.position.z+R*.93);}
+    // braccia: manica, gomito, avambraccio, guanto sulle leve
+    for(const x of[-1,1]){const s=V(x*.17*Math.min(1.25,W*.9+.1),1.32,.2),e=V(x*.24,1.12,.4),h=V(x*.21,.97,.6);
+      const up=add(new THREE.Mesh(new THREE.CylinderGeometry(.04*sW,.052*sW,1,10),sleeve));limb(up,s,e);
+      const el=add(new THREE.Mesh(new THREE.SphereGeometry(.037*sW,10,8),skin));el.position.copy(e);
+      const fo=add(new THREE.Mesh(new THREE.CylinderGeometry(.03*sW,.037*sW,1,10),skin));limb(fo,e,h);
+      const hd=add(new THREE.Mesh(new THREE.SphereGeometry(.04,10,8),dark));hd.position.copy(h);hd.scale.set(.9,.8,1.3);}
+    // gambe: coscia coi pantaloncini, ginocchio, polpaccio, calzino, scarpa
+    const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(new THREE.CylinderGeometry(.05*W,.072*W,1,12),shorts)),kn:add(new THREE.Mesh(new THREE.SphereGeometry(.046*sW,10,8),skin)),
+      shin:add(new THREE.Mesh(new THREE.CylinderGeometry(.032*sW,.047*sW,1,10),skin)),sock:add(new THREE.Mesh(new THREE.CylinderGeometry(.034,.034,.09,10),sock)),
+      shoe:add(new THREE.Mesh(new THREE.BoxGeometry(.075,.06,.25),shoeM)),crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),alu)),hip:V(sd*.09,.98,-.14)}));
     grp.scale.setScalar(ALT[alt]||1);grp.userData={wheels,legs,head,phase:Math.random()*6.28,lean:0,crank:0,wheel:0};scene.add(grp);return grp;}
   const L1=.46,L2=.48,knee=new V3(),foot=new V3(),dv=new V3(),XA=new V3(1,0,0);
   function pedal(r,ang){for(const l of r.userData.legs){const a=ang+(l.sd>0?Math.PI:0);foot.set(l.sd*.11,.3-Math.cos(a)*.17,-Math.sin(a)*.17);
     l.crank.position.set(l.sd*.07,.3-Math.cos(a)*.085,-Math.sin(a)*.085);l.crank.rotation.x=a+Math.PI/2;dv.subVectors(foot,l.hip);const d=Math.min(dv.length(),L1+L2-.001),th=Math.acos((L1*L1+d*d-L2*L2)/(2*L1*d));dv.normalize();
-    knee.copy(dv).applyAxisAngle(XA,-th).multiplyScalar(L1).add(l.hip);limb(l.thigh,l.hip,knee);limb(l.shin,knee,foot);}}
+    knee.copy(dv).applyAxisAngle(XA,-th).multiplyScalar(L1).add(l.hip);limb(l.thigh,l.hip,knee);limb(l.shin,knee,foot);l.kn.position.copy(knee);
+    l.sock.position.copy(foot).lerp(knee,.12);l.sock.quaternion.copy(l.shin.quaternion);l.shoe.position.set(foot.x,foot.y+.03,foot.z+.03);l.shoe.rotation.x=.12;}}
   // --- auto ---
   const COLS=[0xc62828,0x1565c0,0xeeeeee,0x263238,0x9e9e9e,0x2e7d32,0xf9a825,0x6a1b9a,0x00838f,0x795548];
   function makeCar(col){const g=new THREE.Group(),body=new THREE.MeshStandardMaterial({color:col,metalness:.4,roughness:.35}),glass=new THREE.MeshStandardMaterial({color:0x1c2a36,metalness:.6,roughness:.15});
@@ -1203,7 +1291,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
       const sm=new Float64Array(n).fill(NaN);for(let k=0;k<n;k++){let a=0,c=0;for(let j=k-3;j<=k+3;j++)if(j>=0&&j<n&&!isNaN(s[j])){a+=s[j];c++;}if(c&&!isNaN(s[k]))sm[k]=a/c;}
       for(let k=1;k<n;k++)if(!isNaN(sm[k])&&!isNaN(sm[k-1])&&sm[k]<sm[k-1])sm[k]=sm[k-1];
       const pw=r.pts.some(p=>p.pw!=null)?r.pts:null;
-      const m=makeRider(new THREE.Color(r.color).getHex(),r.face,r.alt,r.fis),el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${r.name}</b><i></i>`;$('tags').appendChild(el);m.userData.tag=el;
+      const m=makeRider(r),el=document.createElement('div');el.className='tag';el.innerHTML=`<b>${r.name}</b><i></i>`;$('tags').appendChild(el);m.userData.tag=el;
       return{r,x,s:sm,m,off:2.4,pw,v:0,cur:0,vis:false};});
     $('chi').innerHTML='<option value="-1">Inquadra: automatico</option>'+RID.map((o,i)=>`<option value="${i}">Inquadra: ${o.r.name}</option>`).join('');
     $('tl').min=T0;$('tl').max=T1;
@@ -1648,7 +1736,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
   return{imagery,fromPhotos,riders:setupRiders,
     // sintesi: un pezzo di regia automatica senza telecronaca, da t0 a velocità m
     filmPlay(t0,m){filmM=true;tele=false;view='regia';follow=-1;shot=null;mult=m;FD={fin:'df',fc:0};finishLine();document.body.classList.add('filmtags');showEls(true);seek(t0);paused=false;resize();if(!running){running=true;clock.getDelta();frame();}},
-    get time(){return tNow},svSet,get centerLL(){return unproj(center.x,center.z)},get pathLL(){const o=[];for(let i=0;i<=PR.N;i+=60)o.push(unproj(PR.px[i],PR.pz[i]));return o;},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
+    get time(){return tNow},applyOpt,svSet,get centerLL(){return unproj(center.x,center.z)},get pathLL(){const o=[];for(let i=0;i<=PR.N;i+=60)o.push(unproj(PR.px[i],PR.pz[i]));return o;},hold(v){paused=v;},dbg(){return{T0,T1,rid:RID.map(o=>[o.r.name,o.x.ta,o.x.tb,o.x.ok])};},
     // fotofinish: fermo immagine di lato sulla linea d'arrivo nell'istante in cui passa il primo
     photoFinish(){const sB=FD.sB,arr=RID.map(o=>({o,t:crossT(o,sB)})).filter(x=>x.t!=null).sort((a,b)=>a.t-b.t);if(!arr.length)return null;
       paused=true;tNow=arr[0].t+.02;step(0);FD.photo=true;if(finL)finL.children.forEach(c=>{if(c.userData.post)c.visible=false;});const vis=arr.filter(x=>x.t-arr[0].t<=2.5),back=Math.max(...vis.map(x=>sB-x.o.cur)),mid=sB-back/2,span=back+3.5,fv=44,asp=innerWidth/innerHeight,hf=2*Math.atan(Math.tan(fv*Math.PI/360)*asp),d=clamp(span/(2*Math.tan(hf/2)),9,48);
@@ -1689,7 +1777,7 @@ $('mod').addEventListener('click',()=>{mlyClose();if(window.__SCENA&&!map){windo
 // dati del tratto: solo la finestra del tratto ± 4 minuti (niente partenza da casa)
 function packData(){
   const ok=SEG.res.filter(x=>x.ok),w0=Math.min(...ok.map(x=>x.ta))-240,w1=Math.max(...ok.map(x=>x.tb))+240;
-  return{titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
+  return{titolo:$('titolo').value,A:SEG.A,B:SEG.B,riders:riders.map(r=>({name:r.name,color:r.color,face:r.face,kit:r.kit||null,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
     pts:r.pts.filter(p=>p.t+offE(r)>=w0&&p.t+offE(r)<=w1).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])})).filter(r=>r.pts.length>1)};}
 // ---------- tratti salvati sul telefono: si riaprono e si aggiungono altri ciclisti ----------
 const TK='banda.tratti';let TRATTI=[];try{TRATTI=JSON.parse(localStorage.getItem(TK)||'[]');}catch(e){}
@@ -1706,7 +1794,7 @@ $('tratti').addEventListener('click',e=>{const b=e.target.closest('button');if(!
   if(b.dataset.open!==undefined){loadData(TRATTI[+b.dataset.open].data);built=false;segSel=-1;renderRiders();drawMap();drawMarks();renderSegs();
     if(map&&A&&B)map.fitBounds([A,B],{padding:[40,40]});$('drop').scrollIntoView({behavior:'smooth',block:'center'});}});
 function loadData(d){$('titolo').value=d.titolo;
-  riders=d.riders.map(r=>({name:r.name,fname:r.name,color:r.color,face:r.face,alt:r.alt||'media',fis:r.fis||'normale',nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:r.ghost,sync:r.sync||{ok:true,together:0},abs:r.abs,t0:r.t0??null,segs:[],
+  riders=d.riders.map(r=>({name:r.name,fname:r.name,color:r.color,face:r.face,kit:r.kit||null,alt:r.alt||'media',fis:r.fis||'normale',nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:r.ghost,sync:r.sync||{ok:true,together:0},abs:r.abs,t0:r.t0??null,segs:[],
     prof:BANDA.some(q=>keyN(q.name)===keyN(r.name))?r.name:undefined,pts:r.pts.map(p=>({lat:p[0],lon:p[1],ele:p[2],t:p[3],hr:p[4],cad:p[5],pw:p[6]}))}));
   const p0=riders[0].pts[0];REF={lat:p0.lat,lon:p0.lon,c:Math.cos(p0.lat*D)};
   riders.forEach(r=>{const t0=r.pts[0].t;r.pts.forEach(p=>p.t-=t0);r.off+=t0;if(r.t0!=null)r.t0+=t0*1000;r.abs=!!r.abs&&r.t0!=null;grid(r);});
@@ -1757,7 +1845,7 @@ function homes(){const h=[];riders.forEach(r=>{if(r.pts.length){const a=r.pts[0]
 const farFrom=HM=>(la,lo)=>la!=null&&!HM.some(h=>distM(h,[la,lo])<600);
 function packFilm(F,hide){const far=farFrom(hide?homes():[]),H=F.H,keep=[...new Set([0,...H.flatMap(h=>h.ok.map(x=>x.i))])].sort((a,b)=>a-b),M={};keep.forEach((o,n)=>M[o]=n);
   const W=H.map(h=>[Math.min(...h.ok.map(x=>x.ta))-240,Math.max(...h.ok.map(x=>x.tb))+240]),inW=T=>W.some(w=>T>=w[0]&&T<=w[1]);
-  const rs=keep.map(i=>{const r=riders[i];return{name:r.name,color:r.color,face:r.face,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
+  const rs=keep.map(i=>{const r=riders[i];return{name:r.name,color:r.color,face:r.face,kit:r.kit||null,alt:r.alt,fis:r.fis,nick:r.nick||'',bat:r.bat||'',off:r.off,ghost:!!r.ghost,sync:r.sync,abs:r.abs,t0:r.t0??null,
     pts:r.pts.filter(p=>inW(p.t+offE(r))&&far(p.lat,p.lon)).map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6),+p.ele.toFixed(1),+p.t.toFixed(1),p.hr,p.cad,p.pw])};});
   const mp=x=>({...x,i:M[x.i]}),fp=p=>[Math.round(p.d),Math.round(p.es*10)/10,Math.round(p.t*10)/10];
   return{v:1,titolo:$('titolo').value,dur:F.dur,use3D:F.use3D,CL:F.CL||[],riders:rs,
@@ -1842,6 +1930,9 @@ function mlyTick(){if(!MP.on||!S3||!MP.list)return;const [la,lo]=S3.centerLL;
   if(!f){mlyMsg('Qui non ci sono foto…');return;}
   $('mly').innerHTML=`<button class="x" aria-label="Chiudi le foto">×</button><img src="${f.url}" alt="Foto vera della strada"><p>${mlyCredit(f)}</p>`;}
 $('foto').addEventListener('click',mlyToggle);
+// pali (lampioni e paletti) e marciapiedi: sì/no, ricordato sul telefono
+function optBtns(){$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
+['opali','omarc'].forEach(id=>$(id).addEventListener('click',()=>{const k=id==='opali'?'pali':'marc';SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
 // vista "📷 Street View": scarica (una volta per scena) le foto con posizione e orientamento della macchina fotografica
 async function svStart(){const S=S3;if(!S)return;if(S.__sv)return;
   const note=t=>{const n=$('svnote');n.innerHTML=t;n.dataset.t=t;n.style.display='block';n.style.bottom=($('nav').offsetHeight+18)+'px';};
