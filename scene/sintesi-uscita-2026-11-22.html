@@ -803,6 +803,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #fcard img.fph{display:block;width:100%;max-height:26vh;object-fit:cover;border-radius:8px;margin-top:8px}#fcard .fsrc{display:block;font-size:11px;opacity:.75;margin-top:2px}
 details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4px 8px;background:#faf9f6}details.kit summary{cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;min-height:40px}
 .kc{display:flex;flex-direction:column;font-size:13px;color:#5b6470;gap:2px}.kc input[type=color]{width:56px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0;background:#fff}.kc select{height:36px}
+body.nocron #cron{display:none!important}body.nolive #live{display:none!important}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
 #live em{font-style:normal;margin-left:auto;padding-left:8px;opacity:.85}
@@ -900,7 +901,8 @@ details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4
       <button id="tele" class="on">🎙️ Telecronaca</button><button id="voci">🗣️ Voci</button>
       <button id="sfx" class="on">🔊 Effetti</button><button id="mus" class="on">🎵 Musica</button>
       <button id="foto">📷 Foto vere</button><button id="opali">💡 Pali</button>
-      <button id="omarc">🚶 Marciapiede</button><button id="ric">↺ Ricomincia</button>
+      <button id="omarc">🚶 Marciapiede</button><button id="ocron">💬 Testo cronaca</button>
+      <button id="olive">⏱️ Distacchi</button><button id="ric">↺ Ricomincia</button>
       <button id="mod">✏️ Modifica</button><button id="salvatr2">💾 Salva tratto</button>
       <button id="salva" class="wide">📤 Salva e manda la scena</button>
     </div>
@@ -1692,7 +1694,7 @@ async function fetchOSM(la0,lo0,la1,lo1,depth=0){
   return{nodes,ways};
 }
 
-let S3=null;const SCN={pali:true,marc:true};try{Object.assign(SCN,JSON.parse(localStorage.getItem('banda.scena')||'{}'));}catch(e){}
+let S3=null;const SCN={pali:true,marc:true,cron:true,live:true};try{Object.assign(SCN,JSON.parse(localStorage.getItem('banda.scena')||'{}'));}catch(e){}
 function make3D(PATH,ROADS,BLDS,DEM){
   const V3=THREE.Vector3;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -1863,7 +1865,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
       const sph=bs.getBoundingSphere(new THREE.Sphere()),cgi=cg.clone(),tgi=tg.clone();cgi.boundingSphere=sph;tgi.boundingSphere=sph.clone();
       const crown=new THREE.InstancedMesh(cgi,lm,N),trunk=new THREE.InstancedMesh(tgi,tm,N);crown.castShadow=true;
       list.forEach((t,i)=>{const y=H(t[0],t[1]),k=t[3],hh=1.6+k*1.6,r=2.1*k+(i%3)*.25;o.position.set(t[0],y+hh/2,t[1]);o.scale.set(1,hh,1);o.rotation.set(0,0,0);o.updateMatrix();trunk.setMatrixAt(i,o.matrix);
-        o.position.set(t[0],y+hh+r*.7,t[1]);o.scale.set(r,r*1.1,r);o.rotation.y=i;o.updateMatrix();crown.setMatrixAt(i,o.matrix);cl.setRGB(t[2].r/255,t[2].g/255,t[2].b/255).convertSRGBToLinear().offsetHSL(0,.12,-.02);crown.setColorAt(i,cl);});
+        o.position.set(t[0],y+hh+r*.7,t[1]);o.scale.set(r,r*1.1,r);o.rotation.y=i;o.updateMatrix();crown.setMatrixAt(i,o.matrix);cl.setRGB(t[2].r/255,t[2].g/255,t[2].b/255).convertSRGBToLinear().offsetHSL(0,.12,-.02);{const hs={};cl.getHSL(hs);if(hs.l<.16||hs.h>.55)cl.setHSL(.24+i%5*.02,Math.max(Math.min(hs.s,.6),.35),Math.max(hs.l,.16+i%3*.02));}crown.setColorAt(i,cl);});
       scene.add(crown,trunk);TMESH.push({crown,trunk,list});}
     // paletti e lampioni
     const postM=lam(0xffffff),redM=lam(0xd32f2f),gray=lam(0x9e9e9e),bulb=new THREE.MeshBasicMaterial({color:0xfff8e1}),bxm=(w,h,d,m)=>new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
@@ -2399,7 +2401,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
     // nomi a terra: se si sovrappongono, quelli più lontani salgono sopra
     {const placed=[];gl.sort((a,b)=>a.z-b.z).forEach(g=>{const w=g.el.offsetWidth||80,h=(g.el.offsetHeight||24)+2;let y=g.sy;for(let k=0;k<8;k++){const hit=placed.find(r=>Math.abs(r.x-g.sx)<(r.w+w)/2&&y>r.y-h&&y<r.y+r.h);if(!hit)break;y=hit.y-hit.h;}placed.push({x:g.sx,y,w,h});g.el.style.transform=`translate(${g.sx}px,${y}px) translate(-50%,-100%)`;});}
     let svg='';
-    if(ann.length){const ub=id=>{const e=$(id);if(e.style.display==='none'||getComputedStyle(e).opacity<.1)return 92;return e.getBoundingClientRect().bottom+8;},navTop=$('nav').getBoundingClientRect().top-40;
+    if(ann.length){const ub=id=>{const e=$(id),cs=getComputedStyle(e);if(cs.display==='none'||cs.opacity<.1)return 92;return e.getBoundingClientRect().bottom+8;},navTop=$('nav').getBoundingClientRect().top-40;
       for(const left of[true,false]){const g=ann.filter(a=>(a.sx<W/2)===left).sort((a,b)=>a.sy-b.sy),sp=Math.max(30,...g.map(a=>(a.u.tag.offsetHeight||26)+5)),top=ub(left?'cron':'live'),bot=Math.max(top+40,navTop,top+(g.length-1)*sp);let y=top;
         g.forEach(a=>{a.by=clamp(a.sy-50,y,bot);y=a.by+sp;});for(let k=g.length-1;k>=0;k--){const lim=k===g.length-1?bot:g[k+1].by-sp;if(g[k].by>lim)g[k].by=lim;}
         g.forEach(a=>{const el=a.u.tag,w=el.offsetWidth||90,bx=left?10:W-10-w,ax=left?bx+w:bx,ay=a.by+14,c=a.q.r.color;
@@ -2612,8 +2614,9 @@ $('mbtn').addEventListener('click',e=>{e.stopPropagation();moreOpen(!$('more').c
 ['mod','salva','salvatr2','ric','voci'].forEach(id=>$(id).addEventListener('click',()=>moreOpen(false)));
 document.addEventListener('pointerdown',e=>{if($('more').classList.contains('open')&&!e.target.closest('#nav')){moreOpen(false);e.stopPropagation();}},true);
 // pali (lampioni e paletti) e marciapiedi: sì/no, ricordato sul telefono
-function optBtns(){$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
-['opali','omarc'].forEach(id=>$(id).addEventListener('click',()=>{const k=id==='opali'?'pali':'marc';SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
+function optBtns(){document.body.classList.toggle('nocron',!SCN.cron);document.body.classList.toggle('nolive',!SCN.live);
+  [['ocron','cron','💬 Testo cronaca'],['olive','live','⏱️ Distacchi']].forEach(([id,k,t])=>{$(id).classList.toggle('on',SCN[k]);$(id).textContent=t+(SCN[k]?'':' no');});$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
+['opali','omarc','ocron','olive'].forEach(id=>$(id).addEventListener('click',()=>{const k={opali:'pali',omarc:'marc',ocron:'cron',olive:'live'}[id];SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
 // vista "📷 Street View": scarica (una volta per scena) le foto con posizione e orientamento della macchina fotografica
 async function svStart(){const S=S3;if(!S)return;if(S.__sv)return;
   const note=t=>{const n=$('svnote');n.innerHTML=t;n.dataset.t=t;n.style.display='block';n.style.bottom=($('nav').offsetHeight+18)+'px';};
