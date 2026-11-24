@@ -142,7 +142,7 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 #fcard img.fph{display:block;width:100%;max-height:26vh;object-fit:cover;border-radius:8px;margin-top:8px}#fcard .fsrc{display:block;font-size:11px;opacity:.75;margin-top:2px}
 details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4px 8px;background:#faf9f6}details.kit summary{cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;min-height:40px}
 .kc{display:flex;flex-direction:column;font-size:13px;color:#5b6470;gap:2px}.kc input[type=color]{width:56px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0;background:#fff}.kc select{height:36px}
-body.nocron #cron{display:none!important}body.nolive #live{display:none!important}
+body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opacity:.45}body.nolive #live{display:none!important}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
 #live em{font-style:normal;margin-left:auto;padding-left:8px;opacity:.85}
@@ -202,7 +202,7 @@ body.nocron #cron{display:none!important}body.nolive #live{display:none!importan
 <div id="pres"></div>
 <div id="play"></div>
 <div id="film"><div id="frec">● REC · video in registrazione</div><div id="fmap"></div><div id="fcard"></div><div id="fclock"></div><div id="fcap"></div>
-  <div id="fctl"><button id="fmus" aria-label="Musica">🎵</button><button id="fspeed" aria-label="Velocità della sintesi">1×</button><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
+  <div id="fctl"><button id="fcron" aria-label="Testo della cronaca">💬</button><button id="flive" aria-label="Distacchi">⏱️</button><button id="fmus" aria-label="Musica">🎵</button><button id="fspeed" aria-label="Velocità della sintesi">1×</button><button id="fpause" aria-label="Pausa">⏸</button><button id="fclose" aria-label="Chiudi">✕</button></div>
   <div id="flash"></div><div id="fend"><button class="btn" id="fagain">↻ Rivedi</button><button class="btn l" id="fexit">Chiudi</button></div></div>
 <div id="vocibox"><div><h3>Le voci dei cronisti</h3>
   <label style="flex-direction:row;align-items:center;gap:8px"><input type="radio" name="eng" value="ric" id="engric"> Riccardo — voce naturale, gratis (consigliata)</label>
@@ -1954,8 +1954,9 @@ $('mbtn').addEventListener('click',e=>{e.stopPropagation();moreOpen(!$('more').c
 document.addEventListener('pointerdown',e=>{if($('more').classList.contains('open')&&!e.target.closest('#nav')){moreOpen(false);e.stopPropagation();}},true);
 // pali (lampioni e paletti) e marciapiedi: sì/no, ricordato sul telefono
 function optBtns(){document.body.classList.toggle('nocron',!SCN.cron);document.body.classList.toggle('nolive',!SCN.live);
-  [['ocron','cron','💬 Testo cronaca'],['olive','live','⏱️ Distacchi']].forEach(([id,k,t])=>{$(id).classList.toggle('on',SCN[k]);$(id).textContent=t+(SCN[k]?'':' no');});$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
-['opali','omarc','ocron','olive'].forEach(id=>$(id).addEventListener('click',()=>{const k={opali:'pali',omarc:'marc',ocron:'cron',olive:'live'}[id];SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
+  [['ocron','cron','💬 Testo cronaca'],['olive','live','⏱️ Distacchi']].forEach(([id,k,t])=>{$(id).classList.toggle('on',SCN[k]);$(id).textContent=t+(SCN[k]?'':' no');});
+  $('fcron').classList.toggle('off',!SCN.cron);$('flive').classList.toggle('off',!SCN.live);$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
+['opali','omarc','ocron','olive','fcron','flive'].forEach(id=>$(id).addEventListener('click',()=>{const k={opali:'pali',omarc:'marc',ocron:'cron',olive:'live',fcron:'cron',flive:'live'}[id];SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
 // vista "📷 Street View": scarica (una volta per scena) le foto con posizione e orientamento della macchina fotografica
 async function svStart(){const S=S3;if(!S)return;if(S.__sv)return;
   const note=t=>{const n=$('svnote');n.innerHTML=t;n.dataset.t=t;n.style.display='block';n.style.bottom=($('nav').offsetHeight+18)+'px';};
