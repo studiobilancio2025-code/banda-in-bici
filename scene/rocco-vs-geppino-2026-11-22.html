@@ -813,9 +813,14 @@ details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4
 #nav button,#nav select{font:600 16px "Barlow Condensed";min-height:42px;padding:0 12px;border-radius:21px;border:2px solid var(--ink);background:#fff;color:var(--ink);cursor:pointer}
 #nav button.on{background:var(--ink);color:#fff}
 #nav button:focus-visible,#nav select:focus-visible,.btn:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
-.tlrow{width:min(94vw,640px);gap:6px;align-items:center;flex-wrap:nowrap;max-width:none}
+.tlrow{width:min(96vw,640px);gap:5px;align-items:center;flex-wrap:nowrap;max-width:none}
+#nav button.ic{min-width:44px;padding:0 8px}.tlw{flex:1;position:relative;display:flex;align-items:center;min-width:60px}.tlw #tl{width:100%}
+.tlw{height:44px}.tlw #tlt{position:absolute;right:2px;bottom:-3px;min-width:0;font-size:12px}
+#more{display:none;width:min(96vw,520px);background:rgba(16,21,28,.9);border-radius:16px;padding:10px;box-sizing:border-box;flex-direction:column;gap:8px}#more.open{display:flex}
+#more select{width:100%}#more .mg{display:grid;grid-template-columns:1fr 1fr;gap:6px}#more .mg button{width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#more .mg .wide{grid-column:1/3}
+#nav #views button{min-height:38px;padding:0 10px;font-size:15px}
 #tl{flex:1;min-width:0;height:34px;accent-color:#ffd400}
-#tlt{color:#fff;font:800 14px "Barlow Condensed";text-shadow:0 1px 2px #000c;white-space:nowrap;min-width:64px;text-align:right}
+#tlt{color:#fff;font:800 13px "Barlow Condensed";text-shadow:0 1px 2px #000c;white-space:nowrap;text-align:right}
 #fonti{position:fixed;right:8px;top:calc(env(safe-area-inset-top) + 64px);z-index:3;font-size:11px;color:#fff;text-shadow:0 1px 2px #000c;pointer-events:none;display:none}
 #fine{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:4;background:#fff;border-radius:14px;padding:16px 18px;width:min(92vw,420px);display:none;box-shadow:0 10px 40px #0006}
 #fine h2{margin:0 0 6px}
@@ -889,18 +894,23 @@ details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4
 <div id="fine"></div>
 <div id="mly"></div>
 <div id="nav">
+  <div id="more" role="dialog" aria-label="Altri comandi">
+    <select id="chi" aria-label="Chi inquadrare"></select>
+    <div class="mg">
+      <button id="tele" class="on">🎙️ Telecronaca</button><button id="voci">🗣️ Voci</button>
+      <button id="sfx" class="on">🔊 Effetti</button><button id="mus" class="on">🎵 Musica</button>
+      <button id="foto">📷 Foto vere</button><button id="opali">💡 Pali</button>
+      <button id="omarc">🚶 Marciapiede</button><button id="ric">↺ Ricomincia</button>
+      <button id="mod">✏️ Modifica</button><button id="salvatr2">💾 Salva tratto</button>
+      <button id="salva" class="wide">📤 Salva e manda la scena</button>
+    </div>
+  </div>
   <div class="row" id="views">
-    <button data-v="regia" class="on">Regia automatica</button><button data-v="moto">Dalla moto</button><button data-v="lato">Di lato</button>
+    <button data-v="regia" class="on">🎬 Regia</button><button data-v="moto">Moto</button><button data-v="lato">Lato</button>
     <button data-v="dd">Drone dietro</button><button data-v="df">Drone davanti</button>
     <button data-v="eli">Elicottero</button><button data-v="gruppo">Tutti dall'alto</button><button data-v="libera">Libera</button><button data-v="sv">📷 Street View</button>
   </div>
-  <div class="row tlrow"><button id="rew" aria-label="Indietro di 10 secondi">−10"</button><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><button id="ff" aria-label="Avanti di 10 secondi">+10"</button><span id="tlt"></span></div>
-  <div class="row">
-    <select id="chi" aria-label="Chi inquadrare"></select>
-    <button id="molt" aria-label="Velocità della scena">×5</button>
-    <button id="tele" class="on">🎙️ Telecronaca</button><button id="sfx" class="on">🔊 Effetti</button><button id="mus" class="on">🎵 Musica</button><button id="voci">🗣️ Voci</button><button id="foto">📷 Foto vere</button><button id="opali">💡 Pali</button><button id="omarc">🚶 Marciapiede</button><button id="pausa">Pausa</button><button id="ric">Ricomincia</button>
-    <button id="mod">Modifica</button><button id="salvatr2">Salva tratto</button><button id="salva">Salva scena</button>
-  </div>
+  <div class="row tlrow"><button id="pausa" class="ic" aria-label="Pausa">❚❚</button><button id="rew" class="ic" aria-label="Indietro di 10 secondi">−10"</button><div class="tlw"><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><span id="tlt"></span></div><button id="ff" class="ic" aria-label="Avanti di 10 secondi">+10"</button><button id="molt" class="ic" aria-label="Velocità della scena">×5</button><button id="mbtn" class="ic" aria-label="Altri comandi" aria-expanded="false">☰</button></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -1050,7 +1060,7 @@ function drawMap(){
     map.on('click',ev=>{if(!A)A=[ev.latlng.lat,ev.latlng.lng];else if(!B)B=[ev.latlng.lat,ev.latlng.lng];else return;computeSeg();drawMarks();});}
   layers.forEach(l=>l.remove());layers=[];
   riders.forEach((r,i)=>{const ll=r.pts.filter((_,k)=>k%3===0).map(p=>[p.lat,p.lon]);layers.push(L.polyline(ll,{color:r.color,weight:i?3:5,opacity:.9}).addTo(map));});
-  if(!A)map.fitBounds(layers[0].getBounds(),{padding:[10,10]});drawMarks();
+  if(!A){const bb=layers[0].getBounds();layers.forEach(l=>bb.extend(l.getBounds()));map.fitBounds(bb,{padding:[14,14]});}drawMarks();
 }
 let marks=[];
 function drawMarks(){marks.forEach(m=>m.remove());marks=[];if(!map)return;
@@ -1267,7 +1277,8 @@ const fWait=ms=>new Promise(res=>{let left=ms,last=performance.now();const tick=
 function fCard(html,cls){const c=$('fcard');c.className=cls||'';c.innerHTML=html;c.style.display=html?'block':'none';}
 function fCap(txt,who){const c=$('fcap');c.style.display=txt?'block':'none';c.innerHTML=txt?`<b>${who==='t'?'🎧 Tonino':'🎙️ Gigi'}</b> ${txt}`:'';c.classList.toggle('tec',who==='t');}
 async function fSay(txt,who,ex){if(!FILM.on)return;fCap(txt,who);await speakLine(txt,who,ex);}
-function fFly(bounds,dur){return new Promise(res=>{FILM.map.once('moveend',()=>res());const d=(dur||2)/FILM.speed;FILM.map.flyToBounds(bounds,{padding:[50,50],duration:d,maxZoom:16});setTimeout(res,d*1000+1500);});}
+const fPad=()=>{const c=$('fcard'),top=c.style.display!=='none'?c.offsetTop+c.offsetHeight+16:40,cap=$('fcap'),bot=(cap.style.display!=='none'?cap.offsetHeight:0)+110;return{paddingTopLeft:[30,Math.min(top,innerHeight*.45)],paddingBottomRight:[30,Math.min(bot,innerHeight*.3)]};};
+function fFly(bounds,dur){return new Promise(res=>{FILM.map.once('moveend',()=>res());const d=(dur||2)/FILM.speed;FILM.map.flyToBounds(bounds,Object.assign(fPad(),{duration:d,maxZoom:16}));setTimeout(res,d*1000+1500);});}
 // i pallini dei ciclisti scorrono sul tratto: "real" secondi di corsa in "ms" millisecondi
 function fRun(h,ms){return new Promise(res=>{const t0=h.ta-8,t1=Math.max(...h.ok.map(x=>x.tb))+3,start=performance.now();let el=0,last=start;
   FILM.dots.forEach(d=>d.m.remove());FILM.dots=h.ok.map(x=>{const r=riders[x.i];const m=L.circleMarker([0,0],{radius:8,color:'#10151c',weight:2,fillColor:r.color,fillOpacity:1}).bindTooltip(r.name,{permanent:true,direction:'right',className:'ftip'}).addTo(FILM.map);return{m,r,x};});
@@ -1324,7 +1335,7 @@ async function startFilm(H,durS,use3D,CL,rec){CL=CL||[];if(!riders.length)return
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true,attribution:'© OpenStreetMap · Esri, Maxar, Earthstar Geographics'}).addTo(FILM.map);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true}).addTo(FILM.map);}
   setTimeout(()=>FILM.map.invalidateSize(),50);FILM.rec=false;if(rec){try{FILM.rec=recStart();if(navigator.wakeLock)navigator.wakeLock.request('screen').then(w=>FILM.wl=w).catch(()=>{});}catch(e){alert('Non riesco a registrare il video: '+e.message);}}FILM.lay.forEach(l=>l.remove());FILM.lay=[];FILM.dots.forEach(d=>d.m.remove());FILM.dots=[];
-  const ll=P.map(p=>p.la==null?null:[p.la,p.lo]),LS=(a,b)=>ll.slice(a,b+1).filter(Boolean),LA=LS(0,ll.length-1);FILM.map.fitBounds(L.latLngBounds(LA),{padding:[30,30]});
+  const ll=P.map(p=>p.la==null?null:[p.la,p.lo]),LS=(a,b)=>ll.slice(a,b+1).filter(Boolean),LA=LS(0,ll.length-1);FILM.map.fitBounds(L.latLngBounds(LA),{paddingTopLeft:[24,Math.min(230,innerHeight*.35)],paddingBottomRight:[24,Math.min(200,innerHeight*.28)]});
   // se la voce Riccardo si sta scaricando, si aspetta un po'
   if(ricWanted()&&RIC.st==='loading'){fCard(`<h3>La sintesi sta per cominciare</h3><p>Arriva il cronista… <span id="fpct"></span></p>`);const t=performance.now();while(RIC.st==='loading'&&performance.now()-t<25000&&FILM.on){$('fpct').textContent=RIC.pct+'%';await fWait(300);}}
   FX.music(true);FX.fanfare();
@@ -1687,7 +1698,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputEncoding=THREE.sRGBEncoding;$('scene').appendChild(renderer.domElement);
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec9ee);scene.fog=new THREE.Fog(0x8ec9ee,DEM?220:90,DEM?2200:420);
-  const TMESH=[];const camera=new THREE.PerspectiveCamera(50,1,.5,4000),controls=new THREE.OrbitControls(camera,renderer.domElement);
+  const TMESH=[];const camera=new THREE.PerspectiveCamera(50,1,.5,6000),controls=new THREE.OrbitControls(camera,renderer.domElement);
   controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minDistance=3;controls.maxDistance=300;controls.autoRotateSpeed=1.2;controls.enabled=false;
   scene.add(new THREE.HemisphereLight(0xdff2ff,0x5a7a3a,.75));
   const sun=new THREE.DirectionalLight(0xfff1d6,1.1);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-30,right:30,top:30,bottom:-30,near:1,far:160});scene.add(sun,sun.target);
@@ -1966,7 +1977,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
   function reset(){endCer();tNow=T0;cars.forEach((c,i)=>{if(c.follow){c.s=[30,-60][i]||0;c.active=c.s>=0;}});$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);crReset(T0);}
   const sAt=(o,t)=>{const k=t-T0,i=Math.floor(k),u=k-i,a=o.s[i],b=o.s[i+1];if(isNaN(a))return isNaN(b)?NaN:b;if(isNaN(b))return a;return a+(b-a)*u;};
   function step(dt){if(CER.on||CER.done)return;
-    tNow+=dt;if(tNow>T1){finish();tNow=T1;paused=true;$('pausa').textContent='Riparti';}
+    tNow+=dt;if(tNow>T1){finish();tNow=T1;paused=true;$('pausa').textContent='▶';}
     const live=[];RID.forEach(o=>{const s=sAt(o,tNow);o.vis=!isNaN(s);if(o.vis){o.v=Math.max(0,(sAt(o,tNow+1)-sAt(o,tNow-1))/2)||o.v;o.cur=s;live.push(o);}});
     // posizione in corsia: in fila o a coppie quando sono vicini
     live.sort((a,b)=>b.cur-a.cur);let prev=null,slot=0;live.forEach(o=>{if(prev&&prev.cur-o.cur<(filmM?14:2.3))slot=1-slot;else slot=0;const tgt=slot?(filmM?1.1:1.9):(filmM?3.2:2.65);o.off+=(tgt-o.off)*Math.min(1,dt*1.5);prev=o;});
@@ -1988,7 +1999,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
   function finish(){if(filmM){paused=true;return;}if(!CER.on&&!CER.done&&RID.length){startCer();return;}showFine();}
   function showFine(){const ok=SEG.res.filter(x=>x.ok).sort((p,q)=>p.tb-q.tb),l=ok[0];
     $('fine').innerHTML=`<h2>Arrivo</h2><table>${ok.map((x,k)=>`<tr><td><span class="dot" style="background:${riders[x.i].color}"></span>${riders[x.i].name}</td><td class="n">${fmt(x.dt)}</td><td class="n">${k?'+'+fmt(x.tb-l.tb):'1°'}</td></tr>`).join('')}</table><div class="btns"><button class="btn" id="dinuovo">Rivedi</button></div>`;
-    $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='Pausa';};}
+    $('fine').style.display='block';$('dinuovo').onclick=()=>{reset();paused=false;$('pausa').textContent='❚❚';};}
 
   // --- telecronaca: racconto in italiano dagli eventi della corsa, a voce (sintesi vocale del telefono) e scritto ---
   let tele=true,CR=null,lastSay=-99,capT=0,lastPick='';
@@ -2110,8 +2121,12 @@ function make3D(PATH,ROADS,BLDS,DEM){
     if(spoken&&el>(I.steps[I.i].o?2.8:1.2))nextStep();}
   // telecamera della presentazione
   const im0=new V3(),im1=new V3(),idir=new V3();
+  // quota di partenza della presentazione: tutto il tratto deve stare nello schermo (anche in verticale sul telefono)
+  function introH(a,b){if(isNaN(a)||isNaN(b))return 1200;at(PR,(a+b)/2,0,im0);const hd=at(PR,a,0,im1),fx=Math.sin(hd),fz=Math.cos(hd);let ef=0,er=0;
+    for(let s=a;s<=b;s+=15){at(PR,s,0,tA);const dx=tA.x-im0.x,dz=tA.z-im0.z;ef=Math.max(ef,Math.abs(dx*fx+dz*fz));er=Math.max(er,Math.abs(dx*fz-dz*fx));}
+    const asp=innerWidth/innerHeight,tv=Math.tan(baseFov*D/2),th=tv*asp;return clamp(Math.max((ef+60)/tv,(er+60)/th)*1.1,500,3700);}
   function introCam(dt){const I=INTRO,st=I.steps[I.i]||{},o=st.o||I.first,el=realNow()-I.stepT;
-    if(!st.o){const a=begS(o),b=endS(o),len=Math.max(200,b-a),H0=SAT?clamp(len*1.15,500,3200):clamp(len*.6,250,600),e0=clamp((realNow()-I.t0)/I.dd,0,1),e=e0*e0*(3-2*e0);
+    if(!st.o){const a=begS(o),b=endS(o),len=Math.max(200,b-a),H0=SAT?(I.H0||(I.H0=introH(a,b))):clamp(len*.6,250,600),e0=clamp((realNow()-I.t0)/I.dd,0,1),e=e0*e0*(3-2*e0);
       at(PR,(a+b)/2,0,im0);const hd=at(PR,isNaN(a)?0:a,0,im1);idir.set(Math.sin(hd),0,Math.cos(hd));
       const u=clamp((e-.1)/.9,0,1),h=H0*Math.pow(4/H0,e),gx=im0.x+(im1.x-idir.x*12-im0.x)*u,gz=im0.z+(im1.z-idir.z*12-im0.z)*u,gy=im0.y+(im1.y-im0.y)*u;
       goal.set(gx-idir.x*h*.2,gy+h,gz-idir.z*h*.2);look.set(im0.x+(im1.x+idir.x*8-im0.x)*u,gy+1.2*u,im0.z+(im1.z+idir.z*8-im0.z)*u);return 1;}
@@ -2255,8 +2270,8 @@ function make3D(PATH,ROADS,BLDS,DEM){
   document.querySelectorAll('#views button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.v)));
   renderer.domElement.addEventListener('pointerdown',()=>{if(view!=='libera')setView('libera');controls.autoRotate=false;});
   $('chi').addEventListener('change',e=>{follow=+e.target.value;first=true;shot=null;});
-  $('pausa').addEventListener('click',()=>{paused=!paused;window.__pausa=paused;FX.pause(paused);if(window.speechSynthesis){if(paused)speechSynthesis.pause();else speechSynthesis.resume();}$('pausa').textContent=paused?'Riparti':'Pausa';$('pausa').classList.toggle('on',paused);});
-  $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='Pausa';});
+  $('pausa').addEventListener('click',()=>{paused=!paused;window.__pausa=paused;FX.pause(paused);if(window.speechSynthesis){if(paused)speechSynthesis.pause();else speechSynthesis.resume();}$('pausa').textContent=paused?'▶':'❚❚';$('pausa').classList.toggle('on',paused);});
+  $('ric').addEventListener('click',()=>{reset();paused=false;$('pausa').textContent='❚❚';});
   $('molt').addEventListener('click',()=>{mult={1:2,2:5,5:10,10:20,20:1}[mult];$('molt').textContent='×'+mult;});
   // avanti e indietro nella corsa
   function seek(v){endCer();tNow=clamp(v,T0,T1-.01);$('fine').style.display='none';RID.forEach(o=>o.m.userData.lastP=null);step(0);first=true;crReset(tNow);}
@@ -2591,6 +2606,11 @@ function mlyTick(){if(!MP.on||!S3||!MP.list)return;const [la,lo]=S3.centerLL;
   if(!f){mlyMsg('Qui non ci sono foto…');return;}
   $('mly').innerHTML=`<button class="x" aria-label="Chiudi le foto">×</button><img src="${f.url}" alt="Foto vera della strada"><p>${mlyCredit(f)}</p>`;}
 $('foto').addEventListener('click',mlyToggle);
+// ☰: gli altri comandi in un riquadro che si apre sopra la barra (si chiude toccando fuori o di nuovo ☰)
+function moreOpen(v){$('more').classList.toggle('open',v);$('mbtn').classList.toggle('on',v);$('mbtn').setAttribute('aria-expanded',v);$('mbtn').textContent=v?'✕':'☰';}
+$('mbtn').addEventListener('click',e=>{e.stopPropagation();moreOpen(!$('more').classList.contains('open'));});
+['mod','salva','salvatr2','ric','voci'].forEach(id=>$(id).addEventListener('click',()=>moreOpen(false)));
+document.addEventListener('pointerdown',e=>{if($('more').classList.contains('open')&&!e.target.closest('#nav')){moreOpen(false);e.stopPropagation();}},true);
 // pali (lampioni e paletti) e marciapiedi: sì/no, ricordato sul telefono
 function optBtns(){$('opali').classList.toggle('on',SCN.pali);$('opali').textContent=SCN.pali?'💡 Pali':'💡 Pali no';$('omarc').classList.toggle('on',SCN.marc);$('omarc').textContent=SCN.marc?'🚶 Marciapiede':'🚶 Marciapiede no';}
 ['opali','omarc'].forEach(id=>$(id).addEventListener('click',()=>{const k=id==='opali'?'pali':'marc';SCN[k]=!SCN[k];try{localStorage.setItem('banda.scena',JSON.stringify(SCN));}catch(e){}optBtns();if(S3&&S3.applyOpt)S3.applyOpt();}));optBtns();
