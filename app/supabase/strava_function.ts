@@ -24,10 +24,12 @@ Deno.serve(async (req) => {
     if (op === 'exchange') {
       const t = await token({ code: String(body.code || ''), grant_type: 'authorization_code' });
       const a = t.athlete ? { id: t.athlete.id, nome: `${t.athlete.firstname || ''} ${t.athlete.lastname || ''}`.trim() } : null;
-      await admin.from('strava').upsert({ user_id: user.id, athlete: a, access_token: t.access_token, refresh_token: t.refresh_token, expires_at: t.expires_at, updated_at: new Date().toISOString() });
+      const { error: e1 } = await admin.from('strava').upsert({ user_id: user.id, athlete: a, access_token: t.access_token, refresh_token: t.refresh_token, expires_at: t.expires_at, updated_at: new Date().toISOString() });
+      if (e1) return J({ error: 'Strava ha risposto, ma non riesco a salvare le chiavi: ' + e1.message }, 500);
       return J({ ok: true, athlete: a });
     }
-    const { data: row } = await admin.from('strava').select('*').eq('user_id', user.id).maybeSingle();
+    const { data: row, error: e2 } = await admin.from('strava').select('*').eq('user_id', user.id).maybeSingle();
+    if (e2) return J({ error: 'Non riesco a leggere il collegamento: ' + e2.message }, 500);
     if (op === 'status') return J({ connected: !!row, athlete: row?.athlete || null });
     if (!row) return J({ error: 'Strava non è collegato.' }, 400);
     let tok = row.access_token;
