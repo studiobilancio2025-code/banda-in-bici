@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La banda in bici – Crea la scena</title>
+<link rel="manifest" href="/banda-in-bici/manifest.webmanifest"><meta name="theme-color" content="#10151c"><link rel="apple-touch-icon" href="/banda-in-bici/app/icone/apple-touch-icon.png"><link rel="icon" href="/banda-in-bici/app/icone/icona-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -830,6 +831,7 @@ body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opac
 <body>
 <div id="setup"><div class="wrap">
   <h1>Crea la scena</h1>
+  <div id="inst" style="display:none"><button class="btn" id="instbtn">📲 Installa l'app sul telefono</button><p class="meta">Compare tra le app con la sua icona, si apre a tutto schermo e riceve i GPX dal menu «Condividi».</p></div>
   <p class="sub">Carica i GPX dell'uscita, scegli il tratto sulla mappa e la scena 3D si costruisce da sola, con strade, case e foto satellitari vere.</p>
 
   <div class="card" id="tratti" style="margin-bottom:10px;display:none"></div>
@@ -1002,6 +1004,14 @@ async function addFiles(fl){
   renderRiders();drawMap();computeSeg();renderSegs();
 }
 $('files').addEventListener('change',e=>addFiles([...e.target.files]));
+// ---------- app installabile (Android/Chrome): pulsante «Installa» e GPX ricevuti dal menu «Condividi» ----------
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('/banda-in-bici/sw.js',{scope:'/banda-in-bici/'}).catch(()=>{});
+let instEv=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e;if(!window.__SCENA)$('inst').style.display='block';});
+$('instbtn').addEventListener('click',async()=>{if(!instEv)return;instEv.prompt();const r=await instEv.userChoice;if(r.outcome==='accepted')$('inst').style.display='none';instEv=null;});
+addEventListener('appinstalled',()=>{$('inst').style.display='none';});
+(async()=>{const q=new URLSearchParams(location.search);if(!q.has('condiviso')||!window.caches)return;try{const c=await caches.open('banda-condivisi'),ks=await c.keys(),fl=[];
+  for(const k of ks){const r=await c.match(k);fl.push(new File([await r.blob()],decodeURIComponent(r.headers.get('x-nome')||'traccia.gpx')));await c.delete(k);}
+  history.replaceState(null,'',location.pathname);if(fl.length){await addFiles(fl);$('drop').scrollIntoView({behavior:'smooth',block:'center'});}}catch(e){}})();
 // completino e bici: m1 colore maglia, m2 secondo colore (disegno), pat disegno, sh pantaloncini, he casco, bk telaio
 const KITP={unita:'Tinta unita',fascia:'Fascia sul petto',righe:'A righe',pois:'A pois',bordi:'Fianchi e colletto'};
 function kitOf(r){const k=r.kit||{};return{m1:k.m1||r.color,m2:k.m2||'#ffffff',pat:KITP[k.pat]?k.pat:'unita',sh:k.sh||'#1b1b1b',he:k.he||k.m1||r.color,bk:k.bk||r.color};}

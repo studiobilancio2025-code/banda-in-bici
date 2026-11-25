@@ -1,0 +1,25 @@
+{
+  "name": "La banda in bici",
+  "short_name": "Banda in bici",
+  "description": "Le uscite della banda in 3D, con telecronaca, sintesi e video.",
+  "lang": "it",
+  "id": "/banda-in-bici/crea.html",
+  "start_url": "/banda-in-bici/crea.html?app=1",
+  "scope": "/banda-in-bici/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f1ec",
+  "theme_color": "#10151c",
+  "icons": [
+    {"src": "app/icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "app/icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "app/icone/icona-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "app/icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "share_target": {
+    "action": "/banda-in-bici/condividi",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {"files": [{"name": "gpx", "accept": [".gpx", "application/gpx+xml", "application/xml", "text/xml", "application/octet-stream"]}]}
+  }
+}
