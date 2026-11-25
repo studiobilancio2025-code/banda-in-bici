@@ -2695,6 +2695,7 @@ async function publishGH(kind,html,title,sub){
 // ================= LA BANDA: profilo, guardaroba, archivio uscite e segmenti, confronti =================
 // Archivio online su Supabase (account, pubblico/privato, approvazione dei membri) se SB_URL/SB_KEY sono impostati;
 // altrimenti lo stesso archivio vive solo su questo telefono (IndexedDB), con le stesse funzioni.
+const STRAVA_ID='';   // Client ID dell'app Strava "La banda in bici" (pubblico); la chiave segreta sta solo nei segreti di Supabase
 const SB_URL='https://ysfbjemogvmbjzztcvvc.supabase.co',SB_KEY='sb_publishable_DY5s3yyiBRs68gRHkx69Rg_z8WRqB8M';   // indirizzo del progetto Supabase e chiave "anon" (pubblica per natura: le regole RLS proteggono i dati)
 const IDB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{const r=indexedDB.open('banda-archivio',1);
     r.onupgradeneeded=()=>{for(const t of['profiles','guardaroba','uscite','tracce','segmenti','passaggi'])r.result.createObjectStore(t,{keyPath:t==='tracce'?'uscita_id':'id'});};
@@ -2805,7 +2806,40 @@ function tabProf(){const p=DB.prof,d=p.dati||{},ph=(k,l)=>`<label class="cph">${
     <div class="crow"><select id="palt">${['bassa','media','alta'].map(v=>`<option ${v===(d.alt||'media')?'selected':''} value="${v}">Altezza ${v}</option>`).join('')}</select>
     <select id="pfis">${['magro','normale','robusto','grasso'].map(v=>`<option ${v===(d.fis||'normale')?'selected':''} value="${v}">Fisico ${v}</option>`).join('')}</select></div>
     <label>Battute per il telecronista (una per riga, {n} = il tuo nome)<textarea id="pbat" rows="2">${esc(d.bat||'')}</textarea></label>
-    <button class="btn" id="psave">💾 Salva il profilo</button></div>`;}
+    <button class="btn" id="psave">💾 Salva il profilo</button></div>
+    ${STRAVA_ID&&DB.online?`<div class="ccard"><h3>Strava</h3><div id="stvbox"><p class="meta">Controllo il collegamento…</p></div></div>`:''}`;
+  if(STRAVA_ID&&DB.online)stvStatus();}
+// ---------- Strava: collegamento (OAuth tramite la funzione "strava" su Supabase) e importazione delle uscite coi segmenti esatti ----------
+async function stv(op,extra){const r=await DB.sb.functions.invoke('strava',{body:Object.assign({op},extra||{})});
+  if(r.error){let m=r.error.message;try{const j=await r.error.context.json();if(j.error)m=j.error;}catch(e){}throw new Error(m);}if(r.data&&r.data.error)throw new Error(r.data.error);return r.data;}
+async function stvStatus(){const b=$('stvbox');if(!b)return;try{const s=await stv('status');CL.stv=s;
+    b.innerHTML=s.connected?`<p>✅ Collegato${s.athlete&&s.athlete.nome?' come <b>'+esc(s.athlete.nome)+'</b>':''}. In «🚴 Uscite» trovi «⬇️ Prendi da Strava».</p><button class="lnk" id="stvoff">Scollega Strava</button>`
+      :`<p class="meta">Collegando Strava, le tue uscite arrivano nell'archivio con un tocco, con battiti, cadenza, watt e <b>tutti i segmenti nel punto esatto</b>.</p><button class="btn" id="stvon">🔗 Collega Strava</button>`;}
+  catch(e){b.innerHTML=`<p class="warn">Strava: ${esc(e.message)}</p>`;}}
+function stvConnect(){const mob=/Android|iPhone|iPad/i.test(navigator.userAgent),back=location.origin+location.pathname;
+  location.href=`https://www.strava.com/oauth/${mob?'mobile/':''}authorize?client_id=${STRAVA_ID}&redirect_uri=${encodeURIComponent(back)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all&state=strava`;}
+// al ritorno da Strava: ?code=…&state=strava
+(async()=>{const q=new URLSearchParams(location.search);if(q.get('state')!=='strava')return;history.replaceState(null,'',location.pathname);
+  if(q.get('error')){clubOpen('prof').then(()=>clubMsg('Collegamento a Strava annullato.',true));return;}
+  try{await DB.init();if(!DB.uid){clubOpen('prof');return;}await stv('exchange',{code:q.get('code')});await clubOpen('prof');clubMsg('✅ Strava collegato!');}
+  catch(e){await clubOpen('prof');clubMsg('Strava: '+esc(e.message),true);}})();
+async function stvList(page){const b=$('stvlist');b.innerHTML='<p class="meta">Chiedo a Strava le tue uscite…</p>';
+  try{const L=await stv('activities',{page});CL.stvL=(page>1?CL.stvL||[]:[]).concat(L);const have=new Set(CL.usc.map(u=>u.info&&u.info.strava_id).filter(Boolean));
+    b.innerHTML=CL.stvL.map(a=>`<div class="cusc"><div><b>${esc(a.nome)}</b><span class="meta">${a.locale.slice(0,10).split('-').reverse().join('/')} · ${kmS(a.km*1000)} km · ${Math.round(a.dplus)} m D+ · ${fmt(a.durata)}</span></div>${have.has(a.id)?'<span class="meta">✓ in archivio</span>':`<button class="btn ghost" data-stvimp="${a.id}">⬇️</button>`}</div>`).join('')
+      +(L.length===30?`<button class="lnk" data-stvmore="${page+1}">Altre uscite…</button>`:'');}
+  catch(e){b.innerHTML=`<p class="warn">${esc(e.message)}</p>`;}}
+async function stvImport(id){const a=await stv('activity',{id}),st=a.st;if(!st.t||!st.ll)throw new Error('Questa attività non ha la traccia GPS.');
+  const P=st.t.map((t,i)=>[st.ll[i][0],st.ll[i][1],st.el?st.el[i]:0,t,st.hr?st.hr[i]:null,st.cad?st.cad[i]:null,st.pw?st.pw[i]:null]);
+  const kit={},ids={};for(const t of['completino','casco','bici']){const k=$('uk_'+t)&&$('uk_'+t).value;if(k){ids[t]=k;Object.assign(kit,CL.items.find(i=>i.id===k).dati);}}
+  const day=a.locale.slice(0,10),info=Object.assign(trackInfo(P),{t0:Date.parse(a.start),ciclista:DB.prof.nome||'',kit:Object.keys(kit).length?kit:null,ids,src:'strava',strava_id:a.id});
+  const u=await DB.saveUscita({data:day,titolo:day.replace(/-/g,'')+' - '+a.nome,pubblica:false,info},await encTrack(P),await encTrack(farFromEnds(P,600)));
+  // segmenti Strava nel punto esatto (riusati se già in archivio), passaggi coi tempi di Strava
+  const segs=CL.segs.slice(),rows=[];let nuovi=0;
+  for(const g of a.segs){if(!g.a||!g.b||g.i0==null)continue;let s=segs.find(x=>x.info&&x.info.strava_id===g.sid);
+    if(!s){s=await DB.saveSeg({nome:g.nome,pubblico:false,a:g.a,b:g.b,info:{km:g.km,strava_id:g.sid}});segs.push(s);nuovi++;}
+    if(!rows.some(r=>r.segmento_id===s.id)){const ta=st.t[g.i0],tb=st.t[g.i1];rows.push({segmento_id:s.id,uscita_id:u.id,owner:u.owner,data:u.data,ta,tb,durata:tb-ta});}}
+  for(const s of segs){if(rows.some(r=>r.segmento_id===s.id)||(s.info&&s.info.strava_id))continue;const e=effOf(P,s.a,s.b);if(e)rows.push({segmento_id:s.id,uscita_id:u.id,owner:u.owner,data:u.data,ta:e.ta,tb:e.tb,durata:e.durata});}
+  await DB.addPassaggi(rows);return{nome:a.nome,seg:a.segs.length,nuovi};}
 async function profSave(){const p=DB.prof,d=Object.assign({},p.dati,{nick:$('pnick').value.trim(),alt:$('palt').value,fis:$('pfis').value,bat:$('pbat').value.trim()});
   await DB.saveProfile($('pnome').value.trim(),d);clubMsg('✓ Profilo salvato.');}
 
@@ -2827,6 +2861,7 @@ function itemEditor(it){const k=itemKit(it),col=(f,l)=>`<label class="kc">${l}<i
 function tabUsc(){const mine=CL.usc.filter(u=>u.owner===DB.uid),days=new Map();CL.usc.forEach(u=>{(days.get(u.data)||days.set(u.data,[]).get(u.data)).push(u);});
   const opt=t=>`<option value="">—</option>`+CL.items.filter(i=>i.tipo===t).map(i=>`<option value="${i.id}">${esc(i.nome||GT[t])}</option>`).join('');
   clubBox().innerHTML=`<div class="ccard"><h3>Archivia un'uscita</h3>
+    ${STRAVA_ID&&DB.online?`<button class="btn" id="stvopen" style="width:100%;margin-bottom:8px">⬇️ Prendi da Strava</button><div id="stvlist"></div>`:''}
     <label class="btn ghost cfile">📂 Scegli i file GPX<input type="file" id="ufile" accept=".gpx,application/gpx+xml,application/octet-stream,text/xml" multiple></label>
     ${riders.length?`<button class="btn ghost" id="ufromapp">🗄️ Archivia i GPX caricati nell'app (${riders.length})</button>`:''}
     <div id="unew"></div>
@@ -2856,7 +2891,9 @@ async function uscSave(){const kit={},ids={};for(const t of['completino','casco'
     for(const g of x.r.segs||[]){if(!segs.some(s=>distM(s.a,g.a)<40&&distM(s.b,g.b)<40)){const e=effOf(P,g.a,g.b);segs.push(await DB.saveSeg({nome:g.nome,pubblico:false,a:g.a,b:g.b,info:e?segInfo(P,e):{km:g.km}}));}}
     await DB.addPassaggi(segs.map(s=>{const e=effOf(P,s.a,s.b);return e&&{segmento_id:s.id,uscita_id:u.id,owner:u.owner,data:u.data,ta:e.ta,tb:e.tb,durata:e.durata};}).filter(Boolean));}
   CL.pend=[];clubMsg(`✓ Archiviat${n>1?'e':'a'} ${n} uscit${n>1?'e':'a'}.`);clubRender();}
-async function uscTogglePub(id){const u=CL.usc.find(x=>x.id===id),si=!u.pubblica;clubMsg('Aggiorno…');
+async function uscTogglePub(id){const u=CL.usc.find(x=>x.id===id),si=!u.pubblica;
+  if(si&&u.info&&u.info.src==='strava'){alert('Questa uscita viene da Strava: le regole di Strava permettono di mostrarla solo a te. Per farla vedere alla banda, archivia anche il GPX esportato (📂 Scegli i file GPX) e rendi pubblico quello. I segmenti invece si possono rendere pubblici.');return;}
+  clubMsg('Aggiorno…');
   const patch={pubblica:si};if(DB.online)patch.traccia_pub=si?await encTrack(farFromEnds(await decTrack(await DB.track(u)),600)):null;await DB.updUscita(id,patch);clubMsg(si?'🌍 Ora la vede tutta la banda.':'🔒 Ora la vedi solo tu.');clubRender();}
 
 // --- segmenti ---
@@ -2874,7 +2911,11 @@ function segDetail(g){const ps=CL.pas.filter(p=>p.segmento_id===g.id).sort((a,b)
       <td>${k+1}. ${esc(riderName(u(p.uscita_id)))}</td><td>${new Date(p.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'2-digit'})}</td><td class="n">${fmt(p.durata)}${k?` <small>+${fmt(p.durata-best)}</small>`:''}</td></tr>`).join('')}</table>
     <div class="cmodes"><button class="btn" data-mode="insieme">👥 Con chi c'era<small>stessa uscita</small></button><button class="btn" data-mode="virtuale">🌐 Confronto virtuale<small>altri, altre date</small></button>
       <button class="btn" data-mode="ghost">👻 Ghost<small>te stesso, altre date</small></button><button class="btn" data-mode="h2h">⚔️ Testa a testa<small>2 passaggi spuntati</small></button>
-      <button class="btn ghost" data-mode="solo">▶ Solo il mio</button></div></div>`;}
+      <button class="btn ghost" data-mode="solo">▶ Solo il mio</button></div>
+    <button class="lnk" data-sscan="${g.id}" style="margin-top:8px">🔎 Cerca i passaggi in tutte le uscite dell'archivio</button></div>`;}
+async function segScan(id){const g=CL.segs.find(x=>x.id===id),have=new Set(CL.pas.filter(p=>p.segmento_id===id).map(p=>p.uscita_id)),todo=CL.usc.filter(u=>!have.has(u.id)),rows=[];let k=0;
+  for(const u of todo){clubMsg(`Cerco… ${++k} di ${todo.length}`);try{const P=await decTrack(await DB.track(u)),e=effOf(P,g.a,g.b);if(e)rows.push({segmento_id:g.id,uscita_id:u.id,owner:u.owner,data:u.data,ta:e.ta,tb:e.tb,durata:e.durata});}catch(err){}}
+  await DB.addPassaggi(rows);clubMsg(rows.length?`✓ Trovati ${rows.length} passaggi nuovi.`:'Nessun passaggio nuovo.');await clubLoad();segDetail(g);}
 
 // --- membri (solo online) ---
 function tabMem(){const me=DB.prof;clubBox().innerHTML=`<div class="ccard"><h3>La banda</h3>${CL.profs.map(p=>`<div class="citem">${p.dati&&p.dati.testa?`<img src="${p.dati.testa}" class="cface" alt="">`:'<span class="cdot">🙂</span>'}<b>${esc(p.nome||'senza nome')}</b>
@@ -2953,6 +2994,12 @@ $('club').addEventListener('click',async e=>{const b=e.target.closest('button,[d
     else if(b.id==='isave'){CL.edit.nome=$('inome').value.trim();CL.edit.dati=itemKit(CL.edit);await DB.saveItem(CL.edit);CL.edit=null;clubRender();}
     else if(b.id==='ufromapp'){uscForm(riders.map(r=>({r,fname:r.fname||r.name,titolo:$('titolo').value&&!/segmento/i.test($('titolo').value)?$('titolo').value:null})));}
     else if(b.id==='usave'){b.disabled=true;await uscSave();}
+    else if(b.id==='stvon')stvConnect();
+    else if(b.id==='stvoff'){if(confirm('Scollegare Strava? Le uscite già archiviate restano.')){await stv('disconnect');stvStatus();}}
+    else if(b.id==='stvopen'){b.style.display='none';stvList(1);}
+    else if(d.stvmore)stvList(+d.stvmore);
+    else if(d.sscan){b.disabled=true;await segScan(d.sscan);}
+    else if(d.stvimp){b.disabled=true;b.textContent='…';clubMsg('Scarico da Strava traccia e segmenti…');const r=await stvImport(d.stvimp);clubMsg(`✓ «${esc(r.nome)}» archiviata con ${r.seg} segmenti Strava${r.nuovi?` (${r.nuovi} nuovi nel tuo archivio)`:''}. È 🔒 privata.`);clubRender();}
     else if(d.upub)await uscTogglePub(d.upub);
     else if(d.udel){if(confirm('Cancellare questa uscita dall\'archivio? Spariscono anche i suoi passaggi sui segmenti.')){await DB.delUscita(d.udel);CL.sel.delete(d.udel);clubRender();}}
     else if(b.id==='uplay'){const L=[...CL.sel].map(id=>({u:CL.usc.find(x=>x.id===id)})).filter(x=>x.u);const days=new Set(L.map(x=>x.u.data));await clubLoadRiders(L,null,{real:days.size===1});}
