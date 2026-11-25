@@ -202,7 +202,8 @@ async function clubLoadRiders(list,seg,opts={}){loading(true);prog('Prendo le us
     if(seg){A=seg.a.slice();B=seg.b.slice();$('titolo').value=(opts.h2h?'⚔️ ':'')+seg.nome;}else{A=B=null;$('titolo').value=list.length>1?'Uscita insieme':(list[0].u.titolo||'Uscita');}
     renderRiders();drawMap();computeSeg();renderSegs();loading(false);clubClose();
     if(seg&&SEG){if(map)map.fitBounds([A,B],{padding:[40,40]});FX.init();unlockAudio();buildScene().catch(e=>{loading(false);alert('Errore: '+e.message);});}
-    else $('map').scrollIntoView({behavior:'smooth',block:'center'});}
+    else{const h=$('hint');h.innerHTML=`<b style="display:block;background:#ffd400;color:#10151c;border-radius:10px;padding:10px 12px;font-size:17px">👉 Ora scegli il tratto da rivedere: ${riders[0].segs.length?'tocca un segmento qui sotto, oppure ':''}tocca sulla cartina <u>la partenza</u> e poi <u>l'arrivo</u>, vicino alla linea. Poi «Crea la scena 3D».${riders.length===1?' Per tutta l\'uscita c\'è anche «🎬 Sintesi dell\'uscita».':''}</b>`;
+      h.scrollIntoView({behavior:'smooth',block:'start'});}}
   catch(e){loading(false);alert('Non riesco a caricare: '+e.message);}}
 async function segPlay(mode){const g=CL.segs.find(x=>x.id===CL.seg),ps=CL.pas.filter(p=>p.segmento_id===g.id),ref=ps.find(p=>p.id===CL.ref),pick=ps.filter(p=>CL.pick.has(p.id)),u=p=>CL.usc.find(x=>x.id===p.uscita_id);
   const lab=(p,gh)=>riderName(u(p))+(gh?' 👻 ':' ')+new Date(p.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'numeric'});
