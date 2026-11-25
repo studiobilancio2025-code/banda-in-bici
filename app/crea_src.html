@@ -363,6 +363,7 @@ async function addFiles(fl){window.H2H=false;
     riders.push(r);grid(r);if(riders.length>1)syncRider(r);else r.sync={ok:true,together:0};}
     catch(e){$('hint').textContent='Il file '+f.name+' non è un GPX valido.';}}
   renderRiders();drawMap();computeSeg();renderSegs();
+  if(riders[0]&&!(riders[0].segs||[]).length&&window.clubSegsFor)clubSegsFor(riders[0]);
 }
 $('files').addEventListener('change',e=>addFiles([...e.target.files]));
 // ---------- app installabile (Android/Chrome): pulsante «Installa» e GPX ricevuti dal menu «Condividi» ----------
@@ -444,7 +445,7 @@ $('rifai').addEventListener('click',()=>{A=B=null;SEG=null;segSel=-1;drawMarks()
 let segSel=-1;
 function renderSegs(){const S=riders[0]&&riders[0].segs||[],box=$('segs');$('uscbtn').style.display=riders.length&&!window.__SCENA?'flex':'none';
   if(!S.length){box.innerHTML='';return;}
-  box.innerHTML=`<p class="hint" style="margin-bottom:0">Scegli uno dei ${S.length} segmenti di Strava, oppure tocca tu partenza e arrivo sulla mappa.</p><div class="seglist">${S.map((g,i)=>`<button class="seg ${i===segSel?'on':''}" data-s="${i}">${g.nome}<span>${it(g.km.toFixed(1))} km · ${fmt(g.tempo)}</span></button>`).join('')}</div>`;}
+  box.innerHTML=`<p class="hint" style="margin-bottom:0">${S.length===1?'Scegli il segmento':'Scegli uno dei '+S.length+' segmenti'}, oppure tocca tu partenza e arrivo sulla mappa.</p><div class="seglist">${S.map((g,i)=>`<button class="seg ${i===segSel?'on':''}" data-s="${i}">${g.nome}<span>${it(g.km.toFixed(1))} km · ${fmt(g.tempo)}</span></button>`).join('')}</div>`;}
 $('segs').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;const g=riders[0].segs[+b.dataset.s];segSel=+b.dataset.s;
   A=g.a.slice();B=g.b.slice();$('titolo').value=g.nome;computeSeg();if(map){drawMarks();map.fitBounds([A,B],{padding:[40,40]});}renderSegs();
   $('map').scrollIntoView({behavior:'smooth',block:'center'});});

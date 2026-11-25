@@ -327,4 +327,17 @@ $('club').addEventListener('click',async e=>{const b=e.target.closest('button,[d
     else if(d.mode){await segPlay(d.mode==='solo'?'solo':d.mode);}
     else if(d.mapp){await DB.approve(d.mapp,d.si==='1');clubRender();}
   }catch(err){clubMsg(esc(err.message||String(err)),true);}});
+// GPX caricato a mano (es. esportato da Strava, che non contiene i segmenti): li cerco da Strava (stessa ora di partenza)
+// oppure tra i segmenti dell'archivio dove passa la traccia
+async function clubSegsFor(r){if(r.segTried)return;r.segTried=true;const box=$('segs');let segs=[],da='';
+  try{await DB.init();if(!DB.uid)return;
+    if(STRAVA_ID&&DB.online&&r.abs&&r.t0){box.innerHTML='<p class="hint">⏳ Cerco i segmenti di questa uscita su Strava…</p>';
+      try{const st=await stv('status');if(st.connected){let hit=null;for(let pg=1;pg<=3&&!hit;pg++){const L=await stv('activities',{page:pg});hit=L.find(a=>Math.abs(Date.parse(a.start)-r.t0)<10*60e3);if(L.length<30||(L.length&&Date.parse(L[L.length-1].start)<r.t0-864e5))break;}
+        if(hit){const a=await stv('activity',{id:hit.id});segs=a.segs.filter(g=>g.a&&g.b).map(g=>({nome:g.nome,km:g.km||0,tempo:g.tempo||0,a:g.a,b:g.b}));da='Strava';r.stravaId=hit.id;}}}catch(e){}}
+    if(!segs.length){if(!CL.segs.length)CL.segs=await DB.segmenti();const P=ptsArr(r);
+      segs=CL.segs.map(g=>{const e=effOf(P,g.a,g.b);return e&&{nome:g.nome,km:(g.info&&g.info.km)||0,tempo:e.durata,a:g.a,b:g.b,ta:e.ta};}).filter(Boolean).sort((x,y)=>x.ta-y.ta);da='archivio';}
+  }catch(e){}
+  if(segs.length&&riders[0]===r&&!(r.segs||[]).length){r.segs=segs;}
+  renderSegs();if(segs.length&&riders[0]===r)box.insertAdjacentHTML('afterbegin',`<p class="hint" style="margin:0">✓ ${segs.length===1?'1 segmento preso':segs.length+' segmenti presi'} ${da==='Strava'?'da Strava':'dall\'archivio della banda'}.</p>`);}
+window.clubSegsFor=clubSegsFor;
 window.__CLUB={DB,CL,effOf,decTrack};
