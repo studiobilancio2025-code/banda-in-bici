@@ -84,7 +84,7 @@ Geppino chiede "scarica da Strava l'uscita di oggi": con il connettore Strava si
 - Strava: app "La banda in bici", Client ID 300745, capacità 1 atleta (solo Geppino) finché non si chiede a Strava l'aumento.
 
 ## Da fare / idee
-- Provare con Geppino "Prendi da Strava" (collegamento già fatto il 25/11); poi preparare il testo per chiedere a Strava l'aumento degli atleti.
+- "Prendi da Strava" provato il 25/11: uscita importata con tutti i segmenti (privati, 1 passaggio ciascuno). Poi preparare il testo per chiedere a Strava l'aumento degli atleti.
 - Testo "AAAAMMGG - Titolo" e riquadro giallo dopo "Rivedi insieme" già pubblicati.
 - Mini-altimetria con pallino; fantasma del miglior tempo; luce all'ora vera dell'uscita.
 - Modalità leggera automatica sui telefoni lenti (meno alberi, ombre ridotte).
