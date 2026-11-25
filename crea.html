@@ -2705,7 +2705,7 @@ const uuid=()=>crypto.randomUUID?crypto.randomUUID():'x'+Date.now().toString(36)
 const DB={online:!!(SB_URL&&SB_KEY),sb:null,uid:null,prof:null,ready:null,
   async init(){if(this.ready)return this.ready;return this.ready=(async()=>{
     if(!this.online){this.uid='locale';this.prof=await IDB.get('profiles','locale')||{id:'locale',nome:'',dati:{},membro:true,admin:true};return;}
-    if(!window.supabase)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';s.onload=res;s.onerror=()=>rej(new Error('Non riesco a scaricare il collegamento al database.'));document.head.appendChild(s);});
+    if(!window.supabase)await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';s.onload=res;s.onerror=()=>rej(new Error('Non riesco a scaricare il collegamento al database.'));document.head.appendChild(s);});
     this.sb=supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,detectSessionInUrl:true}});
     this.sb.auth.onAuthStateChange((ev)=>{if(ev==='PASSWORD_RECOVERY')setTimeout(clubNewPw,300);});
     const {data}=await this.sb.auth.getSession();await this.setUser(data.session&&data.session.user);})();},
