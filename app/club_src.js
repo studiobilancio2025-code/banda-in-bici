@@ -150,7 +150,7 @@ function uscForm(list){CL.pend=list;const today=new Date().toISOString().slice(0
   $('unew').innerHTML=list.map((x,i)=>{const d=x.r.abs&&x.r.t0?new Date(x.r.t0).toISOString().slice(0,10):dm(x.fname)||today,P=ptsArr(x.r),inf=trackInfo(P);
     return`<div class="cedit" data-pi="${i}"><b>${esc(x.fname)}</b> <span class="meta">${kmS(inf.km*1000)} km · ${fmt(inf.durata)}</span>
       <div class="crow"><label class="kc">Data<input type="date" data-pf="data" value="${d}"></label>${DB.online?`<input type="hidden" data-pf="ciclista" value="${esc(DB.prof.nome||'')}">`:`<label class="kc">Ciclista<input data-pf="ciclista" maxlength="24" value="${esc(x.r.prof||guessName(x.fname)||DB.prof.nome||'')}"></label>`}</div>
-      <label>Titolo<input data-pf="titolo" maxlength="60" value="${esc(x.titolo||(DB.online&&guessName(x.fname))||'Uscita del '+dIt(d))}"></label>
+      <label>Titolo<input data-pf="titolo" maxlength="60" value="${esc(d.replace(/-/g,'')+' - '+(x.titolo||(DB.online&&guessName(x.fname))||'Uscita'))}"></label>
       <label class="cck2"><input type="checkbox" data-pf="pubblica" ${DB.online?'checked':''} ${DB.online?'':'disabled'}> 🌍 La vede tutta la banda</label></div>`;}).join('')+(list.length?`<button class="btn" id="usave">💾 Archivia ${list.length>1?list.length+' uscite':'l\'uscita'}</button>`:'');}
 async function uscSave(){const kit={},ids={};for(const t of['completino','casco','bici']){const id=$('uk_'+t)&&$('uk_'+t).value;if(id){ids[t]=id;Object.assign(kit,CL.items.find(i=>i.id===id).dati);}}
   const segs=CL.segs.slice();let n=0;
@@ -233,6 +233,7 @@ $('ctabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(
 $('club').addEventListener('change',async e=>{const t=e.target;
   if(t.dataset.ph){const f=t.files[0];if(!f)return;const im=await fileImg(f),k=t.dataset.ph;DB.prof.dati=Object.assign({},DB.prof.dati,{[k]:imgData(im,k==='testa'?256:640,k==='testa')});URL.revokeObjectURL(im.src);await DB.saveProfile(DB.prof.nome,DB.prof.dati);tabProf();clubMsg('✓ Foto salvata.');return;}
   if(t.id==='ufile'){uscFromFiles([...t.files]);return;}
+  if(t.dataset.pf==='data'){const ti=t.closest('[data-pi]').querySelector('[data-pf="titolo"]');ti.value=t.value.replace(/-/g,'')+' - '+ti.value.replace(/^\d{8} - /,'');return;}
   if(t.dataset.usel){t.checked?CL.sel.add(t.dataset.usel):CL.sel.delete(t.dataset.usel);const b=document.querySelector('#club .cbar');b.style.display=CL.sel.size?'flex':'none';b.firstChild.textContent=CL.sel.size+' scelte';return;}
   if(t.dataset.sref){CL.ref=t.dataset.sref;return;}if(t.dataset.spk){t.checked?CL.pick.add(t.dataset.spk):CL.pick.delete(t.dataset.spk);return;}
   if(t.dataset.ik&&CL.edit){CL.edit.dati=Object.assign(itemKit(CL.edit),{[t.dataset.ik]:t.value});}});
