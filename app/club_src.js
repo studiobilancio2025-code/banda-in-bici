@@ -2,6 +2,8 @@
 // Archivio online su Supabase (account, pubblico/privato, approvazione dei membri) se SB_URL/SB_KEY sono impostati;
 // altrimenti lo stesso archivio vive solo su questo telefono (IndexedDB), con le stesse funzioni.
 const STRAVA_ID='300745';   // Client ID dell'app Strava "La banda in bici" (pubblico); la chiave segreta sta solo nei segreti di Supabase
+const STV_IMG='https://studiobilancio2025-code.github.io/banda-in-bici/app/strava/';   // marchi ufficiali di Strava ("Connect with Strava", "Powered by Strava"), obbligatori per le regole di Strava: non modificarli
+const stvPow=()=>`<img src="${STV_IMG}powered.svg" alt="Powered by Strava" class="stvpow">`;
 const SB_URL='https://ysfbjemogvmbjzztcvvc.supabase.co',SB_KEY='sb_publishable_DY5s3yyiBRs68gRHkx69Rg_z8WRqB8M';   // indirizzo del progetto Supabase e chiave "anon" (pubblica per natura: le regole RLS proteggono i dati)
 const IDB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{const r=indexedDB.open('banda-archivio',1);
     r.onupgradeneeded=()=>{for(const t of['profiles','guardaroba','uscite','tracce','segmenti','passaggi'])r.result.createObjectStore(t,{keyPath:t==='tracce'?'uscita_id':'id'});};
@@ -120,7 +122,8 @@ async function stv(op,extra){const r=await DB.sb.functions.invoke('strava',{body
   if(r.error){let m=r.error.message;try{const j=await r.error.context.json();if(j.error)m=j.error;}catch(e){}throw new Error(m);}if(r.data&&r.data.error)throw new Error(r.data.error);return r.data;}
 async function stvStatus(){const b=$('stvbox');if(!b)return;try{const s=await stv('status');CL.stv=s;
     b.innerHTML=s.connected?`<p>✅ Collegato${s.athlete&&s.athlete.nome?' come <b>'+esc(s.athlete.nome)+'</b>':''}. In «🚴 Uscite» trovi «⬇️ Prendi da Strava».</p><button class="lnk" id="stvoff">Scollega Strava</button>`
-      :`<p class="meta">Collegando Strava, le tue uscite arrivano nell'archivio con un tocco, con battiti, cadenza, watt e <b>tutti i segmenti nel punto esatto</b>.</p><button class="btn" id="stvon">🔗 Collega Strava</button>`;}
+      :`<p class="meta">Collegando Strava, le tue uscite arrivano nell'archivio con un tocco, con battiti, cadenza, watt e <b>tutti i segmenti nel punto esatto</b>.</p><button id="stvon" class="stvbtn" aria-label="Connect with Strava"><img src="${STV_IMG}connetti.svg" alt="Connect with Strava" width="193" height="48"></button>`;
+    b.insertAdjacentHTML('beforeend',stvPow());}
   catch(e){b.innerHTML=`<p class="warn">Strava: ${esc(e.message)}</p>`;}}
 function stvConnect(){const mob=/Android|iPhone|iPad/i.test(navigator.userAgent),back=location.origin+location.pathname;
   location.href=`https://www.strava.com/oauth/${mob?'mobile/':''}authorize?client_id=${STRAVA_ID}&redirect_uri=${encodeURIComponent(back)}&response_type=code&approval_prompt=auto&scope=read,activity:read_all&state=strava`;}
@@ -132,7 +135,7 @@ function stvConnect(){const mob=/Android|iPhone|iPad/i.test(navigator.userAgent)
 async function stvList(page){const b=$('stvlist');b.innerHTML='<p class="meta">Chiedo a Strava le tue uscite…</p>';
   try{const L=await stv('activities',{page});CL.stvL=(page>1?CL.stvL||[]:[]).concat(L);const have=new Set(CL.usc.map(u=>u.info&&u.info.strava_id).filter(Boolean));
     b.innerHTML=CL.stvL.map(a=>`<div class="cusc"><div><b>${esc(a.nome)}</b><span class="meta">${a.locale.slice(0,10).split('-').reverse().join('/')} · ${kmS(a.km*1000)} km · ${Math.round(a.dplus)} m D+ · ${fmt(a.durata)}</span></div>${have.has(a.id)?'<span class="meta">✓ in archivio</span>':`<button class="btn ghost" data-stvimp="${a.id}">⬇️</button>`}</div>`).join('')
-      +(L.length===30?`<button class="lnk" data-stvmore="${page+1}">Altre uscite…</button>`:'');}
+      +(L.length===30?`<button class="lnk" data-stvmore="${page+1}">Altre uscite…</button>`:'')+stvPow();}
   catch(e){b.innerHTML=`<p class="warn">${esc(e.message)}</p>`;}}
 async function stvImport(id){const a=await stv('activity',{id}),st=a.st;if(!st.t||!st.ll)throw new Error('Questa attività non ha la traccia GPS.');
   const P=st.t.map((t,i)=>[st.ll[i][0],st.ll[i][1],st.el?st.el[i]:0,t,st.hr?st.hr[i]:null,st.cad?st.cad[i]:null,st.pw?st.pw[i]:null]);
@@ -174,7 +177,7 @@ function tabUsc(){const mine=CL.usc.filter(u=>u.owner===DB.uid),days=new Map();C
     <details><summary class="meta">Cosa vestire (si può cambiare dopo)</summary><div class="crow"><label class="kc">Completino<select id="uk_completino">${opt('completino')}</select></label><label class="kc">Casco<select id="uk_casco">${opt('casco')}</select></label><label class="kc">Bici<select id="uk_bici">${opt('bici')}</select></label></div></details></div>
   <div class="ccard"><h3>Le uscite <span class="meta">(${mine.length} tue${DB.online?`, ${CL.usc.length-mine.length} della banda`:''})</span></h3>
     ${[...days.entries()].map(([d,us])=>`<div class="cday">${dIt(d)}</div>`+us.map(u=>{const i=u.info||{},m=u.owner===DB.uid;
-      return`<div class="cusc"><label class="cck"><input type="checkbox" data-usel="${u.id}" ${CL.sel.has(u.id)?'checked':''}></label><div><b>${esc(u.titolo||'Uscita')}</b><span class="meta">${esc(riderName(u))} · ${kmS((i.km||0)*1000)} km · ${i.dplus||0} m D+ · ${fmt(i.durata||0)}</span></div>
+      return`<div class="cusc"><label class="cck"><input type="checkbox" data-usel="${u.id}" ${CL.sel.has(u.id)?'checked':''}></label><div><b>${esc(u.titolo||'Uscita')}</b><span class="meta">${esc(riderName(u))} · ${kmS((i.km||0)*1000)} km · ${i.dplus||0} m D+ · ${fmt(i.durata||0)}</span>${i.src==='strava'&&i.strava_id?`<a class="stvlink" href="https://www.strava.com/activities/${encodeURIComponent(i.strava_id)}" target="_blank" rel="noopener">Vedi su Strava</a>`:''}</div>
       ${m?`<button class="lnk" data-upub="${u.id}" title="Chi la vede">${u.pubblica?'🌍':'🔒'}</button><button class="lnk" data-udel="${u.id}">🗑️</button>`:''}</div>`;}).join('')).join('')||'<p class="meta">Ancora nessuna uscita in archivio.</p>'}
     <p class="meta">🔒 = solo tu · 🌍 = tutta la banda (senza i primi e gli ultimi 600 m). Tocca per cambiare.</p></div>
   <div class="cbar" style="display:${CL.sel.size?'flex':'none'}"><span>${CL.sel.size} scelte</span><button class="btn" id="uplay">▶ Rivedi insieme</button></div>`;}
