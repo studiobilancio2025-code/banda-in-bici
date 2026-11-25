@@ -2695,7 +2695,7 @@ async function publishGH(kind,html,title,sub){
 // ================= LA BANDA: profilo, guardaroba, archivio uscite e segmenti, confronti =================
 // Archivio online su Supabase (account, pubblico/privato, approvazione dei membri) se SB_URL/SB_KEY sono impostati;
 // altrimenti lo stesso archivio vive solo su questo telefono (IndexedDB), con le stesse funzioni.
-const SB_URL='https://ysfbjemogvmbjztcvvc.supabase.co',SB_KEY='sb_publishable_DY5s3yyiBRs68gRHkx69Rg_z8WRqB8M';   // indirizzo del progetto Supabase e chiave "anon" (pubblica per natura: le regole RLS proteggono i dati)
+const SB_URL='https://ysfbjemogvmbjzztcvvc.supabase.co',SB_KEY='sb_publishable_DY5s3yyiBRs68gRHkx69Rg_z8WRqB8M';   // indirizzo del progetto Supabase e chiave "anon" (pubblica per natura: le regole RLS proteggono i dati)
 const IDB={db:null,open(){return this.db||(this.db=new Promise((res,rej)=>{const r=indexedDB.open('banda-archivio',1);
     r.onupgradeneeded=()=>{for(const t of['profiles','guardaroba','uscite','tracce','segmenti','passaggi'])r.result.createObjectStore(t,{keyPath:t==='tracce'?'uscita_id':'id'});};
     r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));},
