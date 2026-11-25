@@ -1,6 +1,6 @@
 // La banda in bici: rende l'app installabile e riceve i GPX condivisi da altre app (menu "Condividi" di Android).
 // Le pagine si prendono sempre dalla rete (così c'è sempre l'ultima versione); senza rete si usa la copia salvata.
-const C='banda-app-v1';
+const C='banda-app-v2';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['crea.html','manifest.webmanifest','app/icone/icona-192.png']).catch(()=>{})));});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const r=e.request,u=new URL(r.url);
