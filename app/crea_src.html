@@ -144,6 +144,22 @@ td.n,th.n{text-align:right;font-family:"Barlow Condensed";font-size:19px;white-s
 details.kit{margin-top:6px;border:1px solid #d9d5cc;border-radius:10px;padding:4px 8px;background:#faf9f6}details.kit summary{cursor:pointer;font-weight:600;display:flex;align-items:center;gap:8px;min-height:40px}
 .kc{display:flex;flex-direction:column;font-size:13px;color:#5b6470;gap:2px}.kc input[type=color]{width:56px;height:36px;border:1px solid #ccc;border-radius:8px;padding:0;background:#fff}.kc select{height:36px}
 body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opacity:.45}body.nolive #live{display:none!important}
+#club{position:fixed;inset:0;z-index:60;background:#f3f1ec;overflow-y:auto;display:none;color:#10151c}#club .cw{max-width:640px;margin:0 auto;padding:12px 14px 90px}
+#club .ch{display:flex;align-items:center;justify-content:space-between}#club h2{font:800 30px "Barlow Condensed",sans-serif;margin:4px 0}#club h3{font:800 22px "Barlow Condensed",sans-serif;margin:0 0 8px}
+#clubx{width:44px;height:44px;border-radius:50%;border:2px solid #10151c;background:#fff;font-size:20px}
+#ctabs{display:flex;gap:6px;overflow-x:auto;margin:8px 0;scrollbar-width:none}#ctabs button{flex:none;min-height:40px;padding:0 12px;border-radius:20px;border:2px solid #10151c;background:#fff;font:600 16px "Barlow Condensed",sans-serif}#ctabs button.on{background:#10151c;color:#fff}
+#club .ccard{background:#fff;border:1px solid #d9d5cc;border-radius:12px;padding:12px;margin-bottom:12px}#club label{display:block;margin:6px 0;font-size:14px;color:#5b6470}#club label input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),#club textarea,#club select{display:block;width:100%;box-sizing:border-box;min-height:42px;border:1px solid #ccc;border-radius:8px;padding:6px 10px;font:16px Barlow,system-ui,sans-serif;color:#10151c}
+#club .crow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}#club .crow .kc{flex:1;min-width:90px}#club .lnk{background:none;border:0;font-size:18px;min-height:40px;min-width:40px;color:#10151c;cursor:pointer}
+#club .btn.ghost{background:#fff;color:#10151c;border:2px solid #10151c}#club .cphs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.cph{position:relative;aspect-ratio:3/4;border:2px dashed #bbb;border-radius:10px;overflow:hidden;display:grid!important;place-items:center;text-align:center;font-size:13px!important;margin:0!important}.cph img{width:100%;height:100%;object-fit:cover}.cph input{position:absolute;inset:0;opacity:0}
+.citem,.cusc{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee}.cusc>div{flex:1;min-width:0}.cusc b,.citem b{display:block}.citem b{flex:1}.cusc .meta{display:block}
+.cdot{display:inline-grid;place-items:center;width:40px;height:36px;border-radius:8px;font-size:20px}.cface{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.cday{font:800 17px "Barlow Condensed",sans-serif;margin:10px 0 2px;color:#5b6470;text-transform:capitalize}.cck input{width:22px;height:22px}.cck2{display:flex!important;gap:8px;align-items:center}
+.cfile{position:relative;display:block!important;text-align:center;margin:0 0 8px!important;font:600 18px "Barlow Condensed",sans-serif!important;color:#10151c!important}.cfile input{position:absolute;inset:0;opacity:0}
+.cedit{border:1px solid #e3dfd6;border-radius:10px;padding:8px;margin:8px 0;background:#faf9f6}.cbar{position:fixed;left:0;right:0;bottom:0;background:#10151c;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cuser{display:flex;justify-content:space-between;align-items:center}.ctab{width:100%;border-collapse:collapse;font-size:15px}.ctab td,.ctab th{padding:5px 4px;border-bottom:1px solid #eee;text-align:left}.ctab .n{text-align:right}.ctab tr.me{background:#fff7cc}.ctab input{width:20px;height:20px}
+.cmodes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.cmodes .btn{display:flex;flex-direction:column;align-items:center;line-height:1.1}.cmodes small{font:400 12px Barlow,sans-serif;opacity:.8}.cmodes .ghost{grid-column:1/3}
+#live .h2h{width:150px}#live .h2h .gap{font:800 20px "Barlow Condensed";text-align:center;white-space:nowrap}#live .h2h .bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:4px 0}
 #live{position:fixed;right:max(3vw,10px);top:96px;z-index:3;background:rgba(16,21,28,.72);color:#fff;border-radius:8px;padding:6px 8px;font:600 15px "Barlow Condensed";min-width:120px;display:none}
 #live div{display:flex;gap:6px;align-items:center;white-space:nowrap}
 #live em{font-style:normal;margin-left:auto;padding-left:8px;opacity:.85}
@@ -170,6 +186,7 @@ body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opac
 <body>
 <div id="setup"><div class="wrap">
   <h1>Crea la scena</h1>
+  <button class="btn" id="clubbtn" style="width:100%;margin:6px 0 10px">👥 La banda: profilo, guardaroba, uscite e segmenti</button>
   <div id="inst" style="display:none"><button class="btn" id="instbtn">📲 Installa l'app sul telefono</button><p class="meta">Compare tra le app con la sua icona, si apre a tutto schermo e riceve i GPX dal menu «Condividi».</p></div>
   <p class="sub">Carica i GPX dell'uscita, scegli il tratto sulla mappa e la scena 3D si costruisce da sola, con strade, case e foto satellitari vere.</p>
 
@@ -191,7 +208,7 @@ body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opac
 
   <h2><i>3</i>Classifica</h2>
   <div class="card" id="classifica"><p class="meta">Comparirà dopo la scelta del tratto.</p></div>
-  <div class="btns"><button class="btn" id="vai" disabled>Crea la scena 3D</button><button class="btn l" id="salvatr" disabled>Salva il tratto</button></div>
+  <div class="btns"><button class="btn" id="vai" disabled>Crea la scena 3D</button><button class="btn l" id="salvatr" disabled>Salva il tratto</button><button class="btn l" id="segsave">⛰️ Salva come segmento</button></div>
 </div></div>
 
 <div id="loading"><div><b id="ltxt">Preparo la scena…</b><span id="lsub"></span><div class="bar"><i id="lbar"></i></div></div></div>
@@ -235,6 +252,9 @@ body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opac
 <div id="fonti">© OpenStreetMap · Esri, Maxar, Earthstar Geographics · quote Mapzen</div>
 <div id="fine"></div>
 <div id="mly"></div>
+<div id="club"><div class="cw"><div class="ch"><h2>👥 La banda</h2><button id="clubx" aria-label="Chiudi">✕</button></div>
+  <div id="chead"></div><nav id="ctabs"><button data-t="prof">🙂 Profilo</button><button data-t="gua">👕 Guardaroba</button><button data-t="usc">🚴 Uscite</button><button data-t="seg">⛰️ Segmenti</button><button data-t="mem">🛡️ Membri</button></nav>
+  <div id="cmsg"></div><div id="cbody"></div></div></div>
 <div id="nav">
   <div id="more" role="dialog" aria-label="Altri comandi">
     <select id="chi" aria-label="Chi inquadrare"></select>
@@ -334,7 +354,7 @@ $('banda').addEventListener('change',async e=>{if(e.target.id!=='bimp')return;co
   try{const arr=JSON.parse(await f.text());arr.forEach(p=>{if(!p.name)return;const i=BANDA.findIndex(q=>keyN(q.name)===keyN(p.name));if(i>=0)BANDA[i]=p;else BANDA.push(p);});saveBanda();renderBanda();
     riders.forEach(r=>{const p=BANDA.find(q=>keyN(q.name)===keyN(r.prof));if(p)applyProf(r,p);});renderRiders();}catch(err){}});
 renderBanda();
-async function addFiles(fl){
+async function addFiles(fl){window.H2H=false;
   for(const f of fl){try{const r=parseGPX(await f.text(),f.name.replace(/\.gpx$/i,'').replace(/[_-]+/g,' ').slice(0,18));
     if(!REF){const p=r.pts[0];REF={lat:p.lat,lon:p.lon,c:Math.cos(p.lat*D)};}
     r.fname=r.name;const fn=keyN(f.name),p=BANDA.find(q=>keyN(q.name)&&fn.includes(keyN(q.name)));if(p)applyProf(r,p);
@@ -1287,6 +1307,7 @@ function make3D(PATH,ROADS,BLDS,DEM){
     const legs=[-1,1].map(sd=>({sd,thigh:add(new THREE.Mesh(new THREE.CylinderGeometry(.05*W,.072*W,1,12),shorts)),kn:add(new THREE.Mesh(new THREE.SphereGeometry(.046*sW,10,8),skin)),
       shin:add(new THREE.Mesh(new THREE.CylinderGeometry(.032*sW,.047*sW,1,10),skin)),sock:add(new THREE.Mesh(new THREE.CylinderGeometry(.034,.034,.09,10),sock)),
       shoe:add(new THREE.Mesh(new THREE.BoxGeometry(.075,.06,.25),shoeM)),crank:add(new THREE.Mesh(new THREE.BoxGeometry(.02,.02,.17),alu)),hip:V(sd*.09,.98,-.14)}));
+    if(r.ghostLook)grp.traverse(m=>{if(m.material){m.material=m.material.clone();m.material.transparent=true;m.material.opacity=.42;m.material.depthWrite=false;}m.castShadow=false;});
     grp.scale.setScalar(ALT[alt]||1);grp.userData={wheels,legs,head,phase:Math.random()*6.28,lean:0,crank:0,wheel:0};scene.add(grp);return grp;}
   const L1=.46,L2=.48,knee=new V3(),foot=new V3(),dv=new V3(),XA=new V3(1,0,0);
   function pedal(r,ang){for(const l of r.userData.legs){const a=ang+(l.sd>0?Math.PI:0);foot.set(l.sd*.11,.3-Math.cos(a)*.17,-Math.sin(a)*.17);
@@ -1739,7 +1760,9 @@ function make3D(PATH,ROADS,BLDS,DEM){
     let w='';if(o.pw){const tr=tNow-offE(o.r),P=o.r.pts;let j=0,lo=0,hi=P.length-1;while(lo<hi){const m=(lo+hi)>>1;if(P[m].t<tr)lo=m+1;else hi=m;}j=lo;const pv=P[j]&&P[j].pw;if(pv!=null)w=Math.round(pv)+' W';}$('cw').textContent=w;
     // distacco in secondi: quanto tempo fa il primo è passato dove ora si trova ciascuno
     const lv=RID.filter(q=>q.vis).sort((a,b)=>b.cur-a.cur),gapOf=(L,q)=>{let lo=0,hi=Math.floor(tNow-T0);while(lo<hi){const m=(lo+hi)>>1;const v=L.s[m];if(isNaN(v)||v<q.cur)lo=m+1;else hi=m;}return Math.max(0,tNow-(T0+lo));};
-    if(lv.length>1&&!CER.on&&!CER.done&&!(FD&&FD.photo)){$('live').style.display='block';$('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
+    if(lv.length>1&&!CER.on&&!CER.done&&!(FD&&FD.photo)){$('live').style.display='block';if(window.H2H&&lv.length===2){const g=gapOf(lv[0],lv[1]),dm=Math.max(0,lv[0].cur-lv[1].cur),k0=RID.indexOf(lv[0])<RID.indexOf(lv[1]);const L0=k0?lv[0]:lv[1],L1=k0?lv[1]:lv[0],w=clamp(50+(L0===lv[0]?1:-1)*Math.min(45,dm/2),5,95);
+      $('live').innerHTML=`<div class="h2h"><div>⚔️ <b>Testa a testa</b></div><div class="bar"><span style="width:${w}%;background:${L0.r.color}"></span><span style="flex:1;background:${L1.r.color}"></span></div><div><span class="dot" style="background:${lv[0].r.color}"></span>${lv[0].r.name}</div><div class="gap">+${fmt(g)} · ${Math.round(dm)} m</div></div>`;}
+    else $('live').innerHTML=lv.map((q,k)=>`<div><span class="dot" style="background:${q.r.color}"></span>${q.r.name}<em>${k?'+'+fmt(gapOf(lv[0],q)):''}</em></div>`).join('');}else $('live').style.display='none';
     const showGap=lv.length>1&&(view==='gruppo'||(view==='regia'&&shot&&shot.type==='gruppo'));
     // nelle viste dall'alto i nomi vanno ai lati, collegati ai ciclisti con una freccia
     const aerial=camera.position.y-center.y>32&&!INTRO.on&&!CER.on&&!CER.done,W=innerWidth,Hh=innerHeight,ann=[],gl=[];
@@ -2008,6 +2031,7 @@ async function publishGH(kind,html,title,sub){
     $('ghshare').onclick=async()=>{try{if(navigator.share){await navigator.share({title,text:'🚴 '+title+' – la banda in bici:',url});return;}}catch(e){if(e.name==='AbortError')return;}
       try{await navigator.clipboard.writeText(url);alert('Link copiato: incollalo su WhatsApp.');}catch(e){prompt('Copia il link:',url);}};}
   catch(err){loading(false);alert('Non sono riuscito a pubblicare: '+err.message+'.');}}
+/*CLUB*/
 window.__APP={addFiles,get riders(){return riders},setAB(a,b){A=a;B=b;computeSeg();},get SEG(){return SEG},buildScene,get S3(){return S3}};
 }
 </script>
