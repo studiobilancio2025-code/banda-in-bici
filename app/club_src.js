@@ -207,17 +207,25 @@ async function uscTogglePub(id){const u=CL.usc.find(x=>x.id===id),si=!u.pubblica
 
 // --- segmenti ---
 function tabSeg(){const s=CL.seg?CL.segs.find(x=>x.id===CL.seg):null;if(s)return segDetail(s);
+  const uT=id=>{const u=CL.usc.find(x=>x.id===id);return u?(u.titolo||'Uscita'):'';},fu=CL.segU&&CL.usc.some(u=>u.id===CL.segU)?CL.segU:'';
+  const withP=new Set(CL.pas.map(p=>p.uscita_id)),uopts=CL.usc.filter(u=>withP.has(u.id)).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  // con un'uscita scelta: solo i suoi segmenti, nell'ordine in cui si incontrano lungo l'uscita
+  let L=CL.segs.map(g=>{const ps=CL.pas.filter(p=>p.segmento_id===g.id).sort((a,b)=>a.durata-b.durata);return{g,ps,pu:fu?ps.find(p=>p.uscita_id===fu):null};});
+  if(fu)L=L.filter(x=>x.pu).sort((a,b)=>a.pu.ta-b.pu.ta);
   clubBox().innerHTML=`<div class="ccard"><h3>I segmenti</h3><p class="meta">Si creano da soli dai segmenti Strava dei GPX, oppure dal tratto scelto nell'app (pulsante «⛰️ Salva come segmento» sotto la classifica).</p>
-    ${CL.segs.map(g=>{const ps=CL.pas.filter(p=>p.segmento_id===g.id).sort((a,b)=>a.durata-b.durata),m=g.owner===DB.uid;
-      return`<div class="cusc"><div style="flex:1" data-sopen="${g.id}"><b>${esc(g.nome)}</b><span class="meta">${g.info&&g.info.km?kmS(g.info.km*1000)+' km · ':''}${ps.length} passaggi${ps[0]?' · record '+fmt(ps[0].durata):''}</span></div>
-      ${m?`<button class="lnk" data-spub="${g.id}">${g.pubblico?'🌍':'🔒'}</button><button class="lnk" data-sdel="${g.id}">🗑️</button>`:''}<button class="lnk" data-sopen="${g.id}">›</button></div>`;}).join('')||'<p class="meta">Ancora nessun segmento.</p>'}</div>`;}
+    ${uopts.length?`<label>Uscita<select id="segu"><option value="">Tutte le uscite</option>${uopts.map(u=>`<option value="${u.id}" ${u.id===fu?'selected':''}>${esc(u.titolo||'Uscita')}</option>`).join('')}</select></label>`:''}
+    ${L.map(({g,ps,pu})=>{const m=g.owner===DB.uid,us=[...new Set(ps.map(p=>p.uscita_id))];
+      const where=fu?`🚴 ${fmt(pu.durata)} in questa uscita`:ps[0]?`🚴 ${esc(uT(ps[0].uscita_id))}${us.length>1?` <i>e in ${us.length===2?'un\'altra uscita':'altre '+(us.length-1)+' uscite'}</i>`:''}`:'';
+      return`<div class="cusc"><div style="flex:1" data-sopen="${g.id}"><b>${esc(g.nome)}</b><span class="meta">${g.info&&g.info.km?kmS(g.info.km*1000)+' km · ':''}${ps.length} passaggi${ps[0]?' · record '+fmt(ps[0].durata):''}</span>${where?`<span class="meta segu">${where}</span>`:''}</div>
+      ${m?`<button class="lnk" data-spub="${g.id}">${g.pubblico?'🌍':'🔒'}</button><button class="lnk" data-sdel="${g.id}">🗑️</button>`:''}<button class="lnk" data-sopen="${g.id}">›</button></div>`;}).join('')||'<p class="meta">Ancora nessun segmento.</p>'}</div>`;
+  const sel=$('segu');if(sel)sel.onchange=()=>{CL.segU=sel.value;tabSeg();};}
 function segDetail(g){const ps=CL.pas.filter(p=>p.segmento_id===g.id).sort((a,b)=>a.durata-b.durata),best=ps[0]&&ps[0].durata,mine=ps.filter(p=>p.owner===DB.uid);
   if(!CL.ref||!ps.some(p=>p.id===CL.ref))CL.ref=(mine[0]||ps[0]||{}).id;CL.pick=CL.pick||new Set();
   const u=id=>CL.usc.find(x=>x.id===id)||{};
   clubBox().innerHTML=`<div class="ccard"><button class="lnk" id="sback">‹ Tutti i segmenti</button><h3>${esc(g.nome)}</h3>
     <p class="meta">Tocca ◉ per il tuo passaggio di riferimento e spunta ☐ quelli da confrontare.</p>
     <table class="ctab"><tr><th></th><th></th><th>Ciclista</th><th>Data</th><th class="n">Tempo</th></tr>${ps.map((p,k)=>`<tr class="${p.owner===DB.uid?'me':''}"><td><input type="radio" name="sref" data-sref="${p.id}" ${p.id===CL.ref?'checked':''}></td><td><input type="checkbox" data-spk="${p.id}" ${CL.pick.has(p.id)?'checked':''}></td>
-      <td>${k+1}. ${esc(riderName(u(p.uscita_id)))}</td><td>${new Date(p.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'2-digit'})}</td><td class="n">${fmt(p.durata)}${k?` <small>+${fmt(p.durata-best)}</small>`:''}</td></tr>`).join('')}</table>
+      <td>${k+1}. ${esc(riderName(u(p.uscita_id)))}<small class="segu">${esc(u(p.uscita_id).titolo||'')}</small></td><td>${new Date(p.data+'T12:00').toLocaleDateString('it-IT',{day:'numeric',month:'short',year:'2-digit'})}</td><td class="n">${fmt(p.durata)}${k?` <small>+${fmt(p.durata-best)}</small>`:''}</td></tr>`).join('')}</table>
     <div class="cmodes"><button class="btn" data-mode="insieme">👥 Con chi c'era<small>stessa uscita</small></button><button class="btn" data-mode="virtuale">🌐 Confronto virtuale<small>altri, altre date</small></button>
       <button class="btn" data-mode="ghost">👻 Ghost<small>te stesso, altre date</small></button><button class="btn" data-mode="h2h">⚔️ Testa a testa<small>2 passaggi spuntati</small></button>
       <button class="btn ghost" data-mode="solo">▶ Solo il mio</button></div>
