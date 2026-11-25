@@ -936,7 +936,7 @@ body.nocron #cron,body.nocron #fcap{display:none!important}#fctl button.off{opac
     <button data-v="dd">Drone dietro</button><button data-v="df">Drone davanti</button>
     <button data-v="eli">Elicottero</button><button data-v="gruppo">Tutti dall'alto</button><button data-v="libera">Libera</button><button data-v="sv">📷 Street View</button>
   </div>
-  <div class="row tlrow"><button id="pausa" class="ic" aria-label="Pausa">❚❚</button><button id="rew" class="ic" aria-label="Indietro di 10 secondi">−10"</button><div class="tlw"><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><span id="tlt"></span></div><button id="ff" class="ic" aria-label="Avanti di 10 secondi">+10"</button><button id="molt" class="ic" aria-label="Velocità della scena">×5</button><button id="mbtn" class="ic" aria-label="Altri comandi" aria-expanded="false">☰</button></div>
+  <div class="row tlrow"><button id="pausa" class="ic" aria-label="Pausa">❚❚</button><button id="rew" class="ic" aria-label="Indietro di 10 secondi">−10"</button><div class="tlw"><input id="tl" type="range" min="0" max="1" step="0.5" value="0" aria-label="Posizione nella corsa"><span id="tlt"></span></div><button id="ff" class="ic" aria-label="Avanti di 10 secondi">+10"</button><button id="molt" class="ic" aria-label="Velocità della scena">×5</button><button id="mbtn" class="ic" aria-label="Altri comandi" aria-expanded="false">☰</button><button id="esci" class="ic" aria-label="Esci dalla scena" title="Esci dalla scena">✕</button></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -2484,6 +2484,7 @@ function showScene(){$('setup').style.display='none';$('htitle').textContent=$('
     <button class="btn" id="playgo">▶ Guarda la corsa</button><p class="meta" style="color:#cfd6de">con telecronaca, effetti e musica: alza il volume</p></div>`;
   $('play').style.display='grid';$('playgo').onclick=()=>{unlockAudio();setTimeout(go,150);};}
 // "Modifica": si torna all'impostazione; la scena verrà ricostruita con i dati nuovi
+$('esci').addEventListener('click',()=>$('mod').click());
 $('mod').addEventListener('click',()=>{mlyClose();if(window.__SCENA&&!map){window.__SCENA=false;setTimeout(()=>{renderRiders();drawMap();drawMarks();renderSegs();},50);}if(S3)S3.stop();S3=null;built=false;$('scene').innerHTML='';$('tags').innerHTML='';
   $('setup').style.display='block';['hud','nav','fonti','live','fine','cron','pres'].forEach(i=>$(i).style.display='none');$('lines').innerHTML='';if(window.speechSynthesis)speechSynthesis.cancel();});
 
