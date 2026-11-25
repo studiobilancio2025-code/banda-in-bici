@@ -89,6 +89,12 @@ alter table tracce enable row level security;
 alter table segmenti enable row level security;
 alter table passaggi enable row level security;
 
+-- accesso alle tabelle dall'app (le regole qui sotto decidono cosa vede ciascuno)
+grant usage on schema public to anon, authenticated;
+grant select, insert, update, delete on guardaroba, uscite, tracce, segmenti, passaggi to authenticated;
+grant select on profiles to authenticated;
+grant execute on function is_membro(), is_admin(), approva(uuid, boolean) to authenticated;
+
 -- profili: ognuno vede il proprio; i membri vedono tutti (l'amministratore anche chi aspetta l'approvazione)
 drop policy if exists p_sel on profiles;  create policy p_sel on profiles for select using (id = auth.uid() or is_membro());
 drop policy if exists p_upd on profiles;  create policy p_upd on profiles for update using (id = auth.uid()) with check (id = auth.uid());
