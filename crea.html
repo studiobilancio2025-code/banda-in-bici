@@ -1727,7 +1727,7 @@ async function fetchOSM(la0,lo0,la1,lo1,depth=0){
   return{nodes,ways};
 }
 
-let S3=null;const SCN={pali:true,marc:true,cron:true,live:true};try{Object.assign(SCN,JSON.parse(localStorage.getItem('banda.scena')||'{}'));}catch(e){}
+let S3=null;window.__dbg={get S3(){return S3},get riders(){return riders}};const SCN={pali:true,marc:true,cron:true,live:true};try{Object.assign(SCN,JSON.parse(localStorage.getItem('banda.scena')||'{}'));}catch(e){}
 function make3D(PATH,ROADS,BLDS,DEM){
   const V3=THREE.Vector3;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
