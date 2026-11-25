@@ -149,8 +149,8 @@ const guessName=f=>{const n=f.replace(/\.gpx$/i,'').replace(/20\d\d[-_.]?\d\d[-_
 function uscForm(list){CL.pend=list;const today=new Date().toISOString().slice(0,10),dm=s=>{const m=s.match(/(20\d\d)[-_.]?(\d\d)[-_.]?(\d\d)/);return m?`${m[1]}-${m[2]}-${m[3]}`:null;};
   $('unew').innerHTML=list.map((x,i)=>{const d=x.r.abs&&x.r.t0?new Date(x.r.t0).toISOString().slice(0,10):dm(x.fname)||today,P=ptsArr(x.r),inf=trackInfo(P);
     return`<div class="cedit" data-pi="${i}"><b>${esc(x.fname)}</b> <span class="meta">${kmS(inf.km*1000)} km · ${fmt(inf.durata)}</span>
-      <div class="crow"><label class="kc">Data<input type="date" data-pf="data" value="${d}"></label><label class="kc">Ciclista<input data-pf="ciclista" maxlength="24" value="${esc(x.r.prof||guessName(x.fname)||DB.prof.nome||'')}"></label></div>
-      <label>Titolo<input data-pf="titolo" maxlength="60" value="${esc(x.titolo||'Uscita del '+dIt(d))}"></label>
+      <div class="crow"><label class="kc">Data<input type="date" data-pf="data" value="${d}"></label>${DB.online?`<input type="hidden" data-pf="ciclista" value="${esc(DB.prof.nome||'')}">`:`<label class="kc">Ciclista<input data-pf="ciclista" maxlength="24" value="${esc(x.r.prof||guessName(x.fname)||DB.prof.nome||'')}"></label>`}</div>
+      <label>Titolo<input data-pf="titolo" maxlength="60" value="${esc(x.titolo||(DB.online&&guessName(x.fname))||'Uscita del '+dIt(d))}"></label>
       <label class="cck2"><input type="checkbox" data-pf="pubblica" ${DB.online?'checked':''} ${DB.online?'':'disabled'}> 🌍 La vede tutta la banda</label></div>`;}).join('')+(list.length?`<button class="btn" id="usave">💾 Archivia ${list.length>1?list.length+' uscite':'l\'uscita'}</button>`:'');}
 async function uscSave(){const kit={},ids={};for(const t of['completino','casco','bici']){const id=$('uk_'+t)&&$('uk_'+t).value;if(id){ids[t]=id;Object.assign(kit,CL.items.find(i=>i.id===id).dati);}}
   const segs=CL.segs.slice();let n=0;
