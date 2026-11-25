@@ -11,3 +11,4 @@ create table if not exists strava (
 );
 alter table strava enable row level security;
 revoke all on strava from anon, authenticated;
+grant all on strava to service_role;   -- la funzione "strava" (chiave di servizio) deve poterla leggere e scrivere
